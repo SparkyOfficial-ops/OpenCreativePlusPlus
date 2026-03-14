@@ -18,10 +18,7 @@ subprojects {
 
     dependencies {
         val implementation by configurations
-        val testImplementation by configurations
-
         implementation(kotlin("stdlib"))
-        testImplementation(kotlin("test"))
     }
 
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {

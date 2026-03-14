@@ -5,7 +5,6 @@ import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.ICondition
 import com.opencreativeplus.api.node.IEvent
 import com.opencreativeplus.api.node.IValue
-import io.mockk.mockk
 import org.bukkit.Material
 import kotlin.test.Test
 import kotlin.test.assertEquals

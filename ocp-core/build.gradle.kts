@@ -2,6 +2,8 @@
 
 dependencies {
     api(project(":ocp-api"))
+    // Paper API needed to implement ExecutionContext (which references Player?)
+    compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
     

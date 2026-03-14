@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.9.20" apply false
+    kotlin("jvm") version "1.9.25" apply false
 }
 
 allprojects {
@@ -24,14 +24,14 @@ subprojects {
         testImplementation(kotlin("test"))
     }
 
-    .withType<org.jetbrains.kotlin.gradle..KotlinCompile> {
-        kotlinOptions {
-            jvmTarget = "17"
-            freeCompilerArgs = listOf("-Xjsr305=strict")
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+            freeCompilerArgs.add("-Xjsr305=strict")
         }
     }
 
-    .withType<Test> {
+    tasks.withType<Test> {
         useJUnitPlatform()
     }
 }

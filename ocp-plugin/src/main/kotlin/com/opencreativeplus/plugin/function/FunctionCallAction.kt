@@ -18,6 +18,9 @@ class FunctionCallAction(
     private val registry: FunctionRegistry
 ) : IAction {
 
+    override val nodeId = "function_call"
+    override val displayName = "Function Call"
+
     companion object {
         const val MAX_DEPTH = 100
         private val callDepth = ThreadLocal.withInitial { 0 }

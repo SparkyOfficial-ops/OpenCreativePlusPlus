@@ -17,6 +17,9 @@ import com.opencreativeplus.api.node.IAction
  */
 class TeleportAction(params: Map<String, Any>) : IAction {
 
+    override val nodeId = "teleport"
+    override val displayName = "Teleport"
+
     private val worldName: String = params["world"] as? String ?: "world"
     private val x: Double = (params["x"] as? Number)?.toDouble() ?: 0.0
     private val y: Double = (params["y"] as? Number)?.toDouble() ?: 64.0

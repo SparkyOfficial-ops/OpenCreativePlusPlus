@@ -9,6 +9,7 @@ dependencies {
     implementation(project(":ocp-core"))
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")

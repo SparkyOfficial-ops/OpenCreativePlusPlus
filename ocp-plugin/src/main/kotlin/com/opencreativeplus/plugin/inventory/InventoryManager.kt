@@ -5,6 +5,7 @@ import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.core.database.MongoConnectionManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import org.bson.Document
 import org.bukkit.Material
@@ -75,18 +76,16 @@ class InventoryManager(
     suspend fun loadInventory(player: Player, plotId: UUID, mode: PlotMode) {
         val doc = withContext(Dispatchers.IO) {
             connectionManager.withRetry {
-                kotlinx.coroutines.flow.firstOrNull(
-                    collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode)))
-                )
+                collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode))).firstOrNull()
             }
         }
 
         player.inventory.clear()
 
         if (doc != null) {
-            val contents = deserializeContents(doc.getString("contents"))
-            val armor = deserializeContents(doc.getString("armor"))
-            val offhand = deserializeItem(doc.getString("offhand"))
+            val contents = deserializeContents(doc["contents"] as? String)
+            val armor = deserializeContents(doc["armor"] as? String)
+            val offhand = deserializeItem(doc["offhand"] as? String)
 
             player.inventory.contents = contents
             player.inventory.armorContents = armor

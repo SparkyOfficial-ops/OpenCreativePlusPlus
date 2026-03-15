@@ -15,6 +15,8 @@ class IfAction(
     private val thenActions: List<IAction>,
     private val elseActions: List<IAction> = emptyList()
 ) : IAction {
+    override val nodeId = "if"
+    override val displayName = "If"
     override suspend fun execute(context: ExecutionContext) {
         val branch = if (condition.evaluate(context)) thenActions else elseActions
         for (action in branch) {

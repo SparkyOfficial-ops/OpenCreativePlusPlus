@@ -11,6 +11,8 @@ class EqualsCondition(
     private val left: Any?,
     private val right: Any?
 ) : ICondition {
+    override val nodeId = "equals"
+    override val displayName = "Equals"
     override suspend fun evaluate(context: ExecutionContext): Boolean =
         resolveValue(left, context) == resolveValue(right, context)
 }
@@ -23,6 +25,8 @@ class GreaterThanCondition(
     private val left: Any?,
     private val right: Any?
 ) : ICondition {
+    override val nodeId = "greater_than"
+    override val displayName = "Greater Than"
     override suspend fun evaluate(context: ExecutionContext): Boolean {
         val l = toDouble(resolveValue(left, context)) ?: return false
         val r = toDouble(resolveValue(right, context)) ?: return false
@@ -38,6 +42,8 @@ class LessThanCondition(
     private val left: Any?,
     private val right: Any?
 ) : ICondition {
+    override val nodeId = "less_than"
+    override val displayName = "Less Than"
     override suspend fun evaluate(context: ExecutionContext): Boolean {
         val l = toDouble(resolveValue(left, context)) ?: return false
         val r = toDouble(resolveValue(right, context)) ?: return false

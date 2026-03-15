@@ -1,0 +1,15 @@
+database:
+  uri: "mongodb://localhost:27017"
+  name: "opencreativeplus"
+  max_retries: 3
+  retry_delay_ms: 1000
+
+performance:
+  max_operations_per_script: 10000
+  memory_limit_mb: 50
+  tps_pause_threshold: 15.0
+  tps_resume_threshold: 18.0
+
+execution:
+  thread_pool_size: 4
+  max_recursion_depth: 100

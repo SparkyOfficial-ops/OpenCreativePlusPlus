@@ -1,6 +1,7 @@
 package com.opencreativeplus.core.execution
 
 import com.mongodb.client.model.ReplaceOptions
+import com.mongodb.kotlin.client.coroutine.FindFlow
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.mockk.*
@@ -26,6 +27,13 @@ class VariableManagerTest {
     private lateinit var database: MongoDatabase
     private lateinit var collection: MongoCollection<Document>
     private lateinit var variableManager: VariableManager
+
+    /** Helper: create a FindFlow mock that emits [docs]. */
+    private fun findFlowOf(vararg docs: Document): FindFlow<Document> {
+        val ff = mockk<FindFlow<Document>>(relaxed = true)
+        coEvery { ff.firstOrNull() } returns docs.firstOrNull()
+        return ff
+    }
     
     @BeforeEach
     fun setup() {
@@ -85,7 +93,7 @@ class VariableManagerTest {
             put("updated_at", System.currentTimeMillis())
         }
         
-        coEvery { collection.find(Document("_id", plotId.toString())) } returns flowOf(document)
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf(document)
         
         // When: Getting saved scope
         val scope = variableManager.getSavedScope(plotId)

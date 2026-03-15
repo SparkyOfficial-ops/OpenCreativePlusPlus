@@ -153,8 +153,8 @@ class MongoConnectionManagerTest {
         val delay2 = executionTimes[2] - executionTimes[1]
         
         // First delay should be ~100ms, second ~200ms (with some tolerance)
-        assertTrue(delay1 >= 80, "First delay was $delay1ms, expected ~100ms")
-        assertTrue(delay2 >= 180, "Second delay was $delay2ms, expected ~200ms")
+        assertTrue(delay1 >= 80, "First delay was ${delay1}ms, expected ~100ms")
+        assertTrue(delay2 >= 180, "Second delay was ${delay2}ms, expected ~200ms")
         assertTrue(delay2 > delay1, "Second delay should be longer than first")
     }
     

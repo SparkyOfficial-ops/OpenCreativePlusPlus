@@ -51,8 +51,9 @@ class ModeManagerImpl(
         // 2. Cleanup for the mode we are leaving
         onModeExit(player, plot, oldMode)
 
-        // 3. Apply new mode setup
-        onModeEnter(player, plot, mode)
+        // 3. Apply new mode setup — returns false if the switch was aborted (e.g. compilation failure)
+        val switched = onModeEnter(player, plot, mode)
+        if (!switched) return
 
         // 4. Restore inventory for the new mode (req 14.2, 14.3, 14.4)
         inventoryManager.loadInventory(player, plot.id, mode)
@@ -97,12 +98,13 @@ class ModeManagerImpl(
 
     /**
      * Apply mode-specific setup when entering [mode].
+     * Returns true if the switch should proceed, false if it was aborted.
      * Requirements: 2.4, 2.5, 2.6, 2.7, 3.1
      */
-    private suspend fun onModeEnter(player: Player, plot: Plot, mode: PlotMode) {
-        when (mode) {
-            PlotMode.BUILD -> applyBuildMode(player)
-            PlotMode.DEV   -> applyDevMode(player, plot)
+    private suspend fun onModeEnter(player: Player, plot: Plot, mode: PlotMode): Boolean {
+        return when (mode) {
+            PlotMode.BUILD -> { applyBuildMode(player); true }
+            PlotMode.DEV   -> { applyDevMode(player, plot); true }
             PlotMode.PLAY  -> applyPlayMode(player, plot)
         }
     }
@@ -132,8 +134,9 @@ class ModeManagerImpl(
 
     /**
      * PLAY mode: scan blocks → compile → register scripts → enable execution (req 2.6, 5.1, 5.3, 23.4, 23.5).
+     * Returns true on success, false if compilation failed and the switch was aborted.
      */
-    private suspend fun applyPlayMode(player: Player, plot: Plot) {
+    private suspend fun applyPlayMode(player: Player, plot: Plot): Boolean {
         val scanner = blockScannerFactory(plot)
         val codeLines = scanner.scanCodingZone()
         val result: CompilationResult = astCompiler.compile(codeLines)
@@ -144,15 +147,14 @@ class ModeManagerImpl(
             result.errors.take(5).forEach { err ->
                 player.sendMessage("§c  - ${err.location}: ${err.message}")
             }
-            // Revert to DEV mode so the player can fix errors
-            currentModes[modeKey(player.uniqueId, plot.id)] = PlotMode.DEV
-            return
+            return false
         }
 
         // Register compiled scripts with the event dispatcher (req 16.1, 16.2)
         eventDispatcher.registerScripts(plot.id, result.scripts)
 
         player.sendMessage("§a[OCP] ${result.scripts.size} script(s) compiled and active.")
+        return true
     }
 
     // -------------------------------------------------------------------------

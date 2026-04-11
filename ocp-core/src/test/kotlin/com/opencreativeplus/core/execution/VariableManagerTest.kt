@@ -30,8 +30,11 @@ class VariableManagerTest {
     /** Helper: create a FindFlow mock that emits [docs]. */
     private fun findFlowOf(vararg docs: Document): FindFlow<Document> {
         val ff = mockk<FindFlow<Document>>(relaxed = true)
-        val result: Document? = docs.firstOrNull()
-        coEvery { ff.firstOrNull() } returns result
+        // FindFlow extends Flow<T>, so we stub collect() to emit the documents
+        coEvery { ff.collect(any()) } coAnswers {
+            val collector = firstArg<kotlinx.coroutines.flow.FlowCollector<Document>>()
+            docs.forEach { collector.emit(it) }
+        }
         return ff
     }
     

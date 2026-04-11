@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for PlotManagerImpl covering plot creation, loading, permissions, and settings.
  *
- * Validates: Requirements 32.5, 13.7
+32.5, 13.7
  */
 class PlotManagerTest {
 

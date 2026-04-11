@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  * - Mode-specific provisioning (BUILD, DEV, PLAY)
  * - Three-state separation (each mode stored/retrieved independently)
  *
- * Validates: Requirements 14.1, 14.5
+14.1, 14.5
  */
 class InventoryManagerTest {
 

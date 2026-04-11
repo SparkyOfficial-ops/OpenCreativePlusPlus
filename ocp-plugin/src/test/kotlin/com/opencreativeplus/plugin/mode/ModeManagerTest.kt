@@ -32,7 +32,7 @@ import kotlin.test.assertEquals
  * - Script compilation trigger when switching to PLAY mode (Requirement 2.6)
  * - Coroutine/execution cancellation when leaving PLAY mode (Requirement 26.2)
  *
- * Validates: Requirements 2.8, 2.9, 26.2
+2.8, 2.9, 26.2
  */
 class ModeManagerTest {
 

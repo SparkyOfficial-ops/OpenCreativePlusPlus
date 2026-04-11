@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for RatingManager and TagManager.
  *
- * Validates: Requirements 21.3, 22.5
+21.3, 22.5
  */
 class RatingAndTaggingTest {
 

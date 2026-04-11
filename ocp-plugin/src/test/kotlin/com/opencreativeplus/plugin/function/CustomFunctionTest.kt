@@ -158,7 +158,7 @@ class FunctionRegistryTest {
 /**
  * Tests for [FunctionCallAction]: function execution when called.
  *
- * Validates: Requirements 15.3
+15.3
  */
 class FunctionCallActionDefinitionTest {
 
@@ -225,7 +225,7 @@ class FunctionCallActionDefinitionTest {
 /**
  * Tests for [FunctionCallAction]: parameter passing into function scope.
  *
- * Validates: Requirements 15.3
+15.3
  */
 class FunctionCallActionParameterTest {
 
@@ -346,7 +346,7 @@ class FunctionCallActionParameterTest {
 /**
  * Tests for [FunctionCallAction]: recursion detection via call-depth limit.
  *
- * Validates: Requirements 15.5
+15.5
  */
 class FunctionCallActionRecursionTest {
 

@@ -3,7 +3,6 @@ package com.opencreativeplus.plugin.logging
 import com.mongodb.kotlin.client.coroutine.FindFlow
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
-import com.opencreativeplus.core.database.DatabaseConfig
 import com.opencreativeplus.core.database.MongoConnectionManager
 import io.mockk.*
 import kotlinx.coroutines.flow.FlowCollector
@@ -20,7 +19,7 @@ import kotlin.test.assertTrue
  * Unit tests for ExecutionLogger — log creation, storage, retrieval, and the
  * 100-execution limit per plot.
  *
- 37.1, 37.2, 37.3, 37.5
+37.1, 37.2, 37.3, 37.5
  */
 class ExecutionLoggerTest {
 
@@ -33,11 +32,13 @@ class ExecutionLoggerTest {
     fun setUp() {
         database = mockk(relaxed = true)
         collection = mockk(relaxed = true)
+        connectionManager = mockk()
 
-        // Real MongoConnectionManager with dummy config — withRetry works without a real DB.
-        connectionManager = MongoConnectionManager(
-            DatabaseConfig(connectionString = "mongodb://localhost:27017", maxRetries = 1, retryDelayMs = 0)
-        )
+        // Stub withRetry to simply execute the block — avoids real MongoDB connection
+        coEvery { connectionManager.withRetry<Any>(any(), any()) } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            (secondArg<suspend () -> Any>())()
+        }
 
         every { database.getCollection<Document>("execution_logs") } returns collection
         executionLogger = ExecutionLogger(database, connectionManager)
@@ -99,7 +100,7 @@ class ExecutionLoggerTest {
             errorMessage = "NullPointerException in SendMessageAction"
         )
 
-        assertTrue(docSlot.isCaptured)
+        assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals("ERROR", docSlot.captured.getString("status"))
         assertEquals("NullPointerException in SendMessageAction", docSlot.captured.getString("error_message"))
     }
@@ -117,7 +118,7 @@ class ExecutionLoggerTest {
             errorMessage = "Watchdog: operation limit exceeded"
         )
 
-        assertTrue(docSlot.isCaptured)
+        assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals("TERMINATED", docSlot.captured.getString("status"))
     }
 
@@ -135,8 +136,43 @@ class ExecutionLoggerTest {
             endTime = 5_750L
         )
 
-        assertTrue(docSlot.isCaptured)
+        assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals(750L, docSlot.captured.getLong("duration_ms"))
+    }
+
+    @Test
+    fun `logExecution stores plot_id as string`() = runBlocking {
+        val plotId = UUID.randomUUID()
+        val docSlot = slot<Document>()
+        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+
+        executionLogger.logExecution(
+            plotId = plotId,
+            eventType = "player_join",
+            actionsExecuted = emptyList(),
+            status = ExecutionLogger.ExecutionStatus.SUCCESS
+        )
+
+        assertTrue(docSlot.isCaptured, "insertOne should have been called")
+        assertEquals(plotId.toString(), docSlot.captured.getString("plot_id"))
+    }
+
+    @Test
+    fun `logExecution stores empty actions list`() = runBlocking {
+        val docSlot = slot<Document>()
+        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+
+        executionLogger.logExecution(
+            plotId = UUID.randomUUID(),
+            eventType = "player_join",
+            actionsExecuted = emptyList(),
+            status = ExecutionLogger.ExecutionStatus.SUCCESS
+        )
+
+        assertTrue(docSlot.isCaptured, "insertOne should have been called")
+        @Suppress("UNCHECKED_CAST")
+        val actions = docSlot.captured.get("actions") as List<String>
+        assertTrue(actions.isEmpty())
     }
 
 

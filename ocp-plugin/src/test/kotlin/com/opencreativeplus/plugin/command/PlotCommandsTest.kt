@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for PlotCommands covering permission enforcement and mode switching.
  *
- * Validates: Requirements 32.2, 32.5
+32.2, 32.5
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlotCommandsTest {

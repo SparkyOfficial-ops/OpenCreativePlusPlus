@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for PlotBrowserGUI covering plot loading/display, tag filtering, and rating sort.
  *
- * Validates: Requirements 21.4, 22.4
+21.4, 22.4
  */
 class PlotBrowserGUITest {
 

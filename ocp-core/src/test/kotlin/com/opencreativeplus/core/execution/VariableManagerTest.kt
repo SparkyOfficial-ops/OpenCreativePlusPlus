@@ -5,7 +5,6 @@ import com.mongodb.kotlin.client.coroutine.FindFlow
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.mockk.*
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.bson.Document
 import org.junit.jupiter.api.BeforeEach
@@ -31,7 +30,8 @@ class VariableManagerTest {
     /** Helper: create a FindFlow mock that emits [docs]. */
     private fun findFlowOf(vararg docs: Document): FindFlow<Document> {
         val ff = mockk<FindFlow<Document>>(relaxed = true)
-        coEvery { ff.firstOrNull() } returns docs.firstOrNull()
+        val result: Document? = docs.firstOrNull()
+        coEvery { ff.firstOrNull() } returns result
         return ff
     }
     

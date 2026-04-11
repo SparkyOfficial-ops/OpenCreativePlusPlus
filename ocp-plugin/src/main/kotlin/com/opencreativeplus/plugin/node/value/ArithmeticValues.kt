@@ -64,7 +64,10 @@ class LessThanValue(private val left: Any?, private val right: Any?) : IValue<Bo
 // Helpers
 // -------------------------------------------------------------------------
 
-private fun resolveRaw(value: Any?, context: ExecutionContext): Any? {
+private suspend fun resolveRaw(value: Any?, context: ExecutionContext): Any? {
+    if (value is IValue<*>) {
+        return value.compute(context)
+    }
     if (value is String && value.startsWith("$")) {
         val name = value.substring(1)
         return context.localScope.get(name)
@@ -74,7 +77,7 @@ private fun resolveRaw(value: Any?, context: ExecutionContext): Any? {
     return value
 }
 
-private fun resolve(value: Any?, context: ExecutionContext): Double {
+private suspend fun resolve(value: Any?, context: ExecutionContext): Double {
     val raw = resolveRaw(value, context)
     return when (raw) {
         is Number -> raw.toDouble()

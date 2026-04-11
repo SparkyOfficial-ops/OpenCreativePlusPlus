@@ -18,7 +18,7 @@ import java.util.logging.Logger
  *
  * Register via [start]; cancel via [stop].
  *
- * Requirements: 34.1, 34.3, 34.4, 34.5
+ 34.1, 34.3, 34.4, 34.5
  */
 class TpsMonitorTask(
     private val plugin: JavaPlugin,

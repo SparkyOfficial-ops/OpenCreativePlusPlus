@@ -10,7 +10,7 @@ import java.util.UUID
 /**
  * Logs script execution events to the MongoDB execution_logs collection.
  *
- * Requirements: 37.1, 37.2, 37.3, 37.4, 37.5
+ 37.1, 37.2, 37.3, 37.4, 37.5
  */
 class ExecutionLogger(
     private val database: MongoDatabase,

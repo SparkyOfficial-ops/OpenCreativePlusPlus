@@ -12,14 +12,14 @@ import org.bukkit.Location
  * Compilation errors are collected and returned in [CompilationResult] rather than thrown,
  * so all errors can be reported at once.
  *
- * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 23.1, 23.2, 23.3, 23.4, 23.5
+ 5.1, 5.2, 5.3, 5.4, 5.5, 23.1, 23.2, 23.3, 23.4, 23.5
  */
 class ASTCompiler(private val nodeRegistry: NodeRegistry) {
 
     /**
      * Compile all [codeLines] and return a [CompilationResult] containing
      * successfully compiled scripts and any errors encountered.
-     * Requirements: 5.1, 5.2, 5.3, 23.4
+     5.1, 5.2, 5.3, 23.4
      */
     fun compile(codeLines: List<CodeLine>): CompilationResult {
         val errors = mutableListOf<CompilationError>()
@@ -39,7 +39,7 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
     /**
      * Compile a single [CodeLine] into a [CompiledScript].
      * Throws [CompilationException] on any error.
-     * Requirements: 5.1, 5.2, 23.1, 23.2, 23.3
+     5.1, 5.2, 23.1, 23.2, 23.3
      */
     private fun compileCodeLine(codeLine: CodeLine): CompiledScript {
         if (codeLine.nodes.isEmpty()) {

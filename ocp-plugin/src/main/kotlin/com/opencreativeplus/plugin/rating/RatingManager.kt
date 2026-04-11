@@ -8,7 +8,7 @@ import java.util.UUID
 /**
  * Manages plot ratings (likes) with duplicate prevention.
  *
- * Requirements: 21.2, 21.3, 21.5
+ 21.2, 21.3, 21.5
  */
 class RatingManager(
     private val plotPersistence: PlotPersistence
@@ -16,7 +16,7 @@ class RatingManager(
 
     /**
      * Rate (like) a plot. Returns false if the player has already rated it.
-     * Requirements: 21.2, 21.3
+     21.2, 21.3
      */
     suspend fun ratePlot(player: Player, plot: Plot): Boolean {
         if (plot.metadata.ratedBy.contains(player.uniqueId)) {

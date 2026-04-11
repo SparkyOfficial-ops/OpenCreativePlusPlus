@@ -13,7 +13,7 @@ import org.bukkit.command.CommandSender
  *
  * Requires the `ocp.admin` permission.
  *
- * Requirements: 34.3
+ 34.3
  */
 class TpsCommand(
     private val tpsMonitor: TPSMonitor,

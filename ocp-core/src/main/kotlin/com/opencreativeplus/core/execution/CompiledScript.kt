@@ -10,7 +10,7 @@ import com.opencreativeplus.api.node.IEvent
  * it contains the triggering event, the ordered list of actions to execute, and
  * a human-readable location string for error reporting.
  *
- * Requirements: 6.1, 6.2
+ 6.1, 6.2
  */
 data class CompiledScript(
     val event: IEvent,

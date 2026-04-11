@@ -10,7 +10,7 @@ import com.opencreativeplus.core.execution.ExecutionContextImpl
  * Creates a new local scope for the function, passes parameters,
  * and detects recursion exceeding [MAX_DEPTH].
  *
- * Requirements: 15.3, 15.4, 15.5
+ 15.3, 15.4, 15.5
  */
 class FunctionCallAction(
     private val functionName: String,

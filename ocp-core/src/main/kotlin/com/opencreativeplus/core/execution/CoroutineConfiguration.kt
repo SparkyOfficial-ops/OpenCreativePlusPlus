@@ -10,7 +10,7 @@ import kotlin.coroutines.CoroutineContext
  * - SupervisorJob ensures child coroutine failures don't cancel siblings
  * - syncDispatcher delegates to a provided callback so ocp-core stays Bukkit-free
  *
- * Requirements: 6.1, 6.2, 28.1, 28.2
+ 6.1, 6.2, 28.1, 28.2
  */
 class CoroutineConfiguration(
     private val syncRunner: (() -> Unit) -> Unit

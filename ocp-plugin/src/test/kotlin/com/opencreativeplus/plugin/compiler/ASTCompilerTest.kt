@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 /**
  * Unit tests for [ASTCompiler].
  *
- * Requirements: 5.3, 23.5, 33.5
+ 5.3, 23.5, 33.5
  */
 class ASTCompilerTest {
 

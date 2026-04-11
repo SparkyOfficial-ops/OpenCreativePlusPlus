@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Scripts are indexed per-plot so that only scripts belonging to the active plot are executed.
  * Each matching script is launched in a separate coroutine for isolation (req 16.3).
  *
- * Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 28.1
+ 16.1, 16.2, 16.3, 16.4, 16.5, 28.1
  */
 class EventDispatcher(
     private val executionEngine: ExecutionEngine,
@@ -26,7 +26,7 @@ class EventDispatcher(
     /**
      * Index [scripts] for [plotId] by their event type.
      * Replaces any previously registered scripts for this plot.
-     * Requirements: 16.1, 16.2
+     16.1, 16.2
      */
     fun registerScripts(plotId: UUID, scripts: List<CompiledScript>) {
         scriptsByEvent[plotId] = scripts.groupBy { it.event.eventType }
@@ -34,7 +34,7 @@ class EventDispatcher(
 
     /**
      * Remove all scripts registered for [plotId].
-     * Requirements: 16.2
+     16.2
      */
     fun unregisterScripts(plotId: UUID) {
         scriptsByEvent.remove(plotId)
@@ -43,7 +43,7 @@ class EventDispatcher(
     /**
      * Dispatch [eventType] to all matching scripts for [plotId].
      * Each script is launched in its own coroutine so failures are isolated (req 16.5).
-     * Requirements: 16.2, 16.3, 16.4, 28.1
+     16.2, 16.3, 16.4, 28.1
      */
     fun dispatchEvent(
         plotId: UUID,

@@ -24,7 +24,7 @@ import com.opencreativeplus.core.execution.CompiledScript
  * ]
  * ```
  *
- * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 33.1, 33.2, 33.3, 33.4, 33.5
+ 12.1, 12.2, 12.3, 12.4, 12.5, 33.1, 33.2, 33.3, 33.4, 33.5
  */
 class ASTSerializer(private val nodeRegistry: NodeRegistry) {
 
@@ -32,7 +32,7 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
 
     /**
      * Serialize a list of [CompiledScript]s to a JSON string.
-     * Requirements: 12.1, 12.2, 33.1, 33.2
+     12.1, 12.2, 33.1, 33.2
      */
     fun serialize(scripts: List<CompiledScript>): String {
         val jsonArray = JsonArray()
@@ -58,7 +58,7 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
     /**
      * Deserialize a JSON string back into a list of [CompiledScript]s.
      * Validates all node types against the registry.
-     * Requirements: 12.3, 12.4, 12.5, 33.3, 33.4, 33.5
+     12.3, 12.4, 12.5, 33.3, 33.4, 33.5
      */
     fun deserialize(json: String): DeserializationResult {
         val errors = mutableListOf<String>()
@@ -111,20 +111,20 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
 
     /**
      * Find an event instance by nodeId. Requires registry iteration support.
-     * Requirements: 33.4
+     33.4
      */
     private fun findEventByNodeId(nodeId: String): com.opencreativeplus.api.node.IEvent? = null
 
     /**
      * Find an action instance by nodeId. Requires registry iteration support.
-     * Requirements: 33.4
+     33.4
      */
     private fun findActionByNodeId(nodeId: String, params: Map<String, Any>): com.opencreativeplus.api.node.IAction? = null
 }
 
 /**
  * Result of deserializing a JSON AST string.
- * Requirements: 12.4, 12.5
+ 12.4, 12.5
  */
 data class DeserializationResult(
     val scripts: List<CompiledScript>,

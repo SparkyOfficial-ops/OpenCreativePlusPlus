@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit tests for BlockScanner.
- * Requirements: 4.3, 19.5, 40.3
+ 4.3, 19.5, 40.3
  */
 class BlockScannerTest {
 

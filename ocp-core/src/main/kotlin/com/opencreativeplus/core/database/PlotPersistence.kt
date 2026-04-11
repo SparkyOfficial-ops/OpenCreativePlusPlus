@@ -13,7 +13,7 @@ import java.util.UUID
  * Plot persistence layer for MongoDB operations.
  * Handles plot serialization/deserialization and CRUD operations.
  * 
- * Requirements: 17.1, 39.1, 39.2, 39.3, 39.4, 39.5
+ 17.1, 39.1, 39.2, 39.3, 39.4, 39.5
  */
 class PlotPersistence(
     private val database: MongoDatabase,

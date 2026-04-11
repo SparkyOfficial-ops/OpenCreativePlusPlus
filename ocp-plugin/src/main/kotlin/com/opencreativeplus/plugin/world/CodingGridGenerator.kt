@@ -25,7 +25,7 @@ class CodingGridGenerator {
 
     /**
      * Generate the full coding grid in [world].
-     * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+     3.1, 3.2, 3.3, 3.4, 3.5
      */
     fun generate(world: World) {
         for (levelIndex in 0 until LEVEL_COUNT) {
@@ -47,7 +47,7 @@ class CodingGridGenerator {
     /**
      * Generate a single coding strip starting at (0, y, z).
      * First block is BLUE_STAINED_GLASS, rest alternate WHITE/GRAY.
-     * Requirements: 3.2, 3.3
+     3.2, 3.3
      */
     private fun generateStrip(world: World, y: Int, z: Int) {
         for (x in 0 until STRIP_LENGTH) {

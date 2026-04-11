@@ -16,7 +16,7 @@ import org.bukkit.event.player.PlayerJoinEvent
  * Only dispatches events when the plot is in PLAY mode (req 16.1).
  * Exceptions are caught per-handler to avoid affecting other listeners (req 16.5, 38.1).
  *
- * Requirements: 16.1, 16.5, 38.1
+ 16.1, 16.5, 38.1
  */
 class PlotEventListener(
     private val eventDispatcher: EventDispatcher,

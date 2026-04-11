@@ -11,7 +11,7 @@ import org.bukkit.inventory.meta.ItemMeta
  * Displays compilation errors in a chest GUI.
  * Each error is shown as a barrier block with location and message in lore.
  *
- * Requirements: 23.5
+ 23.5
  */
 object CompilationErrorGUI {
 

@@ -36,7 +36,7 @@ class BlockScanner(
 
     /**
      * Scan the entire coding zone and return all discovered CodeLines.
-     * Requirements: 4.1, 20.1, 20.2, 20.3
+     4.1, 20.1, 20.2, 20.3
      */
     fun scanCodingZone(): List<CodeLine> {
         val codeLines = mutableListOf<CodeLine>()
@@ -48,7 +48,7 @@ class BlockScanner(
 
     /**
      * Scan a single Y level for blue glass strip starts.
-     * Requirements: 4.1, 20.2
+     4.1, 20.2
      */
     private fun scanLevel(y: Int): List<CodeLine> {
         val lines = mutableListOf<CodeLine>()
@@ -65,7 +65,7 @@ class BlockScanner(
      * Read a single coding strip starting at [startBlock] (a blue glass block).
      * Moves in the +X direction, collecting blocks above each glass block.
      * Stops when the floor block is no longer a glass strip material.
-     * Requirements: 4.2, 4.3, 40.1, 40.2, 40.3
+     4.2, 4.3, 40.1, 40.2, 40.3
      */
     private fun scanStrip(startBlock: Block): CodeLine {
         val nodes = mutableListOf<ScannedNode>()
@@ -88,7 +88,7 @@ class BlockScanner(
 
     /**
      * Extract parameters from signs attached to [block] and from a chest placed above it.
-     * Requirements: 4.5, 4.6, 19.1, 19.2, 19.3, 19.4
+     4.5, 4.6, 19.1, 19.2, 19.3, 19.4
      */
     internal fun extractParameters(block: Block): Map<String, Any> {
         val params = mutableMapOf<String, Any>()
@@ -112,7 +112,7 @@ class BlockScanner(
 
     /**
      * Parse sign lines for key=value pairs.
-     * Requirements: 19.2, 19.3, 19.4
+     19.2, 19.3, 19.4
      */
     internal fun parseSignText(lines: Array<String>): Map<String, Any> {
         val params = mutableMapOf<String, Any>()
@@ -132,7 +132,7 @@ class BlockScanner(
 
     /**
      * Parse a raw string value into Int, Double, VariableReference, or String.
-     * Requirements: 19.3, 19.4
+     19.3, 19.4
      */
     internal fun parseValue(value: String): Any {
         value.toIntOrNull()?.let { return it }

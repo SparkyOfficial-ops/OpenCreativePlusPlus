@@ -7,7 +7,7 @@ import com.opencreativeplus.api.node.IAction
  * Action node that sends a message to the player.
  * Represented by PAPER in the coding grid.
  * Supports variable references in the message using $varname syntax.
- * Requirements: 7.2, 7.5
+ 7.2, 7.5
  */
 class SendMessageAction(private val params: Map<String, Any>) : IAction {
     override val nodeId: String = "send_message"

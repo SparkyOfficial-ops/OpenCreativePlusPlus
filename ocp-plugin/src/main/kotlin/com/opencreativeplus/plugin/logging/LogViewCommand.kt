@@ -12,7 +12,7 @@ import org.bson.Document
 /**
  * /ocplogs command — shows the most recent 100 execution logs for the player's plot.
  *
- * Requirements: 37.4, 37.5
+ 37.4, 37.5
  */
 class LogViewCommand(
     private val executionLogger: ExecutionLogger,

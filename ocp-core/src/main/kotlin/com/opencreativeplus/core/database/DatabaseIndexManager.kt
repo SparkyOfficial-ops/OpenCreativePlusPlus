@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
  * Manages database indexes for all collections.
  * Creates indexes for owner, rating, tags, timestamps, and TTL for execution logs.
  * 
- * Requirements: 17.1, 17.2, 17.3, 17.4, 37.5
+ 17.1, 17.2, 17.3, 17.4, 37.5
  */
 class DatabaseIndexManager(private val database: MongoDatabase) {
     

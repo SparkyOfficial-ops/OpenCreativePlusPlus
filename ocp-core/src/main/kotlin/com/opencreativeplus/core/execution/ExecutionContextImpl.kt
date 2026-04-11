@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * scheduler — the plugin layer supplies a dispatcher that posts work to the
  * main thread (see [CoroutineConfiguration.syncDispatcher]).
  *
- * Requirements: 24.1, 24.2, 24.3, 24.4, 24.5
+ 24.1, 24.2, 24.3, 24.4, 24.5
  */
 class ExecutionContextImpl(
     override val plotId: UUID,

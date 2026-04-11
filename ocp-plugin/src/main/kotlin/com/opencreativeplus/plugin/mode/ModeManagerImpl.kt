@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
  *  2. Apply mode-specific setup.
  *  3. Restore the player's inventory for the new mode.
  *
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 5.1, 5.3, 23.4, 23.5, 26.2
+ 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 5.1, 5.3, 23.4, 23.5, 26.2
  */
 class ModeManagerImpl(
     private val inventoryManager: InventoryManager,
@@ -71,7 +71,7 @@ class ModeManagerImpl(
 
     /**
      * Perform cleanup when leaving [mode].
-     * Requirements: 2.8, 2.9, 5.5, 26.2
+     2.8, 2.9, 5.5, 26.2
      */
     private fun onModeExit(player: Player, plot: Plot, mode: PlotMode) {
         when (mode) {
@@ -99,7 +99,7 @@ class ModeManagerImpl(
     /**
      * Apply mode-specific setup when entering [mode].
      * Returns true if the switch should proceed, false if it was aborted.
-     * Requirements: 2.4, 2.5, 2.6, 2.7, 3.1
+     2.4, 2.5, 2.6, 2.7, 3.1
      */
     private suspend fun onModeEnter(player: Player, plot: Plot, mode: PlotMode): Boolean {
         return when (mode) {

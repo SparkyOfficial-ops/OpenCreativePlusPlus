@@ -7,7 +7,7 @@ import org.bukkit.entity.Player
 /**
  * Manages plot tags with a maximum of 5 tags per plot.
  *
- * Requirements: 22.1, 22.2, 22.3, 22.5
+ 22.1, 22.2, 22.3, 22.5
  */
 class TagManager(
     private val plotPersistence: PlotPersistence
@@ -20,7 +20,7 @@ class TagManager(
     /**
      * Add a tag to a plot. Only the owner can add tags.
      * Returns false if the tag limit is reached or tag already exists.
-     * Requirements: 22.1, 22.2, 22.5
+     22.1, 22.2, 22.5
      */
     suspend fun addTag(player: Player, plot: Plot, tag: String): Boolean {
         if (plot.owner != player.uniqueId) {
@@ -44,7 +44,7 @@ class TagManager(
 
     /**
      * Remove a tag from a plot. Only the owner can remove tags.
-     * Requirements: 22.3
+     22.3
      */
     suspend fun removeTag(player: Player, plot: Plot, tag: String): Boolean {
         if (plot.owner != player.uniqueId) {

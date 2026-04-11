@@ -20,7 +20,7 @@ import kotlin.test.assertSame
  * Unit tests for VariableManager.
  * Tests variable resolution order, scope isolation, and persistence.
  * 
- * Requirements: 9.4, 9.5, 9.6
+ 9.4, 9.5, 9.6
  */
 class VariableManagerTest {
     
@@ -109,7 +109,7 @@ class VariableManagerTest {
     fun `test getSavedScope returns cached instance on subsequent access`() = runBlocking {
         // Given: A plot ID
         val plotId = UUID.randomUUID()
-        coEvery { collection.find(Document("_id", plotId.toString())) } returns flowOf()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
         
         // When: Getting saved scope multiple times
         val scope1 = variableManager.getSavedScope(plotId)
@@ -126,7 +126,7 @@ class VariableManagerTest {
     fun `test getSavedScope creates empty scope when no database document exists`() = runBlocking {
         // Given: A plot ID with no database document
         val plotId = UUID.randomUUID()
-        coEvery { collection.find(Document("_id", plotId.toString())) } returns flowOf()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
         
         // When: Getting saved scope
         val scope = variableManager.getSavedScope(plotId)
@@ -140,7 +140,7 @@ class VariableManagerTest {
     fun `test savePlotVariables persists to database`() = runBlocking {
         // Given: A plot with saved scope variables
         val plotId = UUID.randomUUID()
-        coEvery { collection.find(Document("_id", plotId.toString())) } returns flowOf()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
         
         val scope = variableManager.getSavedScope(plotId)
         scope.set("var1", "value1")
@@ -215,7 +215,7 @@ class VariableManagerTest {
     fun `test removeSavedScope removes scope from cache`() = runBlocking {
         // Given: A plot with a loaded saved scope
         val plotId = UUID.randomUUID()
-        coEvery { collection.find(Document("_id", plotId.toString())) } returns flowOf()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
         
         val scope1 = variableManager.getSavedScope(plotId)
         scope1.set("var1", "value1")

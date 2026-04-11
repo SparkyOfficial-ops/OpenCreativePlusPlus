@@ -63,7 +63,7 @@ private fun capturingAction(varName: String, captured: MutableList<Any?>): IActi
 /**
  * Tests for [FunctionRegistry]: function definition storage and lookup.
  *
- * Requirements: 15.1, 15.2
+ 15.1, 15.2
  */
 class FunctionRegistryTest {
 

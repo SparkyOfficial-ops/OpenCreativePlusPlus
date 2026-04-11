@@ -24,7 +24,7 @@ import java.util.UUID
  * Each player has three separate inventory states per plot (BUILD, DEV, PLAY).
  * Inventories are serialized to Base64 and stored in MongoDB.
  *
- * Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 17.4, 36.1, 36.2, 36.3, 36.4
+ 14.1, 14.2, 14.3, 14.4, 14.5, 17.4, 36.1, 36.2, 36.3, 36.4
  */
 class InventoryManager(
     private val database: MongoDatabase,
@@ -39,7 +39,7 @@ class InventoryManager(
 
     /**
      * Save the player's current inventory for [mode] on [plotId].
-     * Requirements: 14.1, 14.5, 17.4
+     14.1, 14.5, 17.4
      */
     suspend fun saveInventory(player: Player, plotId: UUID, mode: PlotMode) {
         val contents = serializeContents(player.inventory.contents)
@@ -71,7 +71,7 @@ class InventoryManager(
     /**
      * Load and apply the saved inventory for [mode] on [plotId] to [player].
      * If no saved state exists, clears the inventory.
-     * Requirements: 14.2, 14.3, 14.4
+     14.2, 14.3, 14.4
      */
     suspend fun loadInventory(player: Player, plotId: UUID, mode: PlotMode) {
         val doc = withContext(Dispatchers.IO) {
@@ -100,7 +100,7 @@ class InventoryManager(
     /**
      * Provision the DEV mode inventory: all registered action node blocks,
      * glass blocks, signs, and chests in infinite quantities.
-     * Requirements: 36.1, 36.2, 36.3, 36.4
+     36.1, 36.2, 36.3, 36.4
      */
     fun provisionDevInventory(player: Player) {
         player.inventory.clear()

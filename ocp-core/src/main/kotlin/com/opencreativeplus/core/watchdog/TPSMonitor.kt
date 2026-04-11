@@ -9,7 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
  * from the elapsed time since the previous tick. The rolling average is maintained
  * over the last 10 measurements (≈ 10 seconds when called every server tick).
  *
- * Requirements: 34.1, 34.2
+ 34.1, 34.2
  */
 class TPSMonitor {
 

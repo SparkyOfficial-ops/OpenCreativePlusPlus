@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * Unit tests for MongoConnectionManager.
  * Tests connection retry logic with simulated failures.
  * 
- * Requirements: 17.5, 17.6, 38.2
+ 17.5, 17.6, 38.2
  */
 class MongoConnectionManagerTest {
     

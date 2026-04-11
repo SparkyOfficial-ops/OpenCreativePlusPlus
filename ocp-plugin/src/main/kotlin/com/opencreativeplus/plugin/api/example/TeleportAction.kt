@@ -13,7 +13,7 @@ import com.opencreativeplus.api.node.IAction
  * }
  * ```
  *
- * Requirements: 11.1, 11.2
+ 11.1, 11.2
  */
 class TeleportAction(params: Map<String, Any>) : IAction {
 

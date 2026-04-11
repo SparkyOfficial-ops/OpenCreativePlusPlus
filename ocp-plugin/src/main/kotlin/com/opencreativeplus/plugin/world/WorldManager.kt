@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Uses standard Bukkit world management with a hook for SlimeWorldManager
  * when available (Requirements 27.1, 27.2, 27.3).
  *
- * Requirements: 1.1, 1.2, 1.3, 1.5, 27.1, 27.2, 27.3, 27.4, 27.5, 35.1, 35.2, 35.3, 35.4
+ 1.1, 1.2, 1.3, 1.5, 27.1, 27.2, 27.3, 27.4, 27.5, 35.1, 35.2, 35.3, 35.4
  */
 class WorldManager(
     private val codingGridGenerator: CodingGridGenerator = CodingGridGenerator()
@@ -26,7 +26,7 @@ class WorldManager(
 
     /**
      * Create both worlds for a new plot.
-     * Requirements: 1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
+     1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
      */
     suspend fun createPlotWorlds(plotId: UUID): Pair<World, World> = withContext(Dispatchers.IO) {
         val mainWorldName = plotId.toString()
@@ -44,7 +44,7 @@ class WorldManager(
 
     /**
      * Load existing worlds for a plot (fallback to creation if not found).
-     * Requirements: 1.5, 27.2, 27.4
+     1.5, 27.2, 27.4
      */
     suspend fun loadPlotWorlds(plotId: UUID): Pair<World, World> = withContext(Dispatchers.IO) {
         val mainWorldName = plotId.toString()
@@ -63,7 +63,7 @@ class WorldManager(
 
     /**
      * Unload both worlds for a plot, saving state.
-     * Requirements: 27.5
+     27.5
      */
     suspend fun unloadPlotWorlds(plotId: UUID) = withContext(Dispatchers.IO) {
         val (mainWorld, devWorld) = loadedWorlds.remove(plotId) ?: return@withContext
@@ -90,7 +90,7 @@ class WorldManager(
 
     /**
      * Configure the main plot world: difficulty, PvP off, mob spawning off, world border.
-     * Requirements: 1.1, 35.1, 35.2, 35.3, 35.4
+     1.1, 35.1, 35.2, 35.3, 35.4
      */
     private fun configureMainWorld(world: World) {
         world.difficulty = Difficulty.PEACEFUL
@@ -108,7 +108,7 @@ class WorldManager(
 
     /**
      * Configure the dev world and generate the coding grid.
-     * Requirements: 1.4, 3.1
+     1.4, 3.1
      */
     private fun configureDevWorld(world: World) {
         world.difficulty = Difficulty.PEACEFUL

@@ -8,7 +8,7 @@ import kotlinx.coroutines.delay
  * Action node that pauses script execution for a specified duration.
  * Represented by CLOCK in the coding grid.
  * Uses coroutine delay to suspend without blocking the main thread.
- * Requirements: 7.3, 7.6
+ 7.3, 7.6
  */
 class WaitAction(private val params: Map<String, Any>) : IAction {
     override val nodeId: String = "wait"

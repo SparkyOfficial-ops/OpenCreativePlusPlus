@@ -5,7 +5,7 @@ import com.opencreativeplus.api.node.IValue
 
 /**
  * Arithmetic and comparison value nodes.
- * Requirements: 31.1, 31.2, 31.3
+ 31.1, 31.2, 31.3
  */
 
 class AddValue(private val left: Any?, private val right: Any?) : IValue<Double> {

@@ -11,7 +11,7 @@ import kotlin.test.assertTrue
  * Integration tests for DatabaseIndexManager using Testcontainers.
  * Tests index creation for all collections.
  * 
- * Requirements: 17.1, 17.2, 17.3, 17.4, 37.5
+ 17.1, 17.2, 17.3, 17.4, 37.5
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseIndexManagerTest {

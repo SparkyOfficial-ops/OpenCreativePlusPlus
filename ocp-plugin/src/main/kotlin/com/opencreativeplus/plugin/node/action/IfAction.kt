@@ -8,7 +8,7 @@ import com.opencreativeplus.api.node.ICondition
  * Conditional branching action node.
  * Executes [thenActions] if [condition] evaluates to true, otherwise [elseActions].
  *
- * Requirements: 30.3
+ 30.3
  */
 class IfAction(
     private val condition: ICondition,

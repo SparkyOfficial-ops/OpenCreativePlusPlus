@@ -17,7 +17,7 @@ import org.bukkit.inventory.meta.ItemMeta
 /**
  * GUI for configuring plot settings: biome, time, PvP, mob spawning.
  *
- * Requirements: 13.1, 39.1, 39.2, 22.1, 22.2
+ 13.1, 39.1, 39.2, 22.1, 22.2
  */
 class PlotConfigGUI(
     private val plotManager: PlotManagerImpl,

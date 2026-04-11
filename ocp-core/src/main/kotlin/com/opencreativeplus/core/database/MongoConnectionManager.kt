@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
  * MongoDB connection manager with connection pooling and retry logic.
  * Implements retry mechanism for failed database operations (up to 3 attempts).
  * 
- * Requirements: 17.1, 17.5
+ 17.1, 17.5
  */
 class MongoConnectionManager(private val config: DatabaseConfig) {
     

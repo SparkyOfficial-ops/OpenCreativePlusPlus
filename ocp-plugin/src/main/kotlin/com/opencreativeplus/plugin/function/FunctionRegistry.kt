@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Stores custom function definitions per plot.
  * A function is a named list of actions with optional parameter names.
  *
- * Requirements: 15.1, 15.2
+ 15.1, 15.2
  */
 class FunctionRegistry {
 
@@ -23,7 +23,7 @@ class FunctionRegistry {
 
     /**
      * Register a function for a plot.
-     * Requirements: 15.1, 15.2
+     15.1, 15.2
      */
     fun register(plotId: UUID, definition: FunctionDefinition) {
         functions.getOrPut(plotId) { ConcurrentHashMap() }[definition.name] = definition

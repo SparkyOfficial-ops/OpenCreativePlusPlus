@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong
  * 3. **Memory limit** – terminates all scripts for a plot when its tracked allocation
  *    exceeds [MAX_MEMORY_BYTES].
  *
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 29.1, 29.2, 29.3, 29.4
+ 8.1, 8.2, 8.3, 8.4, 8.5, 8.6, 29.1, 29.2, 29.3, 29.4
  */
 class Watchdog(private val tpsMonitor: TPSMonitor) {
 
@@ -78,7 +78,7 @@ class Watchdog(private val tpsMonitor: TPSMonitor) {
      * Record [bytes] of memory allocated by [plotId]'s scripts.
      * Accumulates until [resetMemoryTracking] is called.
      *
-     * Requirements: 29.1
+     29.1
      */
     fun trackMemoryAllocation(plotId: UUID, bytes: Long) {
         plotMemoryUsage.getOrPut(plotId) { AtomicLong(0L) }.addAndGet(bytes)
@@ -88,7 +88,7 @@ class Watchdog(private val tpsMonitor: TPSMonitor) {
      * Reset memory tracking for [plotId].
      * Should be called when a plot switches to BUILD or DEV mode.
      *
-     * Requirements: 29.4
+     29.4
      */
     fun resetMemoryTracking(plotId: UUID) {
         plotMemoryUsage.remove(plotId)

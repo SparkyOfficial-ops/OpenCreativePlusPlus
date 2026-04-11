@@ -5,7 +5,7 @@ import com.opencreativeplus.api.node.ICondition
 
 /**
  * Evaluates two values for equality.
- * Requirements: 30.1, 30.2
+ 30.1, 30.2
  */
 class EqualsCondition(
     private val left: Any?,
@@ -19,7 +19,7 @@ class EqualsCondition(
 
 /**
  * Evaluates whether left > right (numeric comparison).
- * Requirements: 30.1, 30.2
+ 30.1, 30.2
  */
 class GreaterThanCondition(
     private val left: Any?,
@@ -36,7 +36,7 @@ class GreaterThanCondition(
 
 /**
  * Evaluates whether left < right (numeric comparison).
- * Requirements: 30.1, 30.2
+ 30.1, 30.2
  */
 class LessThanCondition(
     private val left: Any?,

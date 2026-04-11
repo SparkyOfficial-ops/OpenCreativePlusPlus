@@ -17,7 +17,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Implementation of [PlotManager] that coordinates world creation, database persistence,
  * and in-memory plot state.
  *
- * Requirements: 1.1, 1.2, 17.1, 32.1, 32.2, 32.3, 32.4, 32.5,
+ 1.1, 1.2, 17.1, 32.1, 32.2, 32.3, 32.4, 32.5,
  *               13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7
  */
 class PlotManagerImpl(
@@ -38,7 +38,7 @@ class PlotManagerImpl(
 
     /**
      * Create a new plot for [owner]: generate worlds, persist to DB, cache in memory.
-     * Requirements: 1.1, 1.2, 17.1, 32.1
+     1.1, 1.2, 17.1, 32.1
      */
     override suspend fun createPlot(owner: UUID): Plot {
         val plotId = UUID.randomUUID()
@@ -70,7 +70,7 @@ class PlotManagerImpl(
 
     /**
      * Load a plot from the database and its worlds.
-     * Requirements: 17.1, 17.6
+     17.1, 17.6
      */
     override suspend fun loadPlot(plotId: UUID): Plot {
         val plot = plotPersistence.loadPlot(plotId)
@@ -85,7 +85,7 @@ class PlotManagerImpl(
 
     /**
      * Unload a plot: save state, unload worlds, remove from cache.
-     * Requirements: 27.5
+     27.5
      */
     override suspend fun unloadPlot(plotId: UUID) {
         val plot = loadedPlots[plotId] ?: return
@@ -114,14 +114,14 @@ class PlotManagerImpl(
 
     /**
      * Returns true if [player] can edit the plot (owner or trusted).
-     * Requirements: 32.2, 32.3, 32.4
+     32.2, 32.3, 32.4
      */
     fun canEdit(player: Player, plot: Plot): Boolean =
         plot.owner == player.uniqueId || plot.trustedPlayers.contains(player.uniqueId)
 
     /**
      * Add a trusted player to the plot.
-     * Requirements: 32.4
+     32.4
      */
     suspend fun addTrustedPlayer(plotId: UUID, playerId: UUID) {
         val plot = loadedPlots[plotId] ?: return
@@ -135,7 +135,7 @@ class PlotManagerImpl(
 
     /**
      * Remove a trusted player from the plot.
-     * Requirements: 32.4
+     32.4
      */
     suspend fun removeTrustedPlayer(plotId: UUID, playerId: UUID) {
         val plot = loadedPlots[plotId] ?: return
@@ -153,7 +153,7 @@ class PlotManagerImpl(
 
     /**
      * Update plot settings and apply them immediately to the main world.
-     * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6
+     13.1, 13.2, 13.3, 13.4, 13.5, 13.6
      */
     suspend fun updateSettings(plotId: UUID, settings: PlotSettings) {
         val plot = loadedPlots[plotId] ?: return
@@ -171,7 +171,7 @@ class PlotManagerImpl(
 
     /**
      * Get the current mode for a plot (delegates to ModeManager).
-     * Requirements: 13.7
+     13.7
      */
     fun getCurrentMode(plot: Plot): PlotMode {
         val owner = Bukkit.getPlayer(plot.owner) ?: return PlotMode.BUILD
@@ -180,14 +180,14 @@ class PlotManagerImpl(
 
     /**
      * Return all currently loaded plots.
-     * Requirements: 10.2
+     10.2
      */
     fun getAllLoadedPlots(): List<Plot> = loadedPlots.values.toList()
 
     /**
      * Ensure a plot's worlds are loaded, loading them from DB if needed.
      * Returns the (mainWorld, devWorld) pair, or null on failure.
-     * Requirements: 10.6
+     10.6
      */
     suspend fun ensurePlotLoaded(plotId: UUID): Pair<org.bukkit.World, org.bukkit.World>? {
         if (!loadedPlots.containsKey(plotId)) {

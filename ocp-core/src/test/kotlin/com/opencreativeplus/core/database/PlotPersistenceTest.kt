@@ -17,7 +17,7 @@ import kotlin.test.assertTrue
  * Integration tests for PlotPersistence using Testcontainers.
  * Tests plot CRUD operations and serialization round-trip consistency.
  * 
- * Requirements: 17.5, 17.6, 38.2
+ 17.5, 17.6, 38.2
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PlotPersistenceTest {

@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 /**
  * Unit tests for TPSMonitor rolling-average TPS tracking.
  *
- * Requirements: 8.3, 34.1, 34.2
+ 8.3, 34.1, 34.2
  */
 class TPSMonitorTest {
 

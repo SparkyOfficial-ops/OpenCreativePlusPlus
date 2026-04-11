@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Displays up to 45 plots sorted by rating (descending) using player skull items.
  * Supports tag-based filtering.
  *
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 21.1, 21.4, 22.4
+ 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 21.1, 21.4, 22.4
  */
 class PlotBrowserGUI(
     private val plotPersistence: PlotPersistence,
@@ -45,7 +45,7 @@ class PlotBrowserGUI(
 
     /**
      * Open the plot browser for [player], optionally filtered by [tagFilter].
-     * Requirements: 10.1, 10.2, 10.3, 21.4, 22.4
+     10.1, 10.2, 10.3, 21.4, 22.4
      */
     fun open(player: Player, tagFilter: String? = null) {
         scope.launch {
@@ -98,7 +98,7 @@ class PlotBrowserGUI(
     /**
      * Load plots from database, sorted by rating descending, limited to [MAX_PLOTS].
      * Optionally filter by [tagFilter].
-     * Requirements: 10.2, 21.4, 22.4
+     10.2, 21.4, 22.4
      */
     private suspend fun loadPlots(tagFilter: String?): List<Plot> {
         // We load all plots via the manager's in-memory cache + persistence
@@ -116,7 +116,7 @@ class PlotBrowserGUI(
 
     /**
      * Build the chest inventory with one item per plot.
-     * Requirements: 10.3, 10.4, 10.5
+     10.3, 10.4, 10.5
      */
     private fun buildInventory(plots: List<Plot>): Inventory {
         val inv = Bukkit.createInventory(null, MAX_PLOTS, GUI_TITLE)
@@ -131,7 +131,7 @@ class PlotBrowserGUI(
     /**
      * Build a player skull item representing [plot].
      * Lore shows name, description, tags, rating, and player count.
-     * Requirements: 10.3, 10.4, 10.5, 21.1
+     10.3, 10.4, 10.5, 21.1
      */
     private fun buildPlotItem(plot: Plot): ItemStack {
         val skull = ItemStack(Material.PLAYER_HEAD)
@@ -161,7 +161,7 @@ class PlotBrowserGUI(
 
     /**
      * Teleport [player] to [plot]'s main world, loading it if necessary.
-     * Requirements: 10.6
+     10.6
      */
     private suspend fun teleportToPlot(player: Player, plot: Plot) {
         val worlds = plotManager.ensurePlotLoaded(plot.id)

@@ -13,7 +13,7 @@ import java.util.logging.Logger
  * Thread-safe implementation of NodeRegistry.
  * Maps Minecraft block types to node factories.
  * Validates nodes implement required interfaces before registration.
- * Requirements: 25.1, 25.2, 25.3, 25.4, 25.5, 11.3, 11.4
+ 25.1, 25.2, 25.3, 25.4, 25.5, 11.3, 11.4
  */
 class NodeRegistryImpl(
     private val logger: Logger = Logger.getLogger(NodeRegistryImpl::class.java.name)

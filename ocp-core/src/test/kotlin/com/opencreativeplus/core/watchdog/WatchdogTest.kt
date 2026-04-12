@@ -12,7 +12,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for the Watchdog anti-lag system.
  *
  8.2, 8.3, 8.4, 29.2

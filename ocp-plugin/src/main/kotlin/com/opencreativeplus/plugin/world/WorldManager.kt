@@ -10,7 +10,7 @@ import org.bukkit.WorldType
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/
+/**
  * Manages plot world creation, loading, and unloading.
  *
  * Uses standard Bukkit world management with a hook for SlimeWorldManager
@@ -21,10 +21,10 @@ import java.util.concurrent.ConcurrentHashMap
 class WorldManager(
     private val codingGridGenerator: CodingGridGenerator = CodingGridGenerator()
 ) {
-    / plotId → (mainWorld, devWorld) */
+    /** plotId → (mainWorld, devWorld) */
     private val loadedWorlds = ConcurrentHashMap<UUID, Pair<World, World>>()
 
-    /
+    /**
      * Create both worlds for a new plot.
      1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
      */
@@ -42,7 +42,7 @@ class WorldManager(
         Pair(mainWorld, devWorld)
     }
 
-    /
+    /**
      * Load existing worlds for a plot (fallback to creation if not found).
      1.5, 27.2, 27.4
      */
@@ -61,7 +61,7 @@ class WorldManager(
         Pair(mainWorld, devWorld)
     }
 
-    /
+    /**
      * Unload both worlds for a plot, saving state.
      27.5
      */
@@ -71,7 +71,7 @@ class WorldManager(
         Bukkit.unloadWorld(devWorld, true)
     }
 
-    /
+    /**
      * Get the loaded worlds for a plot, or null if not loaded.
      */
     fun getLoadedWorlds(plotId: UUID): Pair<World, World>? = loadedWorlds[plotId]
@@ -88,7 +88,7 @@ class WorldManager(
             ?: error("Failed to create world: $name")
     }
 
-    /
+    /**
      * Configure the main plot world: difficulty, PvP off, mob spawning off, world border.
      1.1, 35.1, 35.2, 35.3, 35.4
      */
@@ -106,7 +106,7 @@ class WorldManager(
         }
     }
 
-    /
+    /**
      * Configure the dev world and generate the coding grid.
      1.4, 3.1
      */

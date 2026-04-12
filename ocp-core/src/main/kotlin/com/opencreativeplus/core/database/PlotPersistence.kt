@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.firstOrNull
 import org.bson.Document
 import java.util.UUID
 
-/
+/**
  * Plot persistence layer for MongoDB operations.
  * Handles plot serialization/deserialization and CRUD operations.
  * 
@@ -22,7 +22,7 @@ class PlotPersistence(
     
     private val collection = database.getCollection<Document>("plots")
     
-    /
+    /**
      * Create a new plot in the database.
      * 
      * @param plot The plot to create
@@ -35,7 +35,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Load a plot from the database by ID.
      * 
      * @param plotId The UUID of the plot to load
@@ -51,7 +51,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Update an existing plot in the database.
      * Uses upsert to create if not exists.
      * 
@@ -69,7 +69,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Delete a plot from the database.
      * 
      * @param plotId The UUID of the plot to delete
@@ -81,7 +81,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Update plot metadata (name, description, tags, rating).
      * 
      * @param plotId The UUID of the plot
@@ -121,7 +121,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Update plot rating.
      * 
      * @param plotId The UUID of the plot
@@ -141,7 +141,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Update current player count for a plot.
      * 
      * @param plotId The UUID of the plot
@@ -157,7 +157,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Serialize a Plot object to a MongoDB Document.
      */
     private fun serializePlot(plot: Plot): Document {
@@ -193,7 +193,7 @@ class PlotPersistence(
         }
     }
     
-    /
+    /**
      * Deserialize a MongoDB Document to a Plot object.
      */
     private fun deserializePlot(document: Document): Plot {

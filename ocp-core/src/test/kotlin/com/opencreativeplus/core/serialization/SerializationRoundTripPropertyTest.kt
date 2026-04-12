@@ -28,7 +28,7 @@ import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 
-/
+/**
  * Property-based tests for [ParamSerializer] unified round-trip across ALL supported types.
  *
  * Property 24: Serialization round-trip for all supported types
@@ -39,7 +39,7 @@ import java.util.UUID
  * in a single property check.
  */
 
-/ Sealed hierarchy representing every supported parameter type. */
+/** Sealed hierarchy representing every supported parameter type. */
 sealed class SupportedParam {
     data class StringParam(val value: String) : SupportedParam()
     data class IntParam(val value: Int) : SupportedParam()
@@ -100,7 +100,7 @@ class SerializationRoundTripPropertyTest : FreeSpec({
     val arbFiniteDouble: Arb<Double> =
         Arb.double().filter { !it.isNaN() && !it.isInfinite() }
 
-    / Strings without "|" (the list delimiter). */
+    /** Strings without "|" (the list delimiter). */
     val arbSafeString: Arb<String> =
         Arb.string(1..30).filter { '|' !in it }
 
@@ -119,7 +119,7 @@ class SerializationRoundTripPropertyTest : FreeSpec({
         SupportedParam.LocationParam(Location(world, x, y, z, yaw, pitch), worldName)
     }
 
-    / Unified arbitrary that generates any one of the 7 supported param types. */
+    /** Unified arbitrary that generates any one of the 7 supported param types. */
     val arbSupportedParam: Arb<SupportedParam> = arbitrary { rs ->
         when (rs.random.nextInt(7)) {
             0 -> SupportedParam.StringParam(Arb.string(0..50).bind())

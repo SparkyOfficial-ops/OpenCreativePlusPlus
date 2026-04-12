@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.scanner
 import org.bukkit.Location
 import org.bukkit.Material
 
-/
+/**
  * Represents a single block found above the glass strip during scanning.
  4.4, 40.2
  */

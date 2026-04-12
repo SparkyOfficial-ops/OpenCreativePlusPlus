@@ -2,12 +2,12 @@ package com.opencreativeplus.api.plot
 
 import org.bukkit.entity.Player
 
-/
+/**
  * Interface for managing plot mode switching.
  * Handles transitions between BUILD, DEV, and PLAY modes.
  */
 interface ModeManager {
-    /
+    /**
      * Switch a player to a different mode on their plot.
      *
      * @param player The player to switch
@@ -15,8 +15,8 @@ interface ModeManager {
      * @param mode The target mode
      */
     suspend fun switchMode(player: Player, plot: Plot, mode: PlotMode)
-    
-    /
+
+    /**
      * Get the current mode for a player on a plot.
      *
      * @param player The player

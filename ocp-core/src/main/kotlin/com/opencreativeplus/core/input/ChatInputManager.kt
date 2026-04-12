@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
 import org.bukkit.entity.Player
 
-/
+/**
  * Manages chat-based input sessions for players.
  *
  * When a player is in a [Chat_Input_Session], their next chat message is intercepted
@@ -24,7 +24,7 @@ class ChatInputManager {
 
     private val sessions = ConcurrentHashMap<UUID, CompletableDeferred<String?>>()
 
-    /
+    /**
      * Registers a [Chat_Input_Session] for [player], sends [prompt] to them, and suspends
      * until the player replies in chat or the session is cancelled.
      *
@@ -49,7 +49,7 @@ class ChatInputManager {
         }
     }
 
-    /
+    /**
      * Executes a sequential chain of labeled prompts, collecting each response into a map.
      *
      * Prompts are sent one at a time; the next prompt is only sent after the previous
@@ -71,7 +71,7 @@ class ChatInputManager {
         return results
     }
 
-    /
+    /**
      * Called from the `AsyncChatEvent` listener to deliver a chat message to an active session.
      *
      * If the message equals `"cancel"` (case-insensitive), the session is completed with `null`.
@@ -92,7 +92,7 @@ class ChatInputManager {
         return true
     }
 
-    /
+    /**
      * Called when a player disconnects to clean up any active session.
      *
      * Completes the deferred exceptionally with [ChatInputCancelledException] so that
@@ -107,7 +107,7 @@ class ChatInputManager {
         )
     }
 
-    /
+    /**
      * Returns `true` if [playerId] currently has an active [Chat_Input_Session].
      *
      * @param playerId The UUID to check.
@@ -115,7 +115,7 @@ class ChatInputManager {
     fun hasActiveSession(playerId: UUID): Boolean = sessions.containsKey(playerId)
 }
 
-/
+/**
  * Thrown when a [Chat_Input_Session] is cancelled, either because the player typed `"cancel"`,
  * disconnected, or the session was otherwise terminated before a response was received.
  *

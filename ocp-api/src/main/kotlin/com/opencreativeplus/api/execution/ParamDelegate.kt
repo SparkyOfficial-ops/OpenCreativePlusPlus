@@ -4,7 +4,7 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-/
+/**
  * Thrown when a parameter value cannot be cast to the expected type.
  */
 class ParameterTypeMismatchException(
@@ -15,7 +15,7 @@ class ParameterTypeMismatchException(
     "Parameter '$paramName': expected ${expected.simpleName}, got ${actual.simpleName}"
 )
 
-/
+/**
  * A read-only property delegate that resolves a typed parameter from an [ExecutionContext].
  *
  * Lookup order: [ExecutionContext.eventData] first, then [ExecutionContext.localScope].

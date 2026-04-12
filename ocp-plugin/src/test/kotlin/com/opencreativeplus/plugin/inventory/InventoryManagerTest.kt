@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for InventoryManager covering:
  * - Inventory save and restore (serialization/deserialization)
  * - Mode-specific provisioning (BUILD, DEV, PLAY)

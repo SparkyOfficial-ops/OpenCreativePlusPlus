@@ -7,7 +7,7 @@ import org.testcontainers.utility.DockerImageName
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/
+/**
  * Integration tests for DatabaseIndexManager using Testcontainers.
  * Tests index creation for all collections.
  * 

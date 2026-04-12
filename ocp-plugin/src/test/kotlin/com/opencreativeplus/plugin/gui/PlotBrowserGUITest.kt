@@ -13,7 +13,7 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for PlotBrowserGUI covering plot loading/display, tag filtering, and rating sort.
  *
 21.4, 22.4
@@ -56,7 +56,7 @@ class PlotBrowserGUITest {
         )
     )
 
-    /
+    /**
      * Simulate the loadPlots logic from PlotBrowserGUI to test filtering and sorting
      * in isolation without requiring Bukkit/coroutine infrastructure.
      *

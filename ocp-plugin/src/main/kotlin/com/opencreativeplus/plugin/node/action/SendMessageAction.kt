@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.node.action
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 
-/
+/**
  * Action node that sends a message to the player.
  * Represented by PAPER in the coding grid.
  * Supports variable references in the message using $varname syntax.
@@ -21,7 +21,7 @@ class SendMessageAction(private val params: Map<String, Any>) : IAction {
         player.sendMessage(resolvedMessage)
     }
 
-    /
+    /**
      * Resolve variable references in the message string.
      * Variables are referenced as $varname and resolved from local → plot → saved scope.
      */

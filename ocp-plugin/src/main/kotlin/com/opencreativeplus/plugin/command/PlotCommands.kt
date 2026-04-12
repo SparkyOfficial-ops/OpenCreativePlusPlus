@@ -11,7 +11,7 @@ import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
-/
+/**
  * Handles /build, /dev, /play, /plot, and /ocptps commands.
  *
  2.1, 2.2, 2.3, 32.2, 32.5, 34.3

@@ -7,7 +7,7 @@ import com.opencreativeplus.api.node.IValue
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import org.bukkit.Material
 
-/
+/**
  * Public API facade for third-party plugins to register custom nodes.
  *
  * Usage:
@@ -34,7 +34,7 @@ class OpenCreativePlusAPI private constructor(
             instance ?: error("OpenCreativePlusAPI has not been initialized yet.")
     }
 
-    /
+    /**
      * Register a custom action node factory.
      11.2, 11.3
      */
@@ -43,7 +43,7 @@ class OpenCreativePlusAPI private constructor(
         registry.registerAction(blockType, factory)
     }
 
-    /
+    /**
      * Register a custom condition node factory.
      11.2, 11.3
      */
@@ -52,7 +52,7 @@ class OpenCreativePlusAPI private constructor(
         registry.registerCondition(blockType, factory)
     }
 
-    /
+    /**
      * Register a custom value node factory.
      11.2, 11.3
      */
@@ -61,7 +61,7 @@ class OpenCreativePlusAPI private constructor(
         registry.registerValue(blockType, factory)
     }
 
-    /
+    /**
      * Register a custom event node factory.
      11.2, 11.3
      */
@@ -70,7 +70,7 @@ class OpenCreativePlusAPI private constructor(
         registry.registerEvent(blockType, factory)
     }
 
-    /
+    /**
      * Validate that the material is a valid block type.
      11.4, 11.5
      */

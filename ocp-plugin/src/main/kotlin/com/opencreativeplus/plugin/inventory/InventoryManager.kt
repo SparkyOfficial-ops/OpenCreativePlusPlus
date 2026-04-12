@@ -16,7 +16,7 @@ import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.UUID
 
-/
+/**
  * Manages per-player per-plot inventory states across the three modes.
  *
  * Each player has three separate inventory states per plot (BUILD, DEV, PLAY).
@@ -35,7 +35,7 @@ class InventoryManager(
     // Save / Load
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Save the player's current inventory for [mode] on [plotId].
      14.1, 14.5, 17.4
      */
@@ -64,7 +64,7 @@ class InventoryManager(
         }
     }
 
-    /
+    /**
      * Load and apply the saved inventory for [mode] on [plotId] to [player].
      * If no saved state exists, clears the inventory.
      14.2, 14.3, 14.4
@@ -91,7 +91,7 @@ class InventoryManager(
     // DEV mode provisioning (s 36.1–36.4)
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Provision the DEV mode inventory: all registered action node blocks,
      * glass blocks, signs, and chests in infinite quantities.
      36.1, 36.2, 36.3, 36.4

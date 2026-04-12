@@ -20,7 +20,7 @@ import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
 
-/
+/**
  * Property-based tests for [ChatInputManager.inputChain] — collects all responses.
  *
  * Property 8: inputChain collects all responses
@@ -42,7 +42,7 @@ class InputChainPropertyTest : FreeSpec({
         return p
     }
 
-    / Arbitrary non-"cancel" response strings. */
+    /** Arbitrary non-"cancel" response strings. */
     val arbResponse: Arb<String> =
         Arb.string(1..50).filter { it.lowercase() != "cancel" }
 

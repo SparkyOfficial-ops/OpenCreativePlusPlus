@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for ExecutionLogger — log creation, storage, retrieval, and the
  * 100-execution limit per plot.
  *

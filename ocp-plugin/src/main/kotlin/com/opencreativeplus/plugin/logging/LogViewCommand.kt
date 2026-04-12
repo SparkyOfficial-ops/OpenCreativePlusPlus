@@ -9,7 +9,7 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import org.bson.Document
 
-/
+/**
  * /ocplogs command — shows the most recent 100 execution logs for the player's plot.
  *
  37.4, 37.5

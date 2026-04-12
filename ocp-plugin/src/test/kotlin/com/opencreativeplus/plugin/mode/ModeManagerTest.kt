@@ -26,7 +26,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
 
-/
+/**
  * Unit tests for ModeManagerImpl covering:
  * - Inventory save/restore on mode switch (s 2.8, 2.9)
  * - Script compilation trigger when switching to PLAY mode ( 2.6)

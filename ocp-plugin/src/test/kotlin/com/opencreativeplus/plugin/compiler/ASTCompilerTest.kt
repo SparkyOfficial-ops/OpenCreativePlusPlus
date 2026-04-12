@@ -18,7 +18,7 @@ import org.bukkit.Material
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-/
+/**
  * Unit tests for [ASTCompiler].
  *
  5.3, 23.5, 33.5

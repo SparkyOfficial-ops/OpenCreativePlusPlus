@@ -4,7 +4,7 @@ import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.ICondition
 
-/
+/**
  * Conditional branching action node.
  * Executes [thenActions] if [condition] evaluates to true, otherwise [elseActions].
  *

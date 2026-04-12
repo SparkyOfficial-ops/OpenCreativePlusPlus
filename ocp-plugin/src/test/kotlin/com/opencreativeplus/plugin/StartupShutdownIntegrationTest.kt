@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/
+/**
  * Integration tests for plugin startup/shutdown lifecycle.
  *
  * Group 1: Initialization order — verifies CoroutineConfiguration behaves correctly
@@ -79,7 +79,7 @@ class StartupShutdownIntegrationTest {
     // Group 1: Initialization order
     // =========================================================================
 
-    /
+    /**
      * Verifies that calling close() on a CoroutineConfiguration cancels its
      * executionScope, which is the mechanism used during onDisable().
      */
@@ -100,7 +100,7 @@ class StartupShutdownIntegrationTest {
         assertFalse(coroutineConfig.executionScope.isActive, "Scope should be cancelled after close()")
     }
 
-    /
+    /**
      * Verifies that after coroutineConfig.close(), cancelAllExecutions() on the
      * engine does not throw and the scope is cancelled.
      */
@@ -123,7 +123,7 @@ class StartupShutdownIntegrationTest {
         assertFalse(coroutineConfig.executionScope.isActive, "Scope should be cancelled after close()")
     }
 
-    /
+    /**
      * Verifies that SupervisorJob is used so a failing child coroutine does not
      * cancel the entire executionScope — other scripts keep running.
      */
@@ -156,7 +156,7 @@ class StartupShutdownIntegrationTest {
     // Group 2: Graceful shutdown with active scripts ( 26.4)
     // =========================================================================
 
-    /
+    /**
      * Validates  26.4: cancelling all executions on a plot and then
      * closing the coroutine scope terminates all active coroutines.
      */
@@ -192,7 +192,7 @@ class StartupShutdownIntegrationTest {
         assertEquals(3, cancelledCount.get(), "All 3 active coroutines should be cancelled on shutdown")
     }
 
-    /
+    /**
      * Validates  26.4: the local scope (Execution_Context resource) is
      * cleared when a coroutine is cancelled.
      *
@@ -236,7 +236,7 @@ class StartupShutdownIntegrationTest {
             "Local scope should be cleared when coroutine is cancelled (Req 26.4)")
     }
 
-    /
+    /**
      * Verifies that cancelling one plot's executions does not affect scripts
      * running on a different plot.
      */
@@ -275,7 +275,7 @@ class StartupShutdownIntegrationTest {
             "Plot 2's script should complete unaffected by plot 1's cancellation")
     }
 
-    /
+    /**
      * Verifies that calling cancelAllExecutions followed by coroutineConfig.close()
      * does not throw any exception.
      */
@@ -295,7 +295,7 @@ class StartupShutdownIntegrationTest {
         coroutineConfig.close() // must not throw
     }
 
-    /
+    /**
      * Verifies that calling coroutineConfig.close() twice (e.g., double-shutdown)
      * does not throw any exception.
      */

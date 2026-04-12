@@ -17,7 +17,7 @@ import org.bukkit.inventory.meta.SkullMeta
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/
+/**
  * Chest GUI for browsing, filtering, and teleporting to plots.
  *
  * Displays up to 45 plots sorted by rating (descending) using player skull items.
@@ -36,14 +36,14 @@ class PlotBrowserGUI(
         private const val MAX_PLOTS = 45
     }
 
-    / inventoryId → list of plots shown (for click handling) */
+    /** inventoryId → list of plots shown (for click handling) */
     private val openInventories = ConcurrentHashMap<UUID, List<Plot>>()
 
     // -------------------------------------------------------------------------
     // Open GUI
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Open the plot browser for [player], optionally filtered by [tagFilter].
      10.1, 10.2, 10.3, 21.4, 22.4
      */
@@ -95,7 +95,7 @@ class PlotBrowserGUI(
     // Private helpers
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Load plots from database, sorted by rating descending, limited to [MAX_PLOTS].
      * Optionally filter by [tagFilter].
      10.2, 21.4, 22.4
@@ -114,7 +114,7 @@ class PlotBrowserGUI(
             .take(MAX_PLOTS)
     }
 
-    /
+    /**
      * Build the chest inventory with one item per plot.
      10.3, 10.4, 10.5
      */
@@ -128,7 +128,7 @@ class PlotBrowserGUI(
         return inv
     }
 
-    /
+    /**
      * Build a player skull item representing [plot].
      * Lore shows name, description, tags, rating, and player count.
      10.3, 10.4, 10.5, 21.1
@@ -159,7 +159,7 @@ class PlotBrowserGUI(
         return skull
     }
 
-    /
+    /**
      * Teleport [player] to [plot]'s main world, loading it if necessary.
      10.6
      */

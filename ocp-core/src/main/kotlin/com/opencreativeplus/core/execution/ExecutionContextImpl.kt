@@ -8,7 +8,7 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/
+/**
  * Runtime execution context for a single script invocation.
  *
  * Holds all state needed during execution: the triggering player, event data,
@@ -31,7 +31,7 @@ class ExecutionContextImpl(
     private val syncDispatcher: CoroutineDispatcher
 ) : ExecutionContext {
 
-    /
+    /**
      * Switches to [syncDispatcher] (the Bukkit main thread) for the duration
      * of [block], then resumes on the calling coroutine's dispatcher.
      */

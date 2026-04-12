@@ -31,7 +31,7 @@ import com.opencreativeplus.plugin.world.WorldManager
 import kotlinx.coroutines.runBlocking
 import org.bukkit.plugin.java.JavaPlugin
 
-/
+/**
  * Main plugin class. Wires all components together and manages lifecycle.
  *
  25.2, 34.1, 9.5, 14.5, 26.1, 26.2, 27.5

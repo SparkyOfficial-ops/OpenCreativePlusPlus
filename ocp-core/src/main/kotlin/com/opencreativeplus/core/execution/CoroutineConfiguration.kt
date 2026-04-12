@@ -3,7 +3,7 @@ package com.opencreativeplus.core.execution
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
-/
+/**
  * Configures the coroutine infrastructure for script execution.
  *
  * - Uses a fixed thread pool sized to available CPU cores for async execution
@@ -20,13 +20,13 @@ class CoroutineConfiguration(
         name = "ocp-execution"
     )
 
-    /
+    /**
      * The main execution scope. SupervisorJob isolates failures so one script
      * crashing does not cancel other running scripts.
      */
     val executionScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
 
-    /
+    /**
      * A dispatcher that runs blocks on the Bukkit main thread via the injected
      * [syncRunner] callback. The plugin layer supplies something like:
      *   `{ block -> Bukkit.getScheduler().runTask(plugin) { block() } }`
@@ -37,7 +37,7 @@ class CoroutineConfiguration(
         }
     }
 
-    /
+    /**
      * Cancels the execution scope and closes the underlying thread pool.
      * Call this during plugin shutdown.
      */

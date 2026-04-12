@@ -6,7 +6,7 @@ import com.opencreativeplus.core.database.MongoConnectionManager
 import org.bson.Document
 import java.util.UUID
 
-/
+/**
  * Logs script execution events to the MongoDB execution_logs collection.
  *
  37.1, 37.2, 37.3, 37.4, 37.5

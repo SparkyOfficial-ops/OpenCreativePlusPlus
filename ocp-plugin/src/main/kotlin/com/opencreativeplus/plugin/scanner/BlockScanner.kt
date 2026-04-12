@@ -13,7 +13,7 @@ import org.bukkit.block.Chest
 import org.bukkit.block.TileState
 import org.bukkit.persistence.PersistentDataType
 
-/
+/**
  * Scans the Coding_Zone world for physical block arrangements and converts them to CodeLines.
  *
  * Scanning strategy (s 4.1, 4.2, 20.1, 20.2, 20.3, 20.4):
@@ -40,7 +40,7 @@ class BlockScanner(
         )
     }
 
-    /
+    /**
      * Scan the entire coding zone and return all discovered CodeLines.
      4.1, 20.1, 20.2, 20.3
      */
@@ -52,7 +52,7 @@ class BlockScanner(
         return codeLines
     }
 
-    /
+    /**
      * Scan a single Y level for blue glass strip starts.
      4.1, 20.2
      */
@@ -67,7 +67,7 @@ class BlockScanner(
         return lines
     }
 
-    /
+    /**
      * Read a single coding strip starting at [startBlock] (a blue glass block).
      * Moves in the +X direction, collecting blocks above each glass block.
      * Stops when the floor block is no longer a glass strip material.
@@ -92,7 +92,7 @@ class BlockScanner(
         return CodeLine(startBlock.location, nodes)
     }
 
-    /
+    /**
      * Extract parameters from signs attached to [block], from a chest placed above it
      * (including Item_Variable items), and from the block's PersistentDataContainer.
      *
@@ -142,7 +142,7 @@ class BlockScanner(
         return params
     }
 
-    /
+    /**
      * Read all parameters stored in the block's PersistentDataContainer under the "ocp" namespace.
      * Supports STRING, INTEGER, and DOUBLE types.
      * Returns an empty map if the block state is not a TileState.
@@ -161,7 +161,7 @@ class BlockScanner(
         return result
     }
 
-    /
+    /**
      * Parse sign lines for key=value pairs.
      19.2, 19.3, 19.4
      */
@@ -181,7 +181,7 @@ class BlockScanner(
         return params
     }
 
-    /
+    /**
      * Parse a raw string value into Int, Double, VariableReference, or String.
      19.3, 19.4
      */

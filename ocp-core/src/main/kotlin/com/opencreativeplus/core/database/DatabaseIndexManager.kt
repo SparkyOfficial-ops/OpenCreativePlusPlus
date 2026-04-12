@@ -5,7 +5,7 @@ import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import org.bson.Document
 import java.util.concurrent.TimeUnit
 
-/
+/**
  * Manages database indexes for all collections.
  * Creates indexes for owner, rating, tags, timestamps, and TTL for execution logs.
  * 
@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
  */
 class DatabaseIndexManager(private val database: MongoDatabase) {
     
-    /
+    /**
      * Create all required indexes for OCP collections.
      * Should be called during plugin initialization.
      */

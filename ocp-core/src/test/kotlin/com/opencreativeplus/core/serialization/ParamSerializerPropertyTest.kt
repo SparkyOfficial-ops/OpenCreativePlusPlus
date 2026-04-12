@@ -28,7 +28,7 @@ import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 import java.util.UUID
 
-/
+/**
  * Property-based tests for [ParamSerializer] save/load round-trip.
  *
  * Property 3: Parameter save round-trip
@@ -44,7 +44,7 @@ class ParamSerializerPropertyTest : FreeSpec({
     // Infrastructure helpers
     // -----------------------------------------------------------------------
 
-    /
+    /**
      * Creates a fresh in-memory PDC environment for each test case.
      * Returns (serializer, block) ready to use.
      */
@@ -88,7 +88,7 @@ class ParamSerializerPropertyTest : FreeSpec({
         return serializer to block
     }
 
-    / Non-TileState block — state returns a plain BlockState mock. */
+    /** Non-TileState block — state returns a plain BlockState mock. */
     fun makeNonTileStateBlock(): Block {
         val state = mockk<BlockState>()
         val block = mockk<Block>()
@@ -103,11 +103,11 @@ class ParamSerializerPropertyTest : FreeSpec({
     val arbFiniteDouble: Arb<Double> =
         Arb.double().filter { !it.isNaN() && !it.isInfinite() }
 
-    / List<String> elements must not contain "|" (the delimiter). */
+    /** List<String> elements must not contain "|" (the delimiter). */
     val arbSafeString: Arb<String> =
         Arb.string(1..30).filter { '|' !in it }
 
-    / Non-empty list of non-empty strings without "|" — avoids empty-string ambiguity in serialization. */
+    /** Non-empty list of non-empty strings without "|" — avoids empty-string ambiguity in serialization. */
     val arbSafeStringList: Arb<List<String>> =
         Arb.list(arbSafeString, 1..10)
 

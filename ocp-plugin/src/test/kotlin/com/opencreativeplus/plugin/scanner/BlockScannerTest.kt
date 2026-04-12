@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for BlockScanner.
  4.3, 19.5, 40.3
  */
@@ -31,7 +31,7 @@ class BlockScannerTest {
     // Helpers
     // -----------------------------------------------------------------------
 
-    / Create a mock Block with the given material and a real Location. */
+    /** Create a mock Block with the given material and a real Location. */
     private fun mockBlock(x: Int, y: Int, z: Int, material: Material): Block {
         val block = mockk<Block>(relaxed = true)
         val location = Location(world, x.toDouble(), y.toDouble(), z.toDouble())
@@ -44,7 +44,7 @@ class BlockScannerTest {
         return block
     }
 
-    / Wire block.getRelative(face) to return another mock block. */
+    /** Wire block.getRelative(face) to return another mock block. */
     private fun Block.withRelative(face: BlockFace, relative: Block): Block {
         every { this@withRelative.getRelative(face) } returns relative
         return this
@@ -234,7 +234,7 @@ class BlockScannerTest {
     // scanStrip – gap stops reading (Req 4.3, 40.3)
     // -----------------------------------------------------------------------
 
-    /
+    /**
      * Build a minimal strip scenario:
      *   x=0: BLUE_STAINED_GLASS (start), above = PAPER node
      *   x=1: WHITE_STAINED_GLASS, above = AIR
@@ -281,7 +281,7 @@ class BlockScannerTest {
     // scanCodingZone – multi-level scanning (Req 20.1, 20.2, 20.3)
     // -----------------------------------------------------------------------
 
-    /
+    /**
      * Two blue glass strips at different Y levels (y=0 and y=5) each produce a CodeLine.
      * Verifies that scanCodingZone collects code lines from multiple Y levels.
      */

@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.node.condition
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.ICondition
 
-/
+/**
  * Evaluates two values for equality.
  30.1, 30.2
  */
@@ -17,7 +17,7 @@ class EqualsCondition(
         resolveValue(left, context) == resolveValue(right, context)
 }
 
-/
+/**
  * Evaluates whether left > right (numeric comparison).
  30.1, 30.2
  */
@@ -34,7 +34,7 @@ class GreaterThanCondition(
     }
 }
 
-/
+/**
  * Evaluates whether left < right (numeric comparison).
  30.1, 30.2
  */

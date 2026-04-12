@@ -18,7 +18,7 @@ import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
 
-/
+/**
  * Property-based tests for [ChatInputManager.awaitChatInput] round-trip.
  *
  *  3.3
@@ -39,7 +39,7 @@ class ChatInputPropertyTest : FreeSpec({
         return p
     }
 
-    / Arbitrary non-"cancel" strings (case-insensitive exclusion). */
+    /** Arbitrary non-"cancel" strings (case-insensitive exclusion). */
     val arbNonCancelString: Arb<String> =
         Arb.string(0..100).filter { it.lowercase() != "cancel" }
 

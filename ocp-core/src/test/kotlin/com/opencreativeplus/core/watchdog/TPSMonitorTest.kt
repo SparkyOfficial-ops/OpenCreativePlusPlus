@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for TPSMonitor rolling-average TPS tracking.
  *
  8.3, 34.1, 34.2

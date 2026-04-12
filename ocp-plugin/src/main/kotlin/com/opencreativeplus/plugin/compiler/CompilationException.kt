@@ -1,6 +1,6 @@
 package com.opencreativeplus.plugin.compiler
 
-/
+/**
  * Thrown internally during compilation of a single CodeLine.
  5.3, 23.1, 23.2, 23.3
  */

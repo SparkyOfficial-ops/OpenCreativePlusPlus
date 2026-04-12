@@ -2,7 +2,7 @@ package com.opencreativeplus.plugin.node.event
 
 import com.opencreativeplus.api.node.IEvent
 
-/
+/**
  * Event node that triggers when a player joins the plot.
  * Represented by a DIAMOND_BLOCK in the coding grid.
  7.1, 7.4

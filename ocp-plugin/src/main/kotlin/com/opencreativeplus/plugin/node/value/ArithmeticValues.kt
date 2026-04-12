@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.node.value
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IValue
 
-/
+/**
  * Arithmetic and comparison value nodes.
  31.1, 31.2, 31.3
  */

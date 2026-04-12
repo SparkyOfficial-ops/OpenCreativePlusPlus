@@ -38,7 +38,7 @@ private class FakeExecutionContext(
     override suspend fun <T> syncContext(block: () -> T): T = block()
 }
 
-/ Simple recording action that appends [label] to [log] when executed. */
+/** Simple recording action that appends [label] to [log] when executed. */
 private fun recordingAction(log: MutableList<String>, label: String): IAction =
     object : IAction {
         override val nodeId = "recording"
@@ -46,7 +46,7 @@ private fun recordingAction(log: MutableList<String>, label: String): IAction =
         override suspend fun execute(context: ExecutionContext) { log.add(label) }
     }
 
-/ Action that reads [varName] from local scope and stores it in [captured]. */
+/** Action that reads [varName] from local scope and stores it in [captured]. */
 private fun capturingAction(varName: String, captured: MutableList<Any?>): IAction =
     object : IAction {
         override val nodeId = "capturing"
@@ -60,7 +60,7 @@ private fun capturingAction(varName: String, captured: MutableList<Any?>): IActi
 // FunctionRegistry tests
 // ---------------------------------------------------------------------------
 
-/
+/**
  * Tests for [FunctionRegistry]: function definition storage and lookup.
  *
  15.1, 15.2
@@ -155,7 +155,7 @@ class FunctionRegistryTest {
 // FunctionCallAction – function definition and calling ( 15.3)
 // ---------------------------------------------------------------------------
 
-/
+/**
  * Tests for [FunctionCallAction]: function execution when called.
  *
 15.3
@@ -222,7 +222,7 @@ class FunctionCallActionDefinitionTest {
 // FunctionCallAction – parameter passing ( 15.2, 15.3)
 // ---------------------------------------------------------------------------
 
-/
+/**
  * Tests for [FunctionCallAction]: parameter passing into function scope.
  *
 15.3
@@ -343,7 +343,7 @@ class FunctionCallActionParameterTest {
 // FunctionCallAction – recursion detection ( 15.5)
 // ---------------------------------------------------------------------------
 
-/
+/**
  * Tests for [FunctionCallAction]: recursion detection via call-depth limit.
  *
 15.5
@@ -358,7 +358,7 @@ class FunctionCallActionRecursionTest {
         registry = FunctionRegistry()
     }
 
-    /
+    /**
      * Registers a self-recursive function: calling "recurse" will call "recurse" again.
      * The FunctionCallAction inside the definition calls the same function.
      */

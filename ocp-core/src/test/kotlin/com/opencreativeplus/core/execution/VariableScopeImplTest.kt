@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/
+/**
  * Unit tests for VariableScopeImpl.
  * Tests thread-safe variable storage and retrieval.
  */

@@ -4,7 +4,7 @@ import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.core.execution.ExecutionContextImpl
 
-/
+/**
  * Action node that calls a named custom function.
  *
  * Creates a new local scope for the function, passes parameters,

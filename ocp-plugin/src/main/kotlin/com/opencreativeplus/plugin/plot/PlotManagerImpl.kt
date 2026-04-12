@@ -13,7 +13,7 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/
+/**
  * Implementation of [PlotManager] that coordinates world creation, database persistence,
  * and in-memory plot state.
  *
@@ -26,17 +26,17 @@ class PlotManagerImpl(
     private val modeManager: ModeManager
 ) : PlotManager {
 
-    / In-memory cache of loaded plots */
+    /** In-memory cache of loaded plots */
     private val loadedPlots = ConcurrentHashMap<UUID, Plot>()
 
-    / playerId → plotId for quick lookup */
+    /** playerId → plotId for quick lookup */
     private val playerPlotIndex = ConcurrentHashMap<UUID, UUID>()
 
     // -------------------------------------------------------------------------
     // PlotManager interface
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Create a new plot for [owner]: generate worlds, persist to DB, cache in memory.
      1.1, 1.2, 17.1, 32.1
      */
@@ -68,7 +68,7 @@ class PlotManagerImpl(
         return plot
     }
 
-    /
+    /**
      * Load a plot from the database and its worlds.
      17.1, 17.6
      */
@@ -83,7 +83,7 @@ class PlotManagerImpl(
         return plot
     }
 
-    /
+    /**
      * Unload a plot: save state, unload worlds, remove from cache.
      27.5
      */
@@ -95,12 +95,12 @@ class PlotManagerImpl(
         playerPlotIndex.remove(plot.owner)
     }
 
-    /
+    /**
      * Get a loaded plot by ID.
      */
     override suspend fun getPlot(plotId: UUID): Plot? = loadedPlots[plotId]
 
-    /
+    /**
      * Get the plot owned by [player].
      */
     override suspend fun getPlayerPlot(player: UUID): Plot? {
@@ -112,14 +112,14 @@ class PlotManagerImpl(
     // Permission helpers (s 32.1–32.5)
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Returns true if [player] can edit the plot (owner or trusted).
      32.2, 32.3, 32.4
      */
     fun canEdit(player: Player, plot: Plot): Boolean =
         plot.owner == player.uniqueId || plot.trustedPlayers.contains(player.uniqueId)
 
-    /
+    /**
      * Add a trusted player to the plot.
      32.4
      */
@@ -133,7 +133,7 @@ class PlotManagerImpl(
         plotPersistence.updatePlot(updated)
     }
 
-    /
+    /**
      * Remove a trusted player from the plot.
      32.4
      */
@@ -151,7 +151,7 @@ class PlotManagerImpl(
     // Plot configuration (s 13.1–13.7)
     // -------------------------------------------------------------------------
 
-    /
+    /**
      * Update plot settings and apply them immediately to the main world.
      13.1, 13.2, 13.3, 13.4, 13.5, 13.6
      */
@@ -169,7 +169,7 @@ class PlotManagerImpl(
         mainWorld.time = settings.timeOfDay
     }
 
-    /
+    /**
      * Get the current mode for a plot (delegates to ModeManager).
      13.7
      */
@@ -178,13 +178,13 @@ class PlotManagerImpl(
         return modeManager.getCurrentMode(owner, plot)
     }
 
-    /
+    /**
      * Return all currently loaded plots.
      10.2
      */
     fun getAllLoadedPlots(): List<Plot> = loadedPlots.values.toList()
 
-    /
+    /**
      * Ensure a plot's worlds are loaded, loading them from DB if needed.
      * Returns the (mainWorld, devWorld) pair, or null on failure.
      10.6

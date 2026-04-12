@@ -5,7 +5,7 @@ import com.opencreativeplus.core.execution.CompiledScript
 import com.opencreativeplus.plugin.scanner.CodeLine
 import org.bukkit.Location
 
-/
+/**
  * Compiles a list of [CodeLine]s into [CompiledScript]s.
  *
  * Each CodeLine must start with an event block followed by zero or more action blocks.
@@ -16,7 +16,7 @@ import org.bukkit.Location
  */
 class ASTCompiler(private val nodeRegistry: NodeRegistry) {
 
-    /
+    /**
      * Compile all [codeLines] and return a [CompilationResult] containing
      * successfully compiled scripts and any errors encountered.
      5.1, 5.2, 5.3, 23.4
@@ -36,7 +36,7 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         return CompilationResult(scripts, errors)
     }
 
-    /
+    /**
      * Compile a single [CodeLine] into a [CompiledScript].
      * Throws [CompilationException] on any error.
      5.1, 5.2, 23.1, 23.2, 23.3

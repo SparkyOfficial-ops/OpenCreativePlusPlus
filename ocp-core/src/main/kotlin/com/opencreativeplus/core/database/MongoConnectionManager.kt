@@ -8,7 +8,7 @@ import kotlinx.coroutines.delay
 import org.bson.UuidRepresentation
 import java.util.concurrent.TimeUnit
 
-/
+/**
  * MongoDB connection manager with connection pooling and retry logic.
  * Implements retry mechanism for failed database operations (up to 3 attempts).
  * 
@@ -19,7 +19,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
     private var client: MongoClient? = null
     private var database: MongoDatabase? = null
     
-    /
+    /**
      * Connect to MongoDB with connection pooling.
      * Loads configuration from DatabaseConfig.
      */
@@ -43,7 +43,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
         database = client!!.getDatabase(config.databaseName)
     }
     
-    /
+    /**
      * Get the MongoDB database instance.
      * @throws IllegalStateException if not connected
      */
@@ -51,7 +51,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
         return database ?: throw IllegalStateException("Database not connected. Call connect() first.")
     }
     
-    /
+    /**
      * Close the MongoDB connection and release resources.
      */
     fun close() {
@@ -60,7 +60,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
         database = null
     }
     
-    /
+    /**
      * Execute a database operation with retry logic using the configured max retries.
      * Retries up to config.maxRetries times with exponential backoff on failure.
      * 
@@ -70,7 +70,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
      */
     suspend fun <T> withRetry(block: suspend () -> T): T = withRetry(config.maxRetries, block)
 
-    /
+    /**
      * Execute a database operation with retry logic.
      * Retries up to maxRetries times with exponential backoff on failure.
      * 
@@ -106,7 +106,7 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
         const val DEFAULT_MAX_RETRIES = -1
     }
     
-    /
+    /**
      * Check if the connection is active.
      */
     fun isConnected(): Boolean {

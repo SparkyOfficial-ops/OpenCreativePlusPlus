@@ -9,7 +9,7 @@ import org.bukkit.Material
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
-/**
+/
  * Thread-safe implementation of NodeRegistry.
  * Maps Minecraft block types to node factories.
  * Validates nodes implement required interfaces before registration.
@@ -99,7 +99,7 @@ class NodeRegistryImpl(
     override fun getEventFactory(blockType: Material): (() -> IEvent)? =
         eventFactories[blockType]
 
-    /**
+    /
      * Returns all registered action block types (used for inventory provisioning in DEV mode).
      */
     fun getRegisteredActionMaterials(): Set<Material> = actionFactories.keys.toSet()

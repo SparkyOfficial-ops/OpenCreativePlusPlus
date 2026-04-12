@@ -14,7 +14,7 @@ import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
-/**
+/
  * GUI for configuring plot settings: biome, time, PvP, mob spawning.
  *
  13.1, 39.1, 39.2, 22.1, 22.2

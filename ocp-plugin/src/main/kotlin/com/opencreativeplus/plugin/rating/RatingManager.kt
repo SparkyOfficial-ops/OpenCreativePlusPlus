@@ -5,7 +5,7 @@ import com.opencreativeplus.core.database.PlotPersistence
 import org.bukkit.entity.Player
 import java.util.UUID
 
-/**
+/
  * Manages plot ratings (likes) with duplicate prevention.
  *
  21.2, 21.3, 21.5
@@ -14,7 +14,7 @@ class RatingManager(
     private val plotPersistence: PlotPersistence
 ) {
 
-    /**
+    /
      * Rate (like) a plot. Returns false if the player has already rated it.
      21.2, 21.3
      */

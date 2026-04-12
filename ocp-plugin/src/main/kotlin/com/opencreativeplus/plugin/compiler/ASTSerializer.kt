@@ -7,7 +7,7 @@ import com.google.gson.JsonParser
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.core.execution.CompiledScript
 
-/**
+/
  * Serializes and deserializes [CompiledScript] lists to/from JSON strings using Gson.
  *
  * Format:
@@ -30,7 +30,7 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
 
     private val gson = Gson()
 
-    /**
+    /
      * Serialize a list of [CompiledScript]s to a JSON string.
      12.1, 12.2, 33.1, 33.2
      */
@@ -55,7 +55,7 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
         return gson.toJson(jsonArray)
     }
 
-    /**
+    /
      * Deserialize a JSON string back into a list of [CompiledScript]s.
      * Validates all node types against the registry.
      12.3, 12.4, 12.5, 33.3, 33.4, 33.5
@@ -109,20 +109,20 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
         return DeserializationResult(scripts, errors)
     }
 
-    /**
+    /
      * Find an event instance by nodeId. Requires registry iteration support.
      33.4
      */
     private fun findEventByNodeId(nodeId: String): com.opencreativeplus.api.node.IEvent? = null
 
-    /**
+    /
      * Find an action instance by nodeId. Requires registry iteration support.
      33.4
      */
     private fun findActionByNodeId(nodeId: String, params: Map<String, Any>): com.opencreativeplus.api.node.IAction? = null
 }
 
-/**
+/
  * Result of deserializing a JSON AST string.
  12.4, 12.5
  */

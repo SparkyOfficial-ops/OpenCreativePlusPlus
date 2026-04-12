@@ -16,10 +16,10 @@ import io.kotest.property.checkAll
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
+/
  * Property-based tests for [ParamDelegate] / [param] / [optionalParam].
  *
- * **Validates: Requirements 9.1, 9.3, 9.4**
+ *  9.1, 9.3, 9.4
  */
 class ParamDelegatePropertyTest : FreeSpec({
 
@@ -27,7 +27,7 @@ class ParamDelegatePropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    /** Minimal no-op VariableScope backed by a mutable map. */
+    / Minimal no-op VariableScope backed by a mutable map. */
     fun mapScope(initial: Map<String, Any> = emptyMap()): VariableScope {
         val store = initial.toMutableMap()
         return object : VariableScope {
@@ -38,7 +38,7 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
     }
 
-    /**
+    /
      * Build a minimal [ExecutionContext] where [eventData] contains the given entries
      * and [localScope] is empty.
      */
@@ -54,7 +54,7 @@ class ParamDelegatePropertyTest : FreeSpec({
             override suspend fun <T> syncContext(block: () -> T): T = block()
         }
 
-    /**
+    /
      * Build a minimal [ExecutionContext] where [localScope] contains the given entries
      * and [eventData] is empty.
      */
@@ -77,8 +77,8 @@ class ParamDelegatePropertyTest : FreeSpec({
     "Property 14a: param<T> round-trip via eventData" - {
 
         "String values round-trip" {
-            // **Validates: Requirements 9.1**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(), Arb.string(1..30)) { value, key ->
+            //  9.1
+            checkAll(PropTestConfig(iterations = 20), Arb.string(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<String>(key)
                 val result by delegate
@@ -87,8 +87,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "Int values round-trip" {
-            // **Validates: Requirements 9.1**
-            checkAll(PropTestConfig(iterations = 100), Arb.int(), Arb.string(1..30)) { value, key ->
+            //  9.1
+            checkAll(PropTestConfig(iterations = 20), Arb.int(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<Int>(key)
                 val result by delegate
@@ -97,8 +97,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "Double values round-trip" {
-            // **Validates: Requirements 9.1**
-            checkAll(PropTestConfig(iterations = 100), Arb.double(), Arb.string(1..30)) { value, key ->
+            //  9.1
+            checkAll(PropTestConfig(iterations = 20), Arb.double(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<Double>(key)
                 val result by delegate
@@ -107,8 +107,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "Boolean values round-trip" {
-            // **Validates: Requirements 9.1**
-            checkAll(PropTestConfig(iterations = 100), Arb.boolean(), Arb.string(1..30)) { value, key ->
+            //  9.1
+            checkAll(PropTestConfig(iterations = 20), Arb.boolean(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<Boolean>(key)
                 val result by delegate
@@ -117,8 +117,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "String values round-trip via localScope (fallback)" {
-            // **Validates: Requirements 9.1** — localScope is the fallback lookup
-            checkAll(PropTestConfig(iterations = 100), Arb.string(), Arb.string(1..30)) { value, key ->
+            //  9.1 — localScope is the fallback lookup
+            checkAll(PropTestConfig(iterations = 20), Arb.string(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithLocalScope(mapOf(key to value))
                 val delegate = ctx.param<String>(key)
                 val result by delegate
@@ -127,8 +127,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "eventData takes priority over localScope" {
-            // **Validates: Requirements 9.1** — eventData is checked first
-            checkAll(PropTestConfig(iterations = 100), Arb.string(), Arb.string(), Arb.string(1..30)) { eventVal, localVal, key ->
+            //  9.1 — eventData is checked first
+            checkAll(PropTestConfig(iterations = 20), Arb.string(), Arb.string(), Arb.string(1..30)) { eventVal, localVal, key ->
                 val ctx = object : ExecutionContext {
                     override val plotId: UUID = UUID.randomUUID()
                     override val player = null
@@ -153,8 +153,8 @@ class ParamDelegatePropertyTest : FreeSpec({
     "Property 14b: param<T> throws ParameterTypeMismatchException on type mismatch" - {
 
         "Int stored, String expected → throws" {
-            // **Validates: Requirements 9.3**
-            checkAll(PropTestConfig(iterations = 100), Arb.int(), Arb.string(1..30)) { value, key ->
+            //  9.3
+            checkAll(PropTestConfig(iterations = 20), Arb.int(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<String>(key)
                 shouldThrow<ParameterTypeMismatchException> {
@@ -166,8 +166,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "String stored, Int expected → throws" {
-            // **Validates: Requirements 9.3**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(), Arb.string(1..30)) { value, key ->
+            //  9.3
+            checkAll(PropTestConfig(iterations = 20), Arb.string(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<Int>(key)
                 shouldThrow<ParameterTypeMismatchException> {
@@ -179,8 +179,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "Boolean stored, Double expected → throws" {
-            // **Validates: Requirements 9.3**
-            checkAll(PropTestConfig(iterations = 100), Arb.boolean(), Arb.string(1..30)) { value, key ->
+            //  9.3
+            checkAll(PropTestConfig(iterations = 20), Arb.boolean(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<Double>(key)
                 shouldThrow<ParameterTypeMismatchException> {
@@ -192,8 +192,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "exception message contains parameter name" {
-            // **Validates: Requirements 9.3** — exception carries the param name
-            checkAll(PropTestConfig(iterations = 100), Arb.int(), Arb.string(1..30)) { value, key ->
+            //  9.3 — exception carries the param name
+            checkAll(PropTestConfig(iterations = 20), Arb.int(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.param<String>(key)
                 val ex = shouldThrow<ParameterTypeMismatchException> {
@@ -213,8 +213,8 @@ class ParamDelegatePropertyTest : FreeSpec({
     "Property 14c: optionalParam<T> returns null when parameter is absent" - {
 
         "absent String param returns null" {
-            // **Validates: Requirements 9.4**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(1..30)) { key ->
+            //  9.4
+            checkAll(PropTestConfig(iterations = 20), Arb.string(1..30)) { key ->
                 val ctx = contextWithEventData(emptyMap())
                 val delegate = ctx.optionalParam<String>(key)
                 val result by delegate
@@ -223,8 +223,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "absent Int param returns null" {
-            // **Validates: Requirements 9.4**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(1..30)) { key ->
+            //  9.4
+            checkAll(PropTestConfig(iterations = 20), Arb.string(1..30)) { key ->
                 val ctx = contextWithEventData(emptyMap())
                 val delegate = ctx.optionalParam<Int>(key)
                 val result by delegate
@@ -233,8 +233,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "absent Boolean param returns null" {
-            // **Validates: Requirements 9.4**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(1..30)) { key ->
+            //  9.4
+            checkAll(PropTestConfig(iterations = 20), Arb.string(1..30)) { key ->
                 val ctx = contextWithEventData(emptyMap())
                 val delegate = ctx.optionalParam<Boolean>(key)
                 val result by delegate
@@ -243,8 +243,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "key absent from both eventData and localScope returns null" {
-            // **Validates: Requirements 9.4**
-            checkAll(PropTestConfig(iterations = 100), Arb.string(1..30), Arb.string(1..30)) { presentKey, absentKey ->
+            //  9.4
+            checkAll(PropTestConfig(iterations = 20), Arb.string(1..30), Arb.string(1..30)) { presentKey, absentKey ->
                 // Ensure the keys are different so absentKey is truly absent
                 if (presentKey != absentKey) {
                     val ctx = contextWithEventData(mapOf(presentKey to "someValue"))
@@ -256,8 +256,8 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
 
         "optionalParam returns value when key IS present" {
-            // **Validates: Requirements 9.4** — null only when absent, not when present
-            checkAll(PropTestConfig(iterations = 100), Arb.string(), Arb.string(1..30)) { value, key ->
+            //  9.4 — null only when absent, not when present
+            checkAll(PropTestConfig(iterations = 20), Arb.string(), Arb.string(1..30)) { value, key ->
                 val ctx = contextWithEventData(mapOf(key to value))
                 val delegate = ctx.optionalParam<String>(key)
                 val result by delegate

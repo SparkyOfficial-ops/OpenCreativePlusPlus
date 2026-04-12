@@ -13,7 +13,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
+/
  * Integration tests for PlotPersistence using Testcontainers.
  * Tests plot CRUD operations and serialization round-trip consistency.
  * 

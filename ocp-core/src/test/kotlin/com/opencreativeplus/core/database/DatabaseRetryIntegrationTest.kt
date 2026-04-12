@@ -10,7 +10,7 @@ import org.junit.jupiter.api.condition.DisabledIfSystemProperty
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
+/
  * Integration tests for database retry logic.
  *
  * Verifies that:
@@ -257,7 +257,7 @@ class DatabaseRetryIntegrationTest {
     // when Docker is unavailable.
     // -------------------------------------------------------------------------
 
-    /**
+    /
      * Nested test class that uses Testcontainers for real MongoDB integration.
      * Skipped automatically when Docker is not available.
      */

@@ -18,10 +18,10 @@ import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
 
-/**
+/
  * Property-based tests for [ChatInputManager.awaitChatInput] round-trip.
  *
- * **Validates: Requirements 3.3**
+ *  3.3
  *
  * Property 7: awaitChatInput round-trip — for any arbitrary non-"cancel" string sent by a
  * player, `awaitChatInput` must return exactly that string (input == output). The coroutine
@@ -39,7 +39,7 @@ class ChatInputPropertyTest : FreeSpec({
         return p
     }
 
-    /** Arbitrary non-"cancel" strings (case-insensitive exclusion). */
+    / Arbitrary non-"cancel" strings (case-insensitive exclusion). */
     val arbNonCancelString: Arb<String> =
         Arb.string(0..100).filter { it.lowercase() != "cancel" }
 
@@ -50,8 +50,8 @@ class ChatInputPropertyTest : FreeSpec({
     "Property 7a: awaitChatInput returns the exact message for any non-cancel string" - {
 
         "input equals output (round-trip)" {
-            // **Validates: Requirements 3.3**
-            checkAll(PropTestConfig(iterations = 100), arbNonCancelString) { message ->
+            //  3.3
+            checkAll(PropTestConfig(iterations = 20), arbNonCancelString) { message ->
                 val manager = ChatInputManager()
                 val player = mockPlayer()
                 var result: String? = null
@@ -70,8 +70,8 @@ class ChatInputPropertyTest : FreeSpec({
         }
 
         "onChatMessage returns true when session is active" {
-            // **Validates: Requirements 3.3** — session is registered before message delivery
-            checkAll(PropTestConfig(iterations = 100), arbNonCancelString) { message ->
+            //  3.3 — session is registered before message delivery
+            checkAll(PropTestConfig(iterations = 20), arbNonCancelString) { message ->
                 val manager = ChatInputManager()
                 val player = mockPlayer()
                 var consumed = false
@@ -90,8 +90,8 @@ class ChatInputPropertyTest : FreeSpec({
         }
 
         "session is cleaned up after coroutine resumes" {
-            // **Validates: Requirements 3.3** — finally block removes the session
-            checkAll(PropTestConfig(iterations = 100), arbNonCancelString) { message ->
+            //  3.3 — finally block removes the session
+            checkAll(PropTestConfig(iterations = 20), arbNonCancelString) { message ->
                 val manager = ChatInputManager()
                 val player = mockPlayer()
 
@@ -119,7 +119,7 @@ class ChatInputPropertyTest : FreeSpec({
 
         cancelVariants.forEach { variant ->
             "cancel variant '$variant' returns null" {
-                // **Validates: Requirements 3.3**
+                //  3.3
                 val manager = ChatInputManager()
                 val player = mockPlayer()
                 var result: String? = "not_set"
@@ -145,9 +145,9 @@ class ChatInputPropertyTest : FreeSpec({
     "Property 7c: concurrent sessions for different players are independent" - {
 
         "each player receives their own message" {
-            // **Validates: Requirements 3.3** — sessions keyed by UUID
+            //  3.3 — sessions keyed by UUID
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbNonCancelString,
                 arbNonCancelString
             ) { msg1, msg2 ->

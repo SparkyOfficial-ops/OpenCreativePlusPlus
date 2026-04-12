@@ -8,7 +8,7 @@ import org.bson.Document
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/**
+/
  * Manages variable scopes at three levels: local, plot, and saved.
  * 
  * Variable resolution order: local → plot → saved
@@ -24,7 +24,7 @@ class VariableManager(private val database: MongoDatabase) {
     private val plotScopes = ConcurrentHashMap<UUID, VariableScope>()
     private val savedScopes = ConcurrentHashMap<UUID, VariableScope>()
     
-    /**
+    /
      * Create a new local scope for a single script execution.
      * Local scopes are not shared and are cleared after execution.
      */
@@ -32,7 +32,7 @@ class VariableManager(private val database: MongoDatabase) {
         return VariableScopeImpl()
     }
     
-    /**
+    /
      * Get the plot scope for a specific plot.
      * Plot scopes are shared across all players on the plot but not persisted.
      * 
@@ -43,7 +43,7 @@ class VariableManager(private val database: MongoDatabase) {
         return plotScopes.getOrPut(plotId) { VariableScopeImpl() }
     }
     
-    /**
+    /
      * Get the saved scope for a specific plot.
      * Saved scopes persist across server restarts.
      * Loads from database on first access.
@@ -57,7 +57,7 @@ class VariableManager(private val database: MongoDatabase) {
         }
     }
     
-    /**
+    /
      * Save plot variables to MongoDB.
      * Uses write-behind caching strategy with upsert.
      * 
@@ -67,9 +67,10 @@ class VariableManager(private val database: MongoDatabase) {
         val scope = savedScopes[plotId] ?: return
         
         val collection = database.getCollection<Document>("plot_variables")
+        val variablesDoc = Document((scope as VariableScopeImpl).toMap())
         val document = Document().apply {
             put("_id", plotId.toString())
-            put("variables", (scope as VariableScopeImpl).toMap())
+            put("variables", variablesDoc)
             put("updated_at", System.currentTimeMillis())
         }
         
@@ -80,7 +81,7 @@ class VariableManager(private val database: MongoDatabase) {
         )
     }
     
-    /**
+    /
      * Load saved scope variables from MongoDB.
      * 
      * @param plotId The plot UUID
@@ -98,7 +99,7 @@ class VariableManager(private val database: MongoDatabase) {
         return scope
     }
     
-    /**
+    /
      * Clear the plot scope for a specific plot.
      * Does not affect saved scope.
      * 
@@ -108,7 +109,7 @@ class VariableManager(private val database: MongoDatabase) {
         plotScopes[plotId]?.clear()
     }
     
-    /**
+    /
      * Remove plot scope from memory.
      * Used when a plot is unloaded.
      * 
@@ -118,7 +119,7 @@ class VariableManager(private val database: MongoDatabase) {
         plotScopes.remove(plotId)
     }
     
-    /**
+    /
      * Remove saved scope from memory cache.
      * Does not delete from database.
      * 

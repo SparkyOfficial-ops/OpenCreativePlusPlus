@@ -15,7 +15,7 @@ import com.opencreativeplus.plugin.node.value.MultiplyValue
 import com.opencreativeplus.plugin.node.value.SubtractValue
 import org.bukkit.Material
 
-/**
+/
  * Registers all built-in nodes into the NodeRegistry.
  25.2, 7.1, 7.2, 7.3, 30.1, 30.2, 30.4, 31.1, 31.2, 31.3
  */

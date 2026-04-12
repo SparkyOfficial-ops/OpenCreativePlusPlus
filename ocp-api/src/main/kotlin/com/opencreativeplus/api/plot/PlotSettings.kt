@@ -1,6 +1,6 @@
 package com.opencreativeplus.api.plot
 
-/**
+/
  * Data class for plot configuration settings.
  */
 data class PlotSettings(

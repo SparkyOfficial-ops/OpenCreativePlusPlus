@@ -15,7 +15,7 @@ import java.util.UUID
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for RatingManager and TagManager.
  *
 21.3, 22.5

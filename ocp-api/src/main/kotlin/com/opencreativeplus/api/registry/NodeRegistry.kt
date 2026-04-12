@@ -6,12 +6,12 @@ import com.opencreativeplus.api.node.IEvent
 import com.opencreativeplus.api.node.IValue
 import org.bukkit.Material
 
-/**
+/
  * Registry for mapping Minecraft block types to node factories.
  * Supports registration of actions, conditions, values, and events.
  */
 interface NodeRegistry {
-    /**
+    /
      * Register an action node factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -19,7 +19,7 @@ interface NodeRegistry {
      */
     fun registerAction(blockType: Material, factory: (params: Map<String, Any>) -> IAction)
     
-    /**
+    /
      * Register a condition node factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -27,7 +27,7 @@ interface NodeRegistry {
      */
     fun registerCondition(blockType: Material, factory: (params: Map<String, Any>) -> ICondition)
     
-    /**
+    /
      * Register a value node factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -35,7 +35,7 @@ interface NodeRegistry {
      */
     fun registerValue(blockType: Material, factory: (params: Map<String, Any>) -> IValue<*>)
     
-    /**
+    /
      * Register an event node factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -43,7 +43,7 @@ interface NodeRegistry {
      */
     fun registerEvent(blockType: Material, factory: () -> IEvent)
     
-    /**
+    /
      * Get the action factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -51,7 +51,7 @@ interface NodeRegistry {
      */
     fun getActionFactory(blockType: Material): ((Map<String, Any>) -> IAction)?
     
-    /**
+    /
      * Get the condition factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -59,7 +59,7 @@ interface NodeRegistry {
      */
     fun getConditionFactory(blockType: Material): ((Map<String, Any>) -> ICondition)?
     
-    /**
+    /
      * Get the value factory for a specific block type.
      *
      * @param blockType The Minecraft block material
@@ -67,7 +67,7 @@ interface NodeRegistry {
      */
     fun getValueFactory(blockType: Material): ((Map<String, Any>) -> IValue<*>)?
     
-    /**
+    /
      * Get the event factory for a specific block type.
      *
      * @param blockType The Minecraft block material

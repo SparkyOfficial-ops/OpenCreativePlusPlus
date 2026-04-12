@@ -1,6 +1,6 @@
 package com.opencreativeplus.core.database
 
-/**
+/
  * Database configuration loaded from config.yml
  */
 data class DatabaseConfig(

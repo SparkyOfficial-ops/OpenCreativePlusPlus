@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for PlotCommands covering permission enforcement and mode switching.
  *
 32.2, 32.5

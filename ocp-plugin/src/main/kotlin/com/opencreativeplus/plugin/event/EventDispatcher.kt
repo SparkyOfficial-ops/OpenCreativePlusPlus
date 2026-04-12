@@ -8,7 +8,7 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/**
+/
  * Indexes compiled scripts by event type and dispatches Minecraft events to matching scripts.
  *
  * Scripts are indexed per-plot so that only scripts belonging to the active plot are executed.
@@ -20,10 +20,10 @@ class EventDispatcher(
     private val executionEngine: ExecutionEngine,
     private val executionScope: CoroutineScope
 ) {
-    /** plotId → (eventType → scripts) */
+    / plotId → (eventType → scripts) */
     private val scriptsByEvent = ConcurrentHashMap<UUID, Map<String, List<CompiledScript>>>()
 
-    /**
+    /
      * Index [scripts] for [plotId] by their event type.
      * Replaces any previously registered scripts for this plot.
      16.1, 16.2
@@ -32,7 +32,7 @@ class EventDispatcher(
         scriptsByEvent[plotId] = scripts.groupBy { it.event.eventType }
     }
 
-    /**
+    /
      * Remove all scripts registered for [plotId].
      16.2
      */
@@ -40,7 +40,7 @@ class EventDispatcher(
         scriptsByEvent.remove(plotId)
     }
 
-    /**
+    /
      * Dispatch [eventType] to all matching scripts for [plotId].
      * Each script is launched in its own coroutine so failures are isolated (req 16.5).
      16.2, 16.3, 16.4, 28.1

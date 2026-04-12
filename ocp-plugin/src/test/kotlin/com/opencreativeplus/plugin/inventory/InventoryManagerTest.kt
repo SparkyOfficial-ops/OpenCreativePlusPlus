@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for InventoryManager covering:
  * - Inventory save and restore (serialization/deserialization)
  * - Mode-specific provisioning (BUILD, DEV, PLAY)
@@ -48,8 +48,12 @@ class InventoryManagerTest {
 
         // Make withRetry execute the block for save operations (returns UpdateResult mock)
         // and return null for load operations (no document found by default)
-        coEvery { connectionManager.withRetry(block = any<suspend () -> Any?>()) } coAnswers {
+        coEvery { connectionManager.withRetry<Any?>(any<suspend () -> Any?>()) } coAnswers {
             val block = firstArg<suspend () -> Any?>()
+            block()
+        }
+        coEvery { connectionManager.withRetry<Any?>(any<Int>(), any<suspend () -> Any?>()) } coAnswers {
+            val block = secondArg<suspend () -> Any?>()
             block()
         }
 

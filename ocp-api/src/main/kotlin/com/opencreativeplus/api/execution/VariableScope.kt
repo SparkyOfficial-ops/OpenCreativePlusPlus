@@ -1,11 +1,11 @@
 package com.opencreativeplus.api.execution
 
-/**
+/
  * Interface for variable storage at different scope levels.
  * Supports local, plot, and saved scope variables.
  */
 interface VariableScope {
-    /**
+    /
      * Get the value of a variable by name.
      *
      * @param name The variable name
@@ -13,7 +13,7 @@ interface VariableScope {
      */
     fun get(name: String): Any?
     
-    /**
+    /
      * Set the value of a variable.
      *
      * @param name The variable name
@@ -21,7 +21,7 @@ interface VariableScope {
      */
     fun set(name: String, value: Any)
     
-    /**
+    /
      * Check if a variable exists in this scope.
      *
      * @param name The variable name
@@ -29,7 +29,7 @@ interface VariableScope {
      */
     fun has(name: String): Boolean
     
-    /**
+    /
      * Clear all variables from this scope.
      */
     fun clear()

@@ -15,7 +15,7 @@ import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/**
+/
  * Manages transitions between BUILD, DEV, and PLAY modes for players on plots.
  *
  * On every mode switch:
@@ -34,7 +34,7 @@ class ModeManagerImpl(
     private val executionEngine: ExecutionEngine
 ) : ModeManager {
 
-    /** "$playerId:$plotId" → current PlotMode */
+    / "$playerId:$plotId" → current PlotMode */
     private val currentModes = ConcurrentHashMap<String, PlotMode>()
 
     // -------------------------------------------------------------------------
@@ -69,7 +69,7 @@ class ModeManagerImpl(
     // Mode exit cleanup
     // -------------------------------------------------------------------------
 
-    /**
+    /
      * Perform cleanup when leaving [mode].
      2.8, 2.9, 5.5, 26.2
      */
@@ -96,7 +96,7 @@ class ModeManagerImpl(
     // Mode enter setup
     // -------------------------------------------------------------------------
 
-    /**
+    /
      * Apply mode-specific setup when entering [mode].
      * Returns true if the switch should proceed, false if it was aborted.
      2.4, 2.5, 2.6, 2.7, 3.1
@@ -109,7 +109,7 @@ class ModeManagerImpl(
         }
     }
 
-    /**
+    /
      * BUILD mode: creative gamemode + flight, scripts disabled (req 2.4, 2.5).
      */
     private fun applyBuildMode(player: Player) {
@@ -118,7 +118,7 @@ class ModeManagerImpl(
         player.isFlying = true
     }
 
-    /**
+    /
      * DEV mode: teleport to dev world coding zone, provision coding inventory (req 2.7, 3.1).
      */
     private suspend fun applyDevMode(player: Player, plot: Plot) {
@@ -132,7 +132,7 @@ class ModeManagerImpl(
         inventoryManager.provisionDevInventory(player)
     }
 
-    /**
+    /
      * PLAY mode: scan blocks → compile → register scripts → enable execution (req 2.6, 5.1, 5.3, 23.4, 23.5).
      * Returns true on success, false if compilation failed and the switch was aborted.
      */

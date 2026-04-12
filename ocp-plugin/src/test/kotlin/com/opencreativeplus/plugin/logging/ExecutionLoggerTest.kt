@@ -15,7 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for ExecutionLogger — log creation, storage, retrieval, and the
  * 100-execution limit per plot.
  *
@@ -30,18 +30,20 @@ class ExecutionLoggerTest {
 
     @BeforeEach
     fun setUp() {
-        database = mockk(relaxed = true)
+        database = mockk()
         collection = mockk(relaxed = true)
-        connectionManager = mockk()
 
-        // Stub withRetry to simply execute the block — avoids real MongoDB connection
-        coEvery { connectionManager.withRetry<Any>(any(), any()) } coAnswers {
-            @Suppress("UNCHECKED_CAST")
-            (secondArg<suspend () -> Any>())()
-        }
+        // Use a real MongoConnectionManager with a fake config — withRetry will execute the block directly
+        val config = com.opencreativeplus.core.database.DatabaseConfig(
+            connectionString = "mongodb://localhost:27017",
+            databaseName = "test",
+            maxRetries = 1,
+            retryDelayMs = 0
+        )
+        connectionManager = spyk(MongoConnectionManager(config))
 
-        every { database.getCollection<Document>("execution_logs") } returns collection
-        executionLogger = ExecutionLogger(database, connectionManager)
+        every { database.getCollection("execution_logs", Document::class.java) } returns collection
+        executionLogger = ExecutionLogger(database, connectionManager, collection)
     }
 
 

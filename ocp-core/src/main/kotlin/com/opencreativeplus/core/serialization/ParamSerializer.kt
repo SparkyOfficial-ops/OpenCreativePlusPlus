@@ -8,7 +8,7 @@ import org.bukkit.block.TileState
 import org.bukkit.persistence.PersistentDataContainer
 import org.bukkit.persistence.PersistentDataType
 
-/**
+/
  * Serializes and deserializes node parameters to/from a block's [PersistentDataContainer].
  *
  * Keys are namespaced using the provided [namespacedKey] factory (typically `ocp:{param_name}`).
@@ -30,7 +30,7 @@ import org.bukkit.persistence.PersistentDataType
  */
 class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
 
-    /**
+    /
      * Persists [value] under [paramName] in the [PersistentDataContainer] of [block].
      *
      * If the block's state is not a [TileState], the call is a no-op.
@@ -55,7 +55,7 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
         (block.state as TileState).update()
     }
 
-    /**
+    /
      * Reads the value stored under [paramName] from the [PersistentDataContainer] of [block].
      *
      * The method tries each supported primitive type in order (String → Int → Double → Boolean)
@@ -78,7 +78,7 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
             ?: pdc.get(key, PersistentDataType.BYTE)?.let { it == 1.toByte() }
     }
 
-    /**
+    /
      * Serializes a [Location] to a comma-separated string:
      * `"worldName,x,y,z,yaw,pitch"`.
      *
@@ -87,7 +87,7 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
     private fun serializeLocation(loc: Location): String =
         "${loc.world?.name},${loc.x},${loc.y},${loc.z},${loc.yaw},${loc.pitch}"
 
-    /**
+    /
      * Serializes a [List] to a `|`-delimited string of each element's [toString] value.
      *
      * Example: `["a", "b", "c"]` → `"a|b|c"`.

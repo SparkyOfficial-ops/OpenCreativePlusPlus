@@ -3,7 +3,7 @@ package com.opencreativeplus.core.execution
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.IEvent
 
-/**
+/
  * Represents a compiled script ready for execution.
  *
  * A compiled script is the result of parsing a physical code line in the world —
@@ -15,6 +15,6 @@ import com.opencreativeplus.api.node.IEvent
 data class CompiledScript(
     val event: IEvent,
     val actions: List<IAction>,
-    /** Human-readable location string, e.g. "world@x,y,z" */
+    / Human-readable location string, e.g. "world@x,y,z" */
     val sourceLocation: String
 )

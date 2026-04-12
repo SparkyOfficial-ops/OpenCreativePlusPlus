@@ -6,7 +6,7 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 
-/**
+/
  * Admin command that displays the current server TPS and watchdog status.
  *
  * Usage: `/ocptps`

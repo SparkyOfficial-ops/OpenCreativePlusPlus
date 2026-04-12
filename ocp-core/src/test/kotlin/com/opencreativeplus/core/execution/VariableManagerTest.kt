@@ -15,7 +15,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
-/**
+/
  * Unit tests for VariableManager.
  * Tests variable resolution order, scope isolation, and persistence.
  * 
@@ -27,7 +27,7 @@ class VariableManagerTest {
     private lateinit var collection: MongoCollection<Document>
     private lateinit var variableManager: VariableManager
 
-    /** Helper: create a FindFlow mock that emits [docs]. */
+    / Helper: create a FindFlow mock that emits [docs]. */
     private fun findFlowOf(vararg docs: Document): FindFlow<Document> {
         val ff = mockk<FindFlow<Document>>(relaxed = true)
         // FindFlow extends Flow<T>, so we stub collect() to emit the documents

@@ -7,7 +7,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 
-/**
+/
  * Displays compilation errors in a chest GUI.
  * Each error is shown as a barrier block with location and message in lore.
  *

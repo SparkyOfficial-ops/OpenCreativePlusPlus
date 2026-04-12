@@ -17,7 +17,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for [ChatInputManager].
  *
  * Requirements: 1.7, 1.8, 3.5

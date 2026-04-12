@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.api.example
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 
-/**
+/
  * Example extension action: teleports the player to a named location.
  *
  * Registration example:

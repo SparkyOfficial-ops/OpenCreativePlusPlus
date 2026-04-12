@@ -3,7 +3,7 @@ package com.opencreativeplus.plugin.world
 import org.bukkit.Material
 import org.bukkit.World
 
-/**
+/
  * Generates the visual coding grid in the Coding_Zone (dev world).
  *
  * Grid layout (Requirements 3.1, 3.2, 3.3, 3.4, 3.5):
@@ -23,7 +23,7 @@ class CodingGridGenerator {
         const val LEVEL_COUNT = 8  // 8 levels: Y=5,10,...,40
     }
 
-    /**
+    /
      * Generate the full coding grid in [world].
      3.1, 3.2, 3.3, 3.4, 3.5
      */
@@ -34,7 +34,7 @@ class CodingGridGenerator {
         }
     }
 
-    /**
+    /
      * Generate all strips at a single Y level.
      */
     private fun generateLevel(world: World, y: Int) {
@@ -44,7 +44,7 @@ class CodingGridGenerator {
         }
     }
 
-    /**
+    /
      * Generate a single coding strip starting at (0, y, z).
      * First block is BLUE_STAINED_GLASS, rest alternate WHITE/GRAY.
      3.2, 3.3

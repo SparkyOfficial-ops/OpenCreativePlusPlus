@@ -10,7 +10,7 @@ import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
 
-/**
+/
  * Bukkit event listener that bridges Minecraft events to the [EventDispatcher].
  *
  * Only dispatches events when the plot is in PLAY mode (req 16.1).

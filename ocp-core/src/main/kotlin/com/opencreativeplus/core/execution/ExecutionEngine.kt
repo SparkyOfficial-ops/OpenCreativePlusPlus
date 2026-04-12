@@ -9,7 +9,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
+/
  * Launches and manages coroutine-based script executions.
  *
  * Each call to [executeScript] spawns a new coroutine under [CoroutineConfiguration.executionScope].
@@ -23,13 +23,13 @@ class ExecutionEngine(
     private val variableManager: VariableManager,
     private val coroutineConfig: CoroutineConfiguration
 ) {
-    /** plotId → active jobs for that plot */
+    / plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
 
-    /** "$plotId:$playerId" → active jobs for that player on that plot */
+    / "$plotId:$playerId" → active jobs for that player on that plot */
     private val playerExecutions = ConcurrentHashMap<String, MutableList<Job>>()
 
-    /**
+    /
      * Execute [script] in a new coroutine, building a fresh [ExecutionContextImpl] for this run.
      *
      * The coroutine is tracked so it can be cancelled via [cancelAllExecutions] or
@@ -89,7 +89,7 @@ class ExecutionEngine(
         }
     }
 
-    /**
+    /
      * Cancel all scripts currently running on [plotId].
      * Called when a plot switches out of PLAY mode (req 26.2).
      */
@@ -97,7 +97,7 @@ class ExecutionEngine(
         activeExecutions.remove(plotId)?.forEach { it.cancel() }
     }
 
-    /**
+    /
      * Cancel all scripts associated with [playerId] on [plotId].
      * Called when a player leaves a plot (req 6.5, 26.1).
      */

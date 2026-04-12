@@ -2,7 +2,7 @@ package com.opencreativeplus.api.plot
 
 import java.util.UUID
 
-/**
+/
  * Data class representing a plot with all its properties and metadata.
  */
 data class Plot(

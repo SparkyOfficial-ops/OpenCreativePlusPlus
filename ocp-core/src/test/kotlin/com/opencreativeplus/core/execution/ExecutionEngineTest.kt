@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
+/
  * Unit tests for ExecutionEngine.
  *
  * Covers:
@@ -82,11 +82,11 @@ class ExecutionEngineTest {
         return e
     }
 
-    /** Build a CompiledScript from a list of IAction lambdas. */
+    / Build a CompiledScript from a list of IAction lambdas. */
     private fun script(vararg actions: IAction): CompiledScript =
         CompiledScript(event = mockEvent(), actions = actions.toList(), sourceLocation = "test@0,0,0")
 
-    /** An IAction that records its execution and optionally suspends. */
+    / An IAction that records its execution and optionally suspends. */
     private fun recordingAction(
         log: CopyOnWriteArrayList<String>,
         label: String,
@@ -100,7 +100,7 @@ class ExecutionEngineTest {
         }
     }
 
-    /** An IAction that always throws. */
+    / An IAction that always throws. */
     private fun throwingAction(message: String = "boom"): IAction = object : IAction {
         override val nodeId = "throwing"
         override val displayName = "Throwing"
@@ -109,7 +109,7 @@ class ExecutionEngineTest {
         }
     }
 
-    /** An IAction that suspends until [latch] is counted down. */
+    / An IAction that suspends until [latch] is counted down. */
     private fun latchAction(latch: CountDownLatch): IAction = object : IAction {
         override val nodeId = "latch"
         override val displayName = "Latch"

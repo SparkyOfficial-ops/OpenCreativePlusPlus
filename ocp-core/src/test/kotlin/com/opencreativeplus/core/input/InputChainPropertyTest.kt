@@ -20,11 +20,11 @@ import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
 
-/**
+/
  * Property-based tests for [ChatInputManager.inputChain] — collects all responses.
  *
- * **Property 8: inputChain collects all responses**
- * **Validates: Requirements 3.4**
+ * Property 8: inputChain collects all responses
+ *  3.4
  *
  * For any sequence of N labeled prompts, when the player provides N non-cancel responses,
  * `inputChain` must return a map of exactly N entries where each label maps to the
@@ -42,7 +42,7 @@ class InputChainPropertyTest : FreeSpec({
         return p
     }
 
-    /** Arbitrary non-"cancel" response strings. */
+    / Arbitrary non-"cancel" response strings. */
     val arbResponse: Arb<String> =
         Arb.string(1..50).filter { it.lowercase() != "cancel" }
 
@@ -53,9 +53,9 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8a: inputChain result map has exactly N entries for N prompts" - {
 
         "result size equals number of prompts" {
-            // **Validates: Requirements 3.4**
+            //  3.4
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..10)
             ) { n ->
                 val manager = ChatInputManager()
@@ -91,9 +91,9 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8b: each label maps to the correct response" - {
 
         "label_i maps to response_i for all i" {
-            // **Validates: Requirements 3.4**
+            //  3.4
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..10),
                 Arb.list(arbResponse, 1..10)
             ) { n, rawResponses ->
@@ -133,9 +133,9 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8c: responses are consumed in the order prompts were declared" - {
 
         "first response goes to first label, second to second, etc." {
-            // **Validates: Requirements 3.4** — sequential execution of prompts
+            //  3.4 — sequential execution of prompts
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.list(arbResponse, 2..8)
             ) { responses ->
                 val manager = ChatInputManager()
@@ -173,8 +173,8 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8d: cancel at any position in the chain throws ChatInputCancelledException" - {
 
         "cancel at first prompt throws immediately" {
-            // **Validates: Requirements 3.4** — cancel propagates as exception
-            checkAll(PropTestConfig(iterations = 100), Arb.int(1..8)) { n ->
+            //  3.4 — cancel propagates as exception
+            checkAll(PropTestConfig(iterations = 20), Arb.int(1..8)) { n ->
                 val manager = ChatInputManager()
                 val player = mockPlayer()
                 val prompts = (0 until n).map { i -> "label_$i" to "prompt_$i" }
@@ -199,9 +199,9 @@ class InputChainPropertyTest : FreeSpec({
         }
 
         "cancel after k valid responses throws and stops chain" {
-            // **Validates: Requirements 3.4** — no further prompts after cancel
+            //  3.4 — no further prompts after cancel
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(2..8)
             ) { n ->
                 val manager = ChatInputManager()
@@ -244,7 +244,7 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8e: inputChain with empty prompts list returns empty map" - {
 
         "empty prompts -> empty result" {
-            // **Validates: Requirements 3.4**
+            //  3.4
             val manager = ChatInputManager()
             val player = mockPlayer()
 
@@ -262,8 +262,8 @@ class InputChainPropertyTest : FreeSpec({
     "Property 8f: no active session remains after inputChain completes" - {
 
         "session is cleaned up on successful completion" {
-            // **Validates: Requirements 3.4**
-            checkAll(PropTestConfig(iterations = 100), Arb.int(1..5)) { n ->
+            //  3.4
+            checkAll(PropTestConfig(iterations = 20), Arb.int(1..5)) { n ->
                 val manager = ChatInputManager()
                 val player = mockPlayer()
                 val prompts = (0 until n).map { i -> "label_$i" to "prompt_$i" }

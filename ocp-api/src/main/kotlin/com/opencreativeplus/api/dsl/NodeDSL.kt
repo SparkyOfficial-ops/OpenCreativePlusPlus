@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
 @DslMarker
 annotation class NodeDslMarker
 
-/**
+/
  * Entry point for OCP plugin API. Provides access to the node registry.
  */
 interface OcpPluginAPI {

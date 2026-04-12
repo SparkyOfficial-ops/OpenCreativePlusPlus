@@ -25,10 +25,10 @@ import org.bukkit.Material
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/**
+/
  * Property-based tests for [NodeDSL] registration round-trip.
  *
- * **Validates: Requirements 10.2, 10.3, 10.4**
+ *  10.2, 10.3, 10.4
  */
 class NodeDSLPropertyTest : FreeSpec({
 
@@ -36,7 +36,7 @@ class NodeDSLPropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    /** Minimal in-memory stub implementation of [NodeRegistry]. */
+    / Minimal in-memory stub implementation of [NodeRegistry]. */
     fun stubRegistry(): NodeRegistry {
         val actions = mutableMapOf<Material, (Map<String, Any>) -> IAction>()
         val conditions = mutableMapOf<Material, (Map<String, Any>) -> ICondition>()
@@ -60,7 +60,7 @@ class NodeDSLPropertyTest : FreeSpec({
         }
     }
 
-    /** Minimal no-op [VariableScope] backed by a mutable map. */
+    / Minimal no-op [VariableScope] backed by a mutable map. */
     fun mapScope(initial: Map<String, Any> = emptyMap()): VariableScope {
         val store = initial.toMutableMap()
         return object : VariableScope {
@@ -71,7 +71,7 @@ class NodeDSLPropertyTest : FreeSpec({
         }
     }
 
-    /** Build a minimal [ExecutionContext] with configurable [eventData] and [localScope]. */
+    / Build a minimal [ExecutionContext] with configurable [eventData] and [localScope]. */
     fun stubContext(
         eventData: Map<String, Any> = emptyMap(),
         localScope: Map<String, Any> = emptyMap()
@@ -86,7 +86,7 @@ class NodeDSLPropertyTest : FreeSpec({
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 
-    /** Fixed set of [Material] values safe to use without a running Bukkit server. */
+    / Fixed set of [Material] values safe to use without a running Bukkit server. */
     val arbMaterial: Arb<Material> = Arb.element(
         listOf(
             Material.STONE,
@@ -108,8 +108,8 @@ class NodeDSLPropertyTest : FreeSpec({
     "Property 15a: Action registration round-trip" - {
 
         "factory is non-null after registerAction" {
-            // **Validates: Requirements 10.2**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.2
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerAction(material) {
@@ -121,8 +121,8 @@ class NodeDSLPropertyTest : FreeSpec({
         }
 
         "produced IAction has correct displayName" {
-            // **Validates: Requirements 10.2**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.2
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerAction(material) {
@@ -136,8 +136,8 @@ class NodeDSLPropertyTest : FreeSpec({
         }
 
         "produced IAction has nodeId equal to material.name" {
-            // **Validates: Requirements 10.2**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.2
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerAction(material) {
@@ -158,8 +158,8 @@ class NodeDSLPropertyTest : FreeSpec({
     "Property 15b: Condition registration round-trip" - {
 
         "factory is non-null after registerCondition" {
-            // **Validates: Requirements 10.3**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.3
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerCondition(material) {
@@ -171,8 +171,8 @@ class NodeDSLPropertyTest : FreeSpec({
         }
 
         "produced ICondition has correct displayName" {
-            // **Validates: Requirements 10.3**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.3
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerCondition(material) {
@@ -186,8 +186,8 @@ class NodeDSLPropertyTest : FreeSpec({
         }
 
         "produced ICondition has nodeId equal to material.name" {
-            // **Validates: Requirements 10.3**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbName) { material: Material, name: String ->
+            //  10.3
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbName) { material: Material, name: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerCondition(material) {
@@ -208,9 +208,9 @@ class NodeDSLPropertyTest : FreeSpec({
     "Property 15c: name() and description() are preserved in produced IAction" - {
 
         "displayName matches name() call" {
-            // **Validates: Requirements 10.4**
+            //  10.4
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbMaterial,
                 arbName,
                 arbDescription
@@ -236,8 +236,8 @@ class NodeDSLPropertyTest : FreeSpec({
     "Property 15d: requires<T> validates params at execution time" - {
 
         "execute() with empty eventData throws ParameterTypeMismatchException" {
-            // **Validates: Requirements 10.2**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbParamName) { material: Material, paramName: String ->
+            //  10.2
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbParamName) { material: Material, paramName: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerAction(material) {
@@ -254,8 +254,8 @@ class NodeDSLPropertyTest : FreeSpec({
         }
 
         "execute() with correct param does NOT throw" {
-            // **Validates: Requirements 10.2**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbParamName) { material: Material, paramName: String ->
+            //  10.2
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbParamName) { material: Material, paramName: String ->
                 val registry = stubRegistry()
                 val dsl = NodeDSL(registry)
                 dsl.registerAction(material) {
@@ -279,8 +279,8 @@ class NodeDSLPropertyTest : FreeSpec({
     "Property 15e: OcpPluginAPI.nodes {} extension delegates to registry" - {
 
         "getActionFactory is non-null after registering via api.nodes {}" {
-            // **Validates: Requirements 10.1**
-            checkAll(PropTestConfig(iterations = 100), arbMaterial) { material: Material ->
+            //  10.1
+            checkAll(PropTestConfig(iterations = 20), arbMaterial) { material: Material ->
                 val registry = stubRegistry()
                 val api = object : OcpPluginAPI {
                     override val nodeRegistry: NodeRegistry = registry

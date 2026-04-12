@@ -47,7 +47,7 @@ private class FakeExecutionContext(override val player: Player? = null) : Execut
 // Integration tests
 // ---------------------------------------------------------------------------
 
-/**
+/
  * Integration tests for the extension API.
  * Validates Requirements: 11.3, 11.4
  */

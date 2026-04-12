@@ -4,9 +4,7 @@ import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.core.database.MongoConnectionManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
 import org.bson.Document
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -18,7 +16,7 @@ import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.UUID
 
-/**
+/
  * Manages per-player per-plot inventory states across the three modes.
  *
  * Each player has three separate inventory states per plot (BUILD, DEV, PLAY).
@@ -37,7 +35,7 @@ class InventoryManager(
     // Save / Load
     // -------------------------------------------------------------------------
 
-    /**
+    /
      * Save the player's current inventory for [mode] on [plotId].
      14.1, 14.5, 17.4
      */
@@ -57,27 +55,23 @@ class InventoryManager(
             put("saved_at", System.currentTimeMillis())
         }
 
-        withContext(Dispatchers.IO) {
-            connectionManager.withRetry {
-                collection.replaceOne(
-                    Document("_id", inventoryKey(player.uniqueId, plotId, mode)),
-                    doc,
-                    com.mongodb.client.model.ReplaceOptions().upsert(true)
-                )
-            }
+        connectionManager.withRetry {
+            collection.replaceOne(
+                Document("_id", inventoryKey(player.uniqueId, plotId, mode)),
+                doc,
+                com.mongodb.client.model.ReplaceOptions().upsert(true)
+            )
         }
     }
 
-    /**
+    /
      * Load and apply the saved inventory for [mode] on [plotId] to [player].
      * If no saved state exists, clears the inventory.
      14.2, 14.3, 14.4
      */
     suspend fun loadInventory(player: Player, plotId: UUID, mode: PlotMode) {
-        val doc = withContext(Dispatchers.IO) {
-            connectionManager.withRetry {
-                collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode))).firstOrNull()
-            }
+        val doc = connectionManager.withRetry {
+            collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode))).firstOrNull()
         }
 
         player.inventory.clear()
@@ -97,7 +91,7 @@ class InventoryManager(
     // DEV mode provisioning (Requirements 36.1–36.4)
     // -------------------------------------------------------------------------
 
-    /**
+    /
      * Provision the DEV mode inventory: all registered action node blocks,
      * glass blocks, signs, and chests in infinite quantities.
      36.1, 36.2, 36.3, 36.4

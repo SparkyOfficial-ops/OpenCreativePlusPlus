@@ -4,7 +4,7 @@ import com.opencreativeplus.api.plot.Plot
 import com.opencreativeplus.core.database.PlotPersistence
 import org.bukkit.entity.Player
 
-/**
+/
  * Manages plot tags with a maximum of 5 tags per plot.
  *
  22.1, 22.2, 22.3, 22.5
@@ -17,7 +17,7 @@ class TagManager(
         const val MAX_TAGS = 5
     }
 
-    /**
+    /
      * Add a tag to a plot. Only the owner can add tags.
      * Returns false if the tag limit is reached or tag already exists.
      22.1, 22.2, 22.5
@@ -42,7 +42,7 @@ class TagManager(
         return true
     }
 
-    /**
+    /
      * Remove a tag from a plot. Only the owner can remove tags.
      22.3
      */

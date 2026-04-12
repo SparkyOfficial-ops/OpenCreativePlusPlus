@@ -29,11 +29,11 @@ import kotlin.test.assertTrue
  * Group 1: Initialization order — verifies CoroutineConfiguration behaves correctly
  *           when created and closed (as done during onEnable/onDisable).
  *
- * Group 2: Graceful shutdown with active scripts — verifies Requirement 26.4:
+ * Group 2: Graceful shutdown with active scripts — verifies  26.4:
  *           "When a coroutine is cancelled, the OCP_Engine SHALL release all
  *            resources held by the Execution_Context."
  *
- * Validates: Requirement 26.4
+ 26.4
  */
 class StartupShutdownIntegrationTest {
 
@@ -153,11 +153,11 @@ class StartupShutdownIntegrationTest {
         }
 
     // =========================================================================
-    // Group 2: Graceful shutdown with active scripts (Requirement 26.4)
+    // Group 2: Graceful shutdown with active scripts ( 26.4)
     // =========================================================================
 
     /
-     * Validates Requirement 26.4: cancelling all executions on a plot and then
+     * Validates  26.4: cancelling all executions on a plot and then
      * closing the coroutine scope terminates all active coroutines.
      */
     @Test
@@ -193,7 +193,7 @@ class StartupShutdownIntegrationTest {
     }
 
     /
-     * Validates Requirement 26.4: the local scope (Execution_Context resource) is
+     * Validates  26.4: the local scope (Execution_Context resource) is
      * cleared when a coroutine is cancelled.
      *
      * The ExecutionEngine.executeScript finally block calls context.localScope.clear()

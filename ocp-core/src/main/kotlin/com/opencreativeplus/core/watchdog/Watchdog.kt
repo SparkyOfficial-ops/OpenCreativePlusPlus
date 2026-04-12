@@ -105,16 +105,16 @@ class Watchdog(private val tpsMonitor: TPSMonitor) {
     fun areScriptsPaused(): Boolean = scriptsPaused.get()
 
     companion object {
-        / Maximum operations allowed per single script execution. Requirements: 8.2 */
+        / Maximum operations allowed per single script execution. s: 8.2 */
         const val MAX_OPERATIONS = 10_000
 
-        / TPS threshold below which all scripts are paused. Requirements: 8.3 */
+        / TPS threshold below which all scripts are paused. s: 8.3 */
         const val MIN_TPS = 15.0
 
-        / TPS threshold above which paused scripts resume. Requirements: 8.4 */
+        / TPS threshold above which paused scripts resume. s: 8.4 */
         const val RESUME_TPS = 18.0
 
-        / Maximum memory per plot in bytes (50 MB). Requirements: 29.2 */
+        / Maximum memory per plot in bytes (50 MB). s: 29.2 */
         const val MAX_MEMORY_BYTES = 50L * 1024 * 1024
     }
 }

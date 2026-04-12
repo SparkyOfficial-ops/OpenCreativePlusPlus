@@ -1,29 +1,35 @@
 package com.opencreativeplus.plugin.scanner
 
+import com.opencreativeplus.api.model.ItemVariableRef
+import com.opencreativeplus.api.model.ItemVariableType
 import com.opencreativeplus.api.registry.NodeRegistry
 import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Sign
 import org.bukkit.block.Chest
+import org.bukkit.block.TileState
+import org.bukkit.persistence.PersistentDataType
 
 /
  * Scans the Coding_Zone world for physical block arrangements and converts them to CodeLines.
  *
- * Scanning strategy (Requirements 4.1, 4.2, 20.1, 20.2, 20.3, 20.4):
+ * Scanning strategy (s 4.1, 4.2, 20.1, 20.2, 20.3, 20.4):
  * - Iterates Y levels 0..255 step 5
  * - At each Y, scans Z coordinates -512..512 step 2 looking for BLUE_STAINED_GLASS
  * - When found, reads the strip left-to-right (increasing X) collecting blocks above glass
  * - Stops when the glass strip ends (non-glass block at floor level)
  *
- * Parameter extraction (Requirements 4.5, 4.6, 19.1-19.5):
+ * Parameter extraction (s 4.5, 4.6, 19.1-19.5):
  * - Checks all adjacent faces for attached signs -> parses key=value pairs
  * - Checks block directly above for a chest -> reads chest contents
  */
 class BlockScanner(
     private val world: World,
-    private val nodeRegistry: NodeRegistry
+    private val nodeRegistry: NodeRegistry,
+    private val pluginNamespace: String = "opencreativeplus"
 ) {
 
     companion object {
@@ -87,12 +93,16 @@ class BlockScanner(
     }
 
     /
-     * Extract parameters from signs attached to [block] and from a chest placed above it.
-     4.5, 4.6, 19.1, 19.2, 19.3, 19.4
+     * Extract parameters from signs attached to [block], from a chest placed above it
+     * (including Item_Variable items), and from the block's PersistentDataContainer.
+     *
+     * Priority order (Req 20.3): PDC values overwrite sign values.
+     4.2, 4.3, 4.5, 4.6, 19.1, 19.2, 19.3, 19.4, 20.2, 20.3
      */
     internal fun extractParameters(block: Block): Map<String, Any> {
         val params = mutableMapOf<String, Any>()
 
+        // 1. Read signs (existing logic)
         for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
             val adjacent = block.getRelative(face)
             val state = adjacent.state
@@ -101,13 +111,54 @@ class BlockScanner(
             }
         }
 
+        // 2. Read chest above (existing logic + Item Variable detection)
         val above = block.getRelative(BlockFace.UP)
         val aboveState = above.state
         if (aboveState is Chest) {
-            params["chest_contents"] = aboveState.inventory.contents.filterNotNull()
+            val nonNullContents = aboveState.inventory.contents.filterNotNull()
+            params["chest_contents"] = nonNullContents
+
+            // Detect Item_Variable items by their PDC tag ocp:variable_type (Req 4.2, 4.3)
+            nonNullContents.forEach { item ->
+                val pdc = item.itemMeta?.persistentDataContainer ?: return@forEach
+                val varTypeStr = pdc.get(
+                    NamespacedKey(pluginNamespace, "variable_type"),
+                    PersistentDataType.STRING
+                ) ?: return@forEach
+                val varName = pdc.get(
+                    NamespacedKey(pluginNamespace, "variable_name"),
+                    PersistentDataType.STRING
+                ) ?: return@forEach
+                val varType = runCatching {
+                    ItemVariableType.valueOf(varTypeStr.uppercase())
+                }.getOrNull() ?: return@forEach
+                params["item_var_${varTypeStr.lowercase()}"] = ItemVariableRef(varName, varType)
+            }
         }
 
+        // 3. PDC has priority over sign data (Req 20.2, 20.3)
+        params.putAll(readPDCParams(block))
+
         return params
+    }
+
+    /
+     * Read all parameters stored in the block's PersistentDataContainer under the "ocp" namespace.
+     * Supports STRING, INTEGER, and DOUBLE types.
+     * Returns an empty map if the block state is not a TileState.
+     20.2, 20.3
+     */
+    internal fun readPDCParams(block: Block): Map<String, Any> {
+        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return emptyMap()
+        val result = mutableMapOf<String, Any>()
+        pdc.keys.filter { it.namespace == "ocp" }.forEach { key ->
+            val paramName = key.key
+            // Try each type; last non-null wins (STRING is tried last so it doesn't shadow numeric types)
+            pdc.get(key, PersistentDataType.INTEGER)?.let { result[paramName] = it }
+            pdc.get(key, PersistentDataType.DOUBLE)?.let { result[paramName] = it }
+            pdc.get(key, PersistentDataType.STRING)?.let { result[paramName] = it }
+        }
+        return result
     }
 
     /

@@ -288,7 +288,7 @@ class LessThanValueTest {
 }
 
 // ---------------------------------------------------------------------------
-// Nested value evaluation tests (Requirements 31.4, 31.5)
+// Nested value evaluation tests (s 31.4, 31.5)
 // ---------------------------------------------------------------------------
 
 class NestedValueTest {

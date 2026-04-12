@@ -34,7 +34,7 @@ class RatingAndTaggingTest {
     }
 
     // -------------------------------------------------------------------------
-    // Duplicate rating prevention — Requirement 21.3
+    // Duplicate rating prevention —  21.3
     // -------------------------------------------------------------------------
 
     @Test
@@ -58,7 +58,7 @@ class RatingAndTaggingTest {
 
         val result = ratingManager.ratePlot(player, plot)
 
-        // Requirement 21.3: duplicate rating must be prevented
+        //  21.3: duplicate rating must be prevented
         assertFalse(result, "Duplicate rating should be rejected")
     }
 
@@ -90,7 +90,7 @@ class RatingAndTaggingTest {
     }
 
     // -------------------------------------------------------------------------
-    // Tag limit enforcement — Requirement 22.5
+    // Tag limit enforcement —  22.5
     // -------------------------------------------------------------------------
 
     @Test
@@ -114,7 +114,7 @@ class RatingAndTaggingTest {
             tags = listOf("adventure", "pvp", "puzzle", "survival", "creative")
         )
 
-        // Requirement 22.5: 6th tag must be rejected
+        //  22.5: 6th tag must be rejected
         val result = tagManager.addTag(owner, plot, "horror")
 
         assertFalse(result, "Adding a 6th tag should be rejected")

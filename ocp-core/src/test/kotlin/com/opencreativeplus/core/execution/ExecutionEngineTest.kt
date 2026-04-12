@@ -26,10 +26,10 @@ import kotlin.test.assertTrue
  * Unit tests for ExecutionEngine.
  *
  * Covers:
- * - Coroutine suspension and resumption (Requirement 6.2, 6.3)
- * - Concurrent script execution (Requirement 6.4)
- * - Cancellation on player leave (Requirement 6.5, 26.1)
- * - Error isolation between scripts (Requirement 38.1)
+ * - Coroutine suspension and resumption ( 6.2, 6.3)
+ * - Concurrent script execution ( 6.4)
+ * - Cancellation on player leave ( 6.5, 26.1)
+ * - Error isolation between scripts ( 38.1)
  */
 class ExecutionEngineTest {
 
@@ -119,7 +119,7 @@ class ExecutionEngineTest {
     }
 
     // =========================================================================
-    // 1. Coroutine suspension and resumption  (Requirements 6.2, 6.3)
+    // 1. Coroutine suspension and resumption  (s 6.2, 6.3)
     // =========================================================================
 
     @Test
@@ -221,7 +221,7 @@ class ExecutionEngineTest {
     }
 
     // =========================================================================
-    // 2. Concurrent script execution  (Requirement 6.4)
+    // 2. Concurrent script execution  ( 6.4)
     // =========================================================================
 
     @Test
@@ -309,7 +309,7 @@ class ExecutionEngineTest {
     }
 
     // =========================================================================
-    // 3. Cancellation on player leave  (Requirements 6.5, 26.1)
+    // 3. Cancellation on player leave  (s 6.5, 26.1)
     // =========================================================================
 
     @Test
@@ -429,7 +429,7 @@ class ExecutionEngineTest {
     }
 
     // =========================================================================
-    // 4. Error isolation between scripts  (Requirement 38.1)
+    // 4. Error isolation between scripts  ( 38.1)
     // =========================================================================
 
     @Test

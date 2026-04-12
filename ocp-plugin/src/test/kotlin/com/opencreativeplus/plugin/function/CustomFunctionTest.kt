@@ -152,7 +152,7 @@ class FunctionRegistryTest {
 }
 
 // ---------------------------------------------------------------------------
-// FunctionCallAction – function definition and calling (Requirement 15.3)
+// FunctionCallAction – function definition and calling ( 15.3)
 // ---------------------------------------------------------------------------
 
 /
@@ -219,7 +219,7 @@ class FunctionCallActionDefinitionTest {
 }
 
 // ---------------------------------------------------------------------------
-// FunctionCallAction – parameter passing (Requirement 15.2, 15.3)
+// FunctionCallAction – parameter passing ( 15.2, 15.3)
 // ---------------------------------------------------------------------------
 
 /
@@ -340,7 +340,7 @@ class FunctionCallActionParameterTest {
 }
 
 // ---------------------------------------------------------------------------
-// FunctionCallAction – recursion detection (Requirement 15.5)
+// FunctionCallAction – recursion detection ( 15.5)
 // ---------------------------------------------------------------------------
 
 /

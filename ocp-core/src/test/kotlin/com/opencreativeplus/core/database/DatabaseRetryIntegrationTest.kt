@@ -14,14 +14,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * Integration tests for database retry logic.
  *
  * Verifies that:
- * - Operations are retried up to 3 times before logging an error (Requirement 17.5)
- * - Operations succeed when connection is restored within the retry window (Requirement 38.2)
- * - Queued operations are retried when connection is restored (Requirement 38.2)
+ * - Operations are retried up to 3 times before logging an error ( 17.5)
+ * - Operations succeed when connection is restored within the retry window ( 38.2)
+ * - Queued operations are retried when connection is restored ( 38.2)
  *
  * The retry logic tests use MongoConnectionManager.withRetry() directly with simulated
  * failures — no real MongoDB connection is required for these tests.
  *
- * Requirements: 38.1, 38.2
+ * s: 38.1, 38.2
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DatabaseRetryIntegrationTest {
@@ -47,7 +47,7 @@ class DatabaseRetryIntegrationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Retry count enforcement (Requirement 17.5)
+    // Retry count enforcement ( 17.5)
     // -------------------------------------------------------------------------
 
     @Test
@@ -137,12 +137,12 @@ class DatabaseRetryIntegrationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Simulated connection recovery (Requirement 38.2)
+    // Simulated connection recovery ( 38.2)
     // -------------------------------------------------------------------------
 
     @Test
     fun `operations queued during failure are retried and succeed on reconnect`() = runBlocking {
-        // Simulates Requirement 38.2: queue operations and retry when connection is restored.
+        // Simulates  38.2: queue operations and retry when connection is restored.
         // withRetry acts as the queue mechanism — the operation is retried until available.
         val connectionAvailable = AtomicInteger(0)
         val attemptCount = AtomicInteger(0)
@@ -164,7 +164,7 @@ class DatabaseRetryIntegrationTest {
 
     @Test
     fun `failed operation after max retries propagates exception to caller`() = runBlocking {
-        // Requirement 17.5: after 3 retries, exception propagates so caller can log the error
+        //  17.5: after 3 retries, exception propagates so caller can log the error
         val attemptCount = AtomicInteger(0)
         var caught = false
 
@@ -224,7 +224,7 @@ class DatabaseRetryIntegrationTest {
 
     @Test
     fun `withRetry preserves the original exception type`() = runBlocking {
-        // Requirement 17.5: the exception type is preserved so callers can handle specific errors
+        //  17.5: the exception type is preserved so callers can handle specific errors
         class DatabaseConnectionException(message: String) : Exception(message)
 
         val ex = assertThrows<DatabaseConnectionException> {

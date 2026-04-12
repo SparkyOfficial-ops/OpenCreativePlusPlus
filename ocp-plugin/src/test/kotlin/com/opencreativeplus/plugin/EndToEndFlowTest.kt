@@ -19,7 +19,7 @@ import org.junit.jupiter.api.Test
  * End-to-end flow tests documenting the complete pipeline:
  * Code placement → Scanning → Compilation → Script registration → Execution
  *
- All requirements (integration validation)
+ All s (integration validation)
  */
 class EndToEndFlowTest {
 

@@ -18,7 +18,7 @@ import org.bukkit.entity.Player
  * if (value != null) { /* use value */ }
  * ```
  *
- * Requirements: 1.4, 1.5, 1.6, 1.7, 1.8, 3.1, 3.2, 3.3, 3.4, 3.5
+ * s: 1.4, 1.5, 1.6, 1.7, 1.8, 3.1, 3.2, 3.3, 3.4, 3.5
  */
 class ChatInputManager {
 

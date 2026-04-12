@@ -6,7 +6,7 @@ import org.bukkit.World
 /
  * Generates the visual coding grid in the Coding_Zone (dev world).
  *
- * Grid layout (Requirements 3.1, 3.2, 3.3, 3.4, 3.5):
+ * Grid layout (s 3.1, 3.2, 3.3, 3.4, 3.5):
  * - Multiple vertical levels spaced 5 blocks apart (Y = 5, 10, 15, ...)
  * - At each level, 32 coding strips spaced 2 blocks apart along Z axis
  * - Each strip starts with a BLUE_STAINED_GLASS block at X=0

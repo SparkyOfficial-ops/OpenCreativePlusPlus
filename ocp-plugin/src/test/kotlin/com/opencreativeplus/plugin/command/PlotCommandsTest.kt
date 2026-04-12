@@ -72,7 +72,7 @@ class PlotCommandsTest {
     }
 
     // -------------------------------------------------------------------------
-    // Requirement 32.5: Non-owner denied /dev and /build with a message
+    //  32.5: Non-owner denied /dev and /build with a message
     // -------------------------------------------------------------------------
 
     @Test
@@ -87,7 +87,7 @@ class PlotCommandsTest {
 
         plotCommands.onCommand(stranger, mockCommand("dev"), "dev", emptyArray())
 
-        // Requirement 32.5: denial message must be sent
+        //  32.5: denial message must be sent
         verify { stranger.sendMessage(match<String> { it.contains("permission", ignoreCase = true) }) }
         // Mode switch must NOT be triggered
         coVerify(exactly = 0) { modeManager.switchMode(any(), any(), any()) }
@@ -110,7 +110,7 @@ class PlotCommandsTest {
     }
 
     // -------------------------------------------------------------------------
-    // Requirement 32.2: Plot owner can execute /dev and /build
+    //  32.2: Plot owner can execute /dev and /build
     // -------------------------------------------------------------------------
 
     @Test

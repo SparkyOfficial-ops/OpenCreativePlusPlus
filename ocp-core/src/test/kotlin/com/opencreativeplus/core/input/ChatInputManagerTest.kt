@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 /
  * Unit tests for [ChatInputManager].
  *
- * Requirements: 1.7, 1.8, 3.5
+ * s: 1.7, 1.8, 3.5
  */
 class ChatInputManagerTest {
 
@@ -105,7 +105,7 @@ class ChatInputManagerTest {
     }
 
     // =========================================================================
-    // 2. Cancel interception — Requirement 1.7
+    // 2. Cancel interception —  1.7
     //    WHEN player types "cancel", awaitChatInput returns null
     // =========================================================================
 
@@ -174,7 +174,7 @@ class ChatInputManagerTest {
     }
 
     // =========================================================================
-    // 3. Disconnect behavior — Requirements 1.8, 3.5
+    // 3. Disconnect behavior — s 1.8, 3.5
     //    onPlayerDisconnect throws ChatInputCancelledException to the coroutine
     // =========================================================================
 
@@ -289,7 +289,7 @@ class ChatInputManagerTest {
     }
 
     // =========================================================================
-    // 5. inputChain throws ChatInputCancelledException on disconnect — Requirement 3.5
+    // 5. inputChain throws ChatInputCancelledException on disconnect —  3.5
     // =========================================================================
 
     @Test

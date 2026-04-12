@@ -96,7 +96,7 @@ class PlotPersistence(
         description: String? = null,
         tags: List<String>? = null
     ) {
-        // Validate character limits (Requirements 39.5)
+        // Validate character limits (s 39.5)
         name?.let {
             require(it.length <= 32) { "Plot name must not exceed 32 characters" }
         }

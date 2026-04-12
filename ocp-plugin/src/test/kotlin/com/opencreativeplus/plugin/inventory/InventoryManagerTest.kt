@@ -79,7 +79,7 @@ class InventoryManagerTest {
     private fun emptyFindFlow() = mockk<com.mongodb.kotlin.client.coroutine.FindFlow<Document>>(relaxed = true)
 
     // -------------------------------------------------------------------------
-    // Save inventory — Requirement 14.5
+    // Save inventory —  14.5
     // -------------------------------------------------------------------------
 
     @Test
@@ -146,7 +146,7 @@ class InventoryManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Load inventory — Requirements 14.2, 14.3, 14.4
+    // Load inventory — s 14.2, 14.3, 14.4
     // -------------------------------------------------------------------------
 
     @Test
@@ -198,7 +198,7 @@ class InventoryManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Three-state separation — Requirement 14.1
+    // Three-state separation —  14.1
     // -------------------------------------------------------------------------
 
     @Test
@@ -225,7 +225,7 @@ class InventoryManagerTest {
                 "$playerId:$plotId:PLAY"
             ),
             capturedKeys.toSet(),
-            "Each mode must use a distinct inventory key (Requirement 14.1)"
+            "Each mode must use a distinct inventory key ( 14.1)"
         )
     }
 
@@ -253,7 +253,7 @@ class InventoryManagerTest {
                 "$playerId:$plotId:PLAY"
             ),
             queriedKeys.toSet(),
-            "Each mode must query a distinct inventory key (Requirement 14.1)"
+            "Each mode must query a distinct inventory key ( 14.1)"
         )
     }
 
@@ -303,7 +303,7 @@ class InventoryManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // DEV mode provisioning — Requirements 36.1–36.4
+    // DEV mode provisioning — s 36.1–36.4
     // -------------------------------------------------------------------------
 
     @Test

@@ -42,7 +42,7 @@ class PlotManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Plot creation — Requirement 32.1
+    // Plot creation —  32.1
     // -------------------------------------------------------------------------
 
     @Test
@@ -86,7 +86,7 @@ class PlotManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Plot loading — Requirement 13.7
+    // Plot loading —  13.7
     // -------------------------------------------------------------------------
 
     @Test
@@ -104,7 +104,7 @@ class PlotManagerTest {
 
         val loaded = plotManager.loadPlot(plotId)
 
-        // Requirement 13.7: all saved settings must be restored on load
+        //  13.7: all saved settings must be restored on load
         assertEquals("DESERT", loaded.settings.biome)
         assertEquals(18000L, loaded.settings.timeOfDay)
         assertEquals(true, loaded.settings.pvpEnabled)
@@ -151,7 +151,7 @@ class PlotManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Permission enforcement — Requirement 32.5
+    // Permission enforcement —  32.5
     // -------------------------------------------------------------------------
 
     @Test
@@ -170,7 +170,7 @@ class PlotManagerTest {
         val plot = makePlot(owner = ownerId, trustedPlayers = emptySet())
         val stranger = mockPlayer(strangerId)
 
-        // Requirement 32.5: non-owner must be denied dev/build mode access
+        //  32.5: non-owner must be denied dev/build mode access
         assertFalse(plotManager.canEdit(stranger, plot), "Non-owner without trust should be denied")
     }
 
@@ -181,7 +181,7 @@ class PlotManagerTest {
         val plot = makePlot(owner = ownerId, trustedPlayers = setOf(trustedId))
         val trusted = mockPlayer(trustedId)
 
-        // Requirement 32.4: trusted players should have edit access
+        //  32.4: trusted players should have edit access
         assertTrue(plotManager.canEdit(trusted, plot), "Trusted player should be able to edit")
     }
 
@@ -197,7 +197,7 @@ class PlotManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Trusted player management — Requirement 32.4
+    // Trusted player management —  32.4
     // -------------------------------------------------------------------------
 
     @Test
@@ -228,7 +228,7 @@ class PlotManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Settings persistence — Requirement 13.6
+    // Settings persistence —  13.6
     // -------------------------------------------------------------------------
 
     @Test

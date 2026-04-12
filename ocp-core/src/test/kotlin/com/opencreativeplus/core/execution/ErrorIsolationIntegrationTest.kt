@@ -21,10 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * Integration tests for error isolation between plots.
  *
  * Verifies that:
- * - When an Action_Node throws an exception, only that Code_Line is terminated (Requirement 38.1)
- * - Scripts on other plots are not affected by a failure on one plot (Requirement 38.1)
- * - Multiple concurrent scripts on the same plot are isolated from each other (Requirement 38.1)
- * - Error count tracking per plot does not bleed across plots (Requirement 38.4)
+ * - When an Action_Node throws an exception, only that Code_Line is terminated ( 38.1)
+ * - Scripts on other plots are not affected by a failure on one plot ( 38.1)
+ * - Multiple concurrent scripts on the same plot are isolated from each other ( 38.1)
+ * - Error count tracking per plot does not bleed across plots ( 38.4)
  *
  38.1, 38.2
  */
@@ -99,7 +99,7 @@ class ErrorIsolationIntegrationTest {
         }
 
     // =========================================================================
-    // Requirement 38.1 — Exception terminates only the affected Code_Line
+    //  38.1 — Exception terminates only the affected Code_Line
     // =========================================================================
 
     @Test
@@ -297,7 +297,7 @@ class ErrorIsolationIntegrationTest {
     }
 
     // =========================================================================
-    // Cancellation does not affect other plots (Requirement 38.4)
+    // Cancellation does not affect other plots ( 38.4)
     // =========================================================================
 
     @Test
@@ -335,7 +335,7 @@ class ErrorIsolationIntegrationTest {
 
     @Test
     fun `executeScript does not throw when action throws — error is isolated`() = runBlocking {
-        // Requirement 38.1: the engine catches exceptions per Code_Line
+        //  38.1: the engine catches exceptions per Code_Line
         val plotId = UUID.randomUUID()
 
         // When / Then: no exception propagates out of executeScript

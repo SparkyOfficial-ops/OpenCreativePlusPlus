@@ -28,9 +28,9 @@ import kotlin.test.assertEquals
 
 /
  * Unit tests for ModeManagerImpl covering:
- * - Inventory save/restore on mode switch (Requirements 2.8, 2.9)
- * - Script compilation trigger when switching to PLAY mode (Requirement 2.6)
- * - Coroutine/execution cancellation when leaving PLAY mode (Requirement 26.2)
+ * - Inventory save/restore on mode switch (s 2.8, 2.9)
+ * - Script compilation trigger when switching to PLAY mode ( 2.6)
+ * - Coroutine/execution cancellation when leaving PLAY mode ( 26.2)
  *
 2.8, 2.9, 26.2
  */
@@ -106,7 +106,7 @@ class ModeManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Inventory save on mode switch — Requirement 2.8
+    // Inventory save on mode switch —  2.8
     // -------------------------------------------------------------------------
 
     @Test
@@ -162,7 +162,7 @@ class ModeManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Inventory restore on mode switch — Requirement 2.9
+    // Inventory restore on mode switch —  2.9
     // -------------------------------------------------------------------------
 
     @Test
@@ -236,7 +236,7 @@ class ModeManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Script compilation trigger — Requirement 2.6 / 5.1
+    // Script compilation trigger —  2.6 / 5.1
     // -------------------------------------------------------------------------
 
     @Test
@@ -324,7 +324,7 @@ class ModeManagerTest {
     }
 
     // -------------------------------------------------------------------------
-    // Coroutine cancellation when leaving PLAY mode — Requirement 26.2
+    // Coroutine cancellation when leaving PLAY mode —  26.2
     // -------------------------------------------------------------------------
 
     @Test

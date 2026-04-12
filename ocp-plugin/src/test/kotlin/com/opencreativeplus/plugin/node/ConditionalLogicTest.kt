@@ -13,7 +13,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 // ---------------------------------------------------------------------------
-// EqualsCondition tests (Requirement 30.1, 30.2)
+// EqualsCondition tests ( 30.1, 30.2)
 // ---------------------------------------------------------------------------
 
 class EqualsConditionTest {
@@ -61,7 +61,7 @@ class EqualsConditionTest {
         assertFalse(EqualsCondition(null, 5).evaluate(ctx))
     }
 
-    // Requirement 30.2 - evaluate using current ExecutionContext (variable resolution)
+    //  30.2 - evaluate using current ExecutionContext (variable resolution)
 
     @Test
     fun `resolves variable reference from local scope`() = runTest {
@@ -101,7 +101,7 @@ class EqualsConditionTest {
 }
 
 // ---------------------------------------------------------------------------
-// GreaterThanCondition tests (Requirement 30.1, 30.2)
+// GreaterThanCondition tests ( 30.1, 30.2)
 // ---------------------------------------------------------------------------
 
 class GreaterThanConditionTest {
@@ -159,7 +159,7 @@ class GreaterThanConditionTest {
 }
 
 // ---------------------------------------------------------------------------
-// LessThanCondition tests (Requirement 30.1, 30.2)
+// LessThanCondition tests ( 30.1, 30.2)
 // ---------------------------------------------------------------------------
 
 class LessThanConditionTest {
@@ -204,7 +204,7 @@ class LessThanConditionTest {
 }
 
 // ---------------------------------------------------------------------------
-// IfAction branching tests (Requirement 30.3)
+// IfAction branching tests ( 30.3)
 // ---------------------------------------------------------------------------
 
 class IfActionTest {

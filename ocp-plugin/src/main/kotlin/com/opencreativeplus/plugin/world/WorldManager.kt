@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Manages plot world creation, loading, and unloading.
  *
  * Uses standard Bukkit world management with a hook for SlimeWorldManager
- * when available (Requirements 27.1, 27.2, 27.3).
+ * when available (s 27.1, 27.2, 27.3).
  *
  1.1, 1.2, 1.3, 1.5, 27.1, 27.2, 27.3, 27.4, 27.5, 35.1, 35.2, 35.3, 35.4
  */

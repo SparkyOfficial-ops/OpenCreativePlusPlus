@@ -49,7 +49,7 @@ private class FakeExecutionContext(override val player: Player? = null) : Execut
 
 /
  * Integration tests for the extension API.
- * Validates Requirements: 11.3, 11.4
+ * Validates s: 11.3, 11.4
  */
 class ExtensionAPIIntegrationTest {
 
@@ -112,7 +112,7 @@ class ExtensionAPIIntegrationTest {
         assertNotNull(registry.getEventFactory(Material.EMERALD_BLOCK))
     }
 
-    // --- Validation of invalid nodes (Requirements: 11.4) ---
+    // --- Validation of invalid nodes (s: 11.4) ---
 
     @Test
     fun `registerAction with blank nodeId throws IllegalArgumentException`() {
@@ -167,7 +167,7 @@ class ExtensionAPIIntegrationTest {
         assertNull(registry.getActionFactory(Material.IRON_BLOCK))
     }
 
-    // --- Execution of external nodes: TeleportAction (Requirements: 11.3) ---
+    // --- Execution of external nodes: TeleportAction (s: 11.3) ---
 
     @Test
     fun `TeleportAction has correct nodeId and displayName`() {

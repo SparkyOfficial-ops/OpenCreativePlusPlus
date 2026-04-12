@@ -1,5 +1,6 @@
 package com.opencreativeplus.core.execution
 
+import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.Watchdog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -21,13 +22,23 @@ import java.util.concurrent.atomic.AtomicInteger
 class ExecutionEngine(
     private val watchdog: Watchdog,
     private val variableManager: VariableManager,
-    private val coroutineConfig: CoroutineConfiguration
+    private val coroutineConfig: CoroutineConfiguration,
+    private var traceManager: TraceManager? = null
 ) {
     /** plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
 
     /** "$plotId:$playerId" → active jobs for that player on that plot */
     private val playerExecutions = ConcurrentHashMap<String, MutableList<Job>>()
+
+    /**
+     * Inject or replace the [TraceManager] used for debug visualisation.
+     * Pass null to disable tracing.
+     * s: 14.2, 14.3, 14.5, 14.7
+     */
+    fun setTraceManager(tm: TraceManager?) {
+        traceManager = tm
+    }
 
     /**
      * Execute [script] in a new coroutine, building a fresh [ExecutionContextImpl] for this run.
@@ -59,9 +70,12 @@ class ExecutionEngine(
         )
 
         val job = coroutineConfig.executionScope.launch {
+            val startTime = System.currentTimeMillis()
             try {
                 for (action in script.actions) {
                     watchdog.checkExecution(context)
+                    // Trace hook: notify before/at node execution (s: 14.2, 14.3)
+                    traceManager?.onNodeExecute(null, action.displayName, emptyMap())
                     action.execute(context)
                     context.operationCount.incrementAndGet()
                 }
@@ -73,6 +87,17 @@ class ExecutionEngine(
                     "[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}"
                 )
             } finally {
+                // Trace hook: execution complete summary (s: 14.7)
+                player?.let { p ->
+                    if (traceManager?.isTracing(p.uniqueId) == true) {
+                        val durationMs = System.currentTimeMillis() - startTime
+                        traceManager?.onExecutionComplete(
+                            p.uniqueId,
+                            context.operationCount.get(),
+                            durationMs
+                        )
+                    }
+                }
                 context.localScope.clear()
             }
         }

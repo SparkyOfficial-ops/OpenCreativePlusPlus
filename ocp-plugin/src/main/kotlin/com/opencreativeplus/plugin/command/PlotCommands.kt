@@ -1,6 +1,7 @@
 package com.opencreativeplus.plugin.command
 
 import com.opencreativeplus.api.plot.PlotMode
+import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
@@ -12,15 +13,16 @@ import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
 /**
- * Handles /build, /dev, /play, /plot, and /ocptps commands.
+ * Handles /build, /dev, /play, /plot, /ocptps, and /ocp commands.
  *
- 2.1, 2.2, 2.3, 32.2, 32.5, 34.3
+ 2.1, 2.2, 2.3, 32.2, 32.5, 34.3, 14.1
  */
 class PlotCommands(
     private val plotManager: PlotManagerImpl,
     private val modeManager: ModeManagerImpl,
     private val tpsMonitor: TPSMonitor,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val traceManager: TraceManager? = null
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -40,6 +42,7 @@ class PlotCommands(
             "play"  -> handleModeSwitch(sender, PlotMode.PLAY)
             "plot"  -> handlePlot(sender, args)
             "ocptps" -> sender.sendMessage("§6[OCP] Current TPS: §f${String.format("%.1f", tpsMonitor.getCurrentTPS())}")
+            "ocp"   -> handleOcp(sender, args)
         }
 
         return true
@@ -100,6 +103,30 @@ class PlotCommands(
                 }
             }
             else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust>")
+        }
+    }
+
+    /**
+     * Handles /ocp subcommands.
+     * Currently supports: trace
+     * s: 14.1
+     */
+    private fun handleOcp(player: Player, args: Array<out String>) {
+        val sub = args.firstOrNull()?.lowercase()
+        when (sub) {
+            "trace" -> {
+                if (!player.hasPermission("ocp.debug")) {
+                    player.sendMessage("§cYou don't have permission to use trace mode.")
+                    return
+                }
+                val tm = traceManager
+                if (tm == null) {
+                    player.sendMessage("§c[OCP] Trace mode is not available.")
+                    return
+                }
+                tm.toggle(player)
+            }
+            else -> player.sendMessage("§7[OCP] Usage: /ocp <trace>")
         }
     }
 }

@@ -7,6 +7,7 @@ import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.core.execution.CoroutineConfiguration
 import com.opencreativeplus.core.execution.ExecutionEngine
 import com.opencreativeplus.core.execution.VariableManager
+import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
@@ -88,6 +89,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         val variableManager = VariableManager(database)
         executionEngine = ExecutionEngine(watchdog, variableManager, coroutineConfig)
 
+        // ── Trace Manager ─────────────────────────────────────────────────────
+        val traceManager = TraceManager(this)
+        executionEngine.setTraceManager(traceManager)
+
         val nodeRegistry = NodeRegistryImpl()
         BuiltInNodeRegistry.register(nodeRegistry)
         OpenCreativePlusAPI.initialize(nodeRegistry)
@@ -130,8 +135,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
 
         // ── Commands ──────────────────────────────────────────────────────────
-        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope)
-        listOf("build", "dev", "play", "plot", "ocptps").forEach { cmd ->
+        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager)
+        listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
             getCommand(cmd)?.setExecutor(plotCommands)
         }
         getCommand("ocplogs")?.setExecutor(LogViewCommand(executionLogger, plotManager, scope))

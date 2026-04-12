@@ -24,3 +24,7 @@ commands:
   ocplogs:
     description: View execution logs for your plot
     usage: /ocplogs
+  ocp:
+    description: OpenCreative++ debug and utility commands
+    usage: /ocp <trace>
+    permission: ocp.use

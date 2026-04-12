@@ -3,6 +3,12 @@ package com.opencreativeplus.core.execution
 import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.opencreativeplus.api.execution.VariableScope
+import com.opencreativeplus.api.model.VariableChange
+import com.opencreativeplus.api.model.VariableScopeType
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
 import org.bson.Document
 import java.util.UUID
@@ -23,6 +29,30 @@ class VariableManager(private val database: MongoDatabase) {
     
     private val plotScopes = ConcurrentHashMap<UUID, VariableScope>()
     private val savedScopes = ConcurrentHashMap<UUID, VariableScope>()
+
+    /** Shared flow that emits every variable change across all plots. */
+    private val _changes = MutableSharedFlow<VariableChange>(extraBufferCapacity = 64)
+
+    /**
+     * Returns a [Flow] of [VariableChange] events for the given plot.
+     * ReactiveGUI instances subscribe to this to react to variable mutations.
+     *
+     * s: 11.1, 11.2
+     */
+    fun changes(plotId: UUID): Flow<VariableChange> =
+        _changes.asSharedFlow().filter { it.plotId == plotId }
+
+    /**
+     * Emit a variable change event. Call this whenever a plot/saved variable is mutated.
+     *
+     * @param plotId  The plot whose variable changed
+     * @param name    Variable name
+     * @param value   New value
+     * @param scope   Which scope the variable belongs to
+     */
+    suspend fun emitChange(plotId: UUID, name: String, value: Any?, scope: VariableScopeType) {
+        _changes.emit(VariableChange(plotId, name, value, scope))
+    }
     
     /**
      * Create a new local scope for a single script execution.

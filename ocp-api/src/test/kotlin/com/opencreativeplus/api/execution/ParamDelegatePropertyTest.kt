@@ -16,7 +16,7 @@ import io.kotest.property.checkAll
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/
+/**
  * Property-based tests for [ParamDelegate] / [param] / [optionalParam].
  *
  *  9.1, 9.3, 9.4
@@ -27,7 +27,7 @@ class ParamDelegatePropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    / Minimal no-op VariableScope backed by a mutable map. */
+    /** Minimal no-op VariableScope backed by a mutable map. */
     fun mapScope(initial: Map<String, Any> = emptyMap()): VariableScope {
         val store = initial.toMutableMap()
         return object : VariableScope {
@@ -38,7 +38,7 @@ class ParamDelegatePropertyTest : FreeSpec({
         }
     }
 
-    /
+    /**
      * Build a minimal [ExecutionContext] where [eventData] contains the given entries
      * and [localScope] is empty.
      */
@@ -54,7 +54,7 @@ class ParamDelegatePropertyTest : FreeSpec({
             override suspend fun <T> syncContext(block: () -> T): T = block()
         }
 
-    /
+    /**
      * Build a minimal [ExecutionContext] where [localScope] contains the given entries
      * and [eventData] is empty.
      */

@@ -25,7 +25,7 @@ import org.bukkit.Material
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
-/
+/**
  * Property-based tests for [NodeDSL] registration round-trip.
  *
  *  10.2, 10.3, 10.4
@@ -36,7 +36,7 @@ class NodeDSLPropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    / Minimal in-memory stub implementation of [NodeRegistry]. */
+    /** Minimal in-memory stub implementation of [NodeRegistry]. */
     fun stubRegistry(): NodeRegistry {
         val actions = mutableMapOf<Material, (Map<String, Any>) -> IAction>()
         val conditions = mutableMapOf<Material, (Map<String, Any>) -> ICondition>()
@@ -60,7 +60,7 @@ class NodeDSLPropertyTest : FreeSpec({
         }
     }
 
-    / Minimal no-op [VariableScope] backed by a mutable map. */
+    /** Minimal no-op [VariableScope] backed by a mutable map. */
     fun mapScope(initial: Map<String, Any> = emptyMap()): VariableScope {
         val store = initial.toMutableMap()
         return object : VariableScope {
@@ -71,7 +71,7 @@ class NodeDSLPropertyTest : FreeSpec({
         }
     }
 
-    / Build a minimal [ExecutionContext] with configurable [eventData] and [localScope]. */
+    /** Build a minimal [ExecutionContext] with configurable [eventData] and [localScope]. */
     fun stubContext(
         eventData: Map<String, Any> = emptyMap(),
         localScope: Map<String, Any> = emptyMap()
@@ -86,7 +86,7 @@ class NodeDSLPropertyTest : FreeSpec({
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 
-    / Fixed set of [Material] values safe to use without a running Bukkit server. */
+    /** Fixed set of [Material] values safe to use without a running Bukkit server. */
     val arbMaterial: Arb<Material> = Arb.element(
         listOf(
             Material.STONE,

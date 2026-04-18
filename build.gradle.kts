@@ -17,6 +17,10 @@ allprojects {
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
 
+    configure<org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension> {
+        jvmToolchain(21)
+    }
+
     dependencies {
         val implementation by configurations
         implementation(kotlin("stdlib"))

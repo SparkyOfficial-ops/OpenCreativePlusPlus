@@ -7,7 +7,6 @@ import com.opencreativeplus.api.model.VariableScopeType
 import com.opencreativeplus.core.execution.VariableManager
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldBeGreaterThanOrEqualTo
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.int

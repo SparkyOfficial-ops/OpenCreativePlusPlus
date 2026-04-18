@@ -2,10 +2,17 @@ package com.opencreativeplus.plugin.registry
 
 import com.opencreativeplus.plugin.node.action.SendMessageAction
 import com.opencreativeplus.plugin.node.action.WaitAction
+import com.opencreativeplus.plugin.node.array.AddToListNode
+import com.opencreativeplus.plugin.node.array.CreateListNode
+import com.opencreativeplus.plugin.node.array.FilterListNode
+import com.opencreativeplus.plugin.node.array.GetListElementNode
+import com.opencreativeplus.plugin.node.array.GetListSizeNode
 import com.opencreativeplus.plugin.node.condition.EqualsCondition
 import com.opencreativeplus.plugin.node.condition.GreaterThanCondition
 import com.opencreativeplus.plugin.node.condition.LessThanCondition
 import com.opencreativeplus.plugin.node.event.OnJoinEvent
+import com.opencreativeplus.plugin.node.loop.ForEachNode
+import com.opencreativeplus.plugin.node.loop.RepeatNode
 import com.opencreativeplus.plugin.node.value.AddValue
 import com.opencreativeplus.plugin.node.value.DivideValue
 import com.opencreativeplus.plugin.node.value.EqualsValue
@@ -17,7 +24,7 @@ import org.bukkit.Material
 
 /**
  * Registers all built-in nodes into the NodeRegistry.
- 25.2, 7.1, 7.2, 7.3, 30.1, 30.2, 30.4, 31.1, 31.2, 31.3
+ * 25.2, 7.1, 7.2, 7.3, 30.1, 30.2, 30.4, 31.1, 31.2, 31.3
  */
 object BuiltInNodeRegistry {
 
@@ -26,6 +33,8 @@ object BuiltInNodeRegistry {
         registerActions(registry)
         registerConditions(registry)
         registerValues(registry)
+        registerLoopNodes(registry)
+        registerArrayNodes(registry)
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {
@@ -73,5 +82,18 @@ object BuiltInNodeRegistry {
         registry.registerValue(Material.NETHERITE_BLOCK) { params ->
             LessThanValue(params["left"], params["right"])
         }
+    }
+
+    private fun registerLoopNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.CHAIN) { params -> ForEachNode(params) }
+        registry.registerAction(Material.REPEATING_COMMAND_BLOCK) { params -> RepeatNode(params) }
+    }
+
+    private fun registerArrayNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.CHEST) { params -> CreateListNode(params) }
+        registry.registerAction(Material.HOPPER) { params -> AddToListNode(params) }
+        registry.registerValue(Material.OBSERVER) { params -> GetListSizeNode(params) }
+        registry.registerValue(Material.BARREL) { params -> GetListElementNode(params) }
+        registry.registerValue(Material.DROPPER) { params -> FilterListNode(params) }
     }
 }

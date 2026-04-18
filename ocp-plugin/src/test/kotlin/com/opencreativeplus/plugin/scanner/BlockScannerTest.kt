@@ -204,6 +204,8 @@ class BlockScannerTest {
         val chestState = mockk<Chest>(relaxed = true)
         val inventory = mockk<Inventory>(relaxed = true)
         val item = mockk<ItemStack>(relaxed = true)
+        // itemMeta returns null so Item_Variable detection is skipped for this plain item
+        every { item.itemMeta } returns null
         every { chestBlock.state } returns chestState
         every { chestState.inventory } returns inventory
         every { inventory.contents } returns arrayOf(item, null)

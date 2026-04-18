@@ -201,9 +201,9 @@ class BlockScannerPDCTest {
         every { block.state } returns tileState
         every { tileState.persistentDataContainer } returns pdc
 
-        // One ocp key, one foreign key
-        val ocpKey = NamespacedKey("ocp", "myParam")
-        val foreignKey = NamespacedKey("other", "foreignParam")
+        // One ocp key, one foreign key (NamespacedKey requires lowercase [a-z0-9/._-])
+        val ocpKey = NamespacedKey("ocp", "my-param")
+        val foreignKey = NamespacedKey("other", "foreign-param")
         every { pdc.keys } returns setOf(ocpKey, foreignKey)
         every { pdc.get(ocpKey, PersistentDataType.STRING) } returns "ocpValue"
         every { pdc.get(ocpKey, PersistentDataType.INTEGER) } returns null
@@ -211,8 +211,8 @@ class BlockScannerPDCTest {
 
         val result = scanner.readPDCParams(block)
         assertEquals(1, result.size)
-        assertEquals("ocpValue", result["myParam"])
-        assertFalse(result.containsKey("foreignParam"))
+        assertEquals("ocpValue", result["my-param"])
+        assertFalse(result.containsKey("foreign-param"))
     }
 
     // -----------------------------------------------------------------------

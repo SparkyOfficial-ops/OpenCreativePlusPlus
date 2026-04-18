@@ -11,6 +11,7 @@ import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.filter
 import io.kotest.property.arbitrary.pair
 import io.kotest.property.arbitrary.string
+import io.kotest.property.arbitrary.of
 import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
@@ -36,13 +37,13 @@ class PDCPriorityPropertyTest : FreeSpec({
     val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
     val scanner = BlockScanner(world, nodeRegistry, pluginNamespace = "opencreativeplus")
 
-    // Arbitrary for valid parameter key names (non-empty, no '=' or whitespace)
-    val arbKey = Arb.string(1..20)
-        .filter { it.isNotBlank() && !it.contains('=') && !it.contains(' ') }
+    // Arbitrary for valid parameter key names (non-empty, NamespacedKey allows [a-z0-9/._-])
+    // Use a fixed set of valid keys to avoid OOM from excessive filter rejection
+    val arbKey = Arb.of(listOf("speed", "count", "mode", "target", "value", "name", "type", "radius", "delay", "power"))
 
-    // Arbitrary for string values (non-empty, no '=' to avoid sign parse ambiguity)
+    // Arbitrary for string values (non-empty, no '=' to avoid sign parse ambiguity, no '$' to avoid VariableReference)
     val arbValue = Arb.string(1..20)
-        .filter { it.isNotBlank() && !it.contains('=') && !it.contains('\n') }
+        .filter { it.isNotBlank() && !it.contains('=') && !it.contains('\n') && !it.startsWith('$') }
 
     // Arbitrary for a pair of distinct values (signValue != pdcValue)
     val arbDistinctValues = Arb.pair(arbValue, arbValue).filter { (a, b) -> a != b }

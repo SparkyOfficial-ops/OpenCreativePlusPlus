@@ -11,9 +11,18 @@ import com.opencreativeplus.plugin.node.condition.EqualsCondition
 import com.opencreativeplus.plugin.node.condition.GreaterThanCondition
 import com.opencreativeplus.plugin.node.condition.LessThanCondition
 import com.opencreativeplus.plugin.node.event.OnJoinEvent
+import com.opencreativeplus.plugin.node.entity.GetNearbyEntitiesNode
+import com.opencreativeplus.plugin.node.entity.KillEntityNode
+import com.opencreativeplus.plugin.node.entity.MoveEntityToNode
+import com.opencreativeplus.plugin.node.entity.SetEntityAINode
+import com.opencreativeplus.plugin.node.entity.SetEntityHealthNode
+import com.opencreativeplus.plugin.node.entity.SpawnEntityNode
 import com.opencreativeplus.plugin.node.loop.ForEachNode
 import com.opencreativeplus.plugin.node.loop.RepeatNode
 import com.opencreativeplus.plugin.node.value.AddValue
+import com.opencreativeplus.plugin.node.visual.DrawLineNode
+import com.opencreativeplus.plugin.node.visual.PlaySoundNode
+import com.opencreativeplus.plugin.node.visual.SpawnParticleNode
 import com.opencreativeplus.plugin.node.value.DivideValue
 import com.opencreativeplus.plugin.node.value.EqualsValue
 import com.opencreativeplus.plugin.node.value.GreaterThanValue
@@ -35,6 +44,8 @@ object BuiltInNodeRegistry {
         registerValues(registry)
         registerLoopNodes(registry)
         registerArrayNodes(registry)
+        registerEntityNodes(registry)
+        registerVisualEffectNodes(registry)
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {
@@ -95,5 +106,20 @@ object BuiltInNodeRegistry {
         registry.registerValue(Material.OBSERVER) { params -> GetListSizeNode(params) }
         registry.registerValue(Material.BARREL) { params -> GetListElementNode(params) }
         registry.registerValue(Material.DROPPER) { params -> FilterListNode(params) }
+    }
+
+    private fun registerEntityNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.ZOMBIE_HEAD) { params -> SpawnEntityNode(params) }
+        registry.registerAction(Material.SKELETON_SKULL) { params -> KillEntityNode(params) }
+        registry.registerAction(Material.CREEPER_HEAD) { params -> SetEntityAINode(params) }
+        registry.registerAction(Material.WITHER_SKELETON_SKULL) { params -> SetEntityHealthNode(params) }
+        registry.registerAction(Material.PLAYER_HEAD) { params -> MoveEntityToNode(params) }
+        registry.registerValue(Material.DRAGON_HEAD) { params -> GetNearbyEntitiesNode(params) }
+    }
+
+    private fun registerVisualEffectNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.FIREWORK_ROCKET) { params -> SpawnParticleNode(params) }
+        registry.registerAction(Material.JUKEBOX) { params -> PlaySoundNode(params) }
+        registry.registerAction(Material.GLOWSTONE) { params -> DrawLineNode(params) }
     }
 }

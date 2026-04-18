@@ -158,7 +158,7 @@ object BuiltInNodeRegistry {
 
     private fun registerTeleportNodes(registry: NodeRegistryImpl) {
         registry.registerAction(Material.ENDER_PEARL) { params -> TeleportPlayerNode(params) }
-        registry.registerAction(Material.EYE_OF_ENDER) { params -> TeleportToPlayerNode(params) }
+        registry.registerAction(Material.ENDER_EYE) { params -> TeleportToPlayerNode(params) }
         registry.registerAction(Material.FEATHER) { params -> LaunchPlayerNode(params) }
         registry.registerAction(Material.ELYTRA) { params -> SetPlayerFlightNode(params) }
     }

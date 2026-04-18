@@ -23,6 +23,20 @@ import com.opencreativeplus.plugin.node.value.AddValue
 import com.opencreativeplus.plugin.node.visual.DrawLineNode
 import com.opencreativeplus.plugin.node.visual.PlaySoundNode
 import com.opencreativeplus.plugin.node.visual.SpawnParticleNode
+import com.opencreativeplus.plugin.node.player.TeleportPlayerNode
+import com.opencreativeplus.plugin.node.player.TeleportToPlayerNode
+import com.opencreativeplus.plugin.node.player.LaunchPlayerNode
+import com.opencreativeplus.plugin.node.player.SetPlayerFlightNode
+import com.opencreativeplus.plugin.node.player.ApplyPotionEffectNode
+import com.opencreativeplus.plugin.node.player.RemovePotionEffectNode
+import com.opencreativeplus.plugin.node.player.SetPlayerHealthNode
+import com.opencreativeplus.plugin.node.player.SetPlayerFoodLevelNode
+import com.opencreativeplus.plugin.node.player.GiveExperienceNode
+import com.opencreativeplus.plugin.node.player.SetGameModeNode
+import com.opencreativeplus.plugin.node.inventory.GiveItemNode
+import com.opencreativeplus.plugin.node.inventory.RemoveItemNode
+import com.opencreativeplus.plugin.node.inventory.ClearInventoryNode
+import com.opencreativeplus.plugin.node.inventory.HasItemNode
 import com.opencreativeplus.plugin.node.value.DivideValue
 import com.opencreativeplus.plugin.node.value.EqualsValue
 import com.opencreativeplus.plugin.node.value.GreaterThanValue
@@ -46,6 +60,9 @@ object BuiltInNodeRegistry {
         registerArrayNodes(registry)
         registerEntityNodes(registry)
         registerVisualEffectNodes(registry)
+        registerTeleportNodes(registry)
+        registerPlayerStatNodes(registry)
+        registerInventoryNodes(registry)
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {
@@ -121,5 +138,28 @@ object BuiltInNodeRegistry {
         registry.registerAction(Material.FIREWORK_ROCKET) { params -> SpawnParticleNode(params) }
         registry.registerAction(Material.JUKEBOX) { params -> PlaySoundNode(params) }
         registry.registerAction(Material.GLOWSTONE) { params -> DrawLineNode(params) }
+    }
+
+    private fun registerTeleportNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.ENDER_PEARL) { params -> TeleportPlayerNode(params) }
+        registry.registerAction(Material.EYE_OF_ENDER) { params -> TeleportToPlayerNode(params) }
+        registry.registerAction(Material.FEATHER) { params -> LaunchPlayerNode(params) }
+        registry.registerAction(Material.ELYTRA) { params -> SetPlayerFlightNode(params) }
+    }
+
+    private fun registerPlayerStatNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.POTION) { params -> ApplyPotionEffectNode(params) }
+        registry.registerAction(Material.GLASS_BOTTLE) { params -> RemovePotionEffectNode(params) }
+        registry.registerAction(Material.RED_DYE) { params -> SetPlayerHealthNode(params) }
+        registry.registerAction(Material.COOKED_BEEF) { params -> SetPlayerFoodLevelNode(params) }
+        registry.registerAction(Material.EXPERIENCE_BOTTLE) { params -> GiveExperienceNode(params) }
+        registry.registerAction(Material.NETHER_STAR) { params -> SetGameModeNode(params) }
+    }
+
+    private fun registerInventoryNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.CHEST_MINECART) { params -> GiveItemNode(params) }
+        registry.registerAction(Material.HOPPER_MINECART) { params -> RemoveItemNode(params) }
+        registry.registerAction(Material.TNT_MINECART) { params -> ClearInventoryNode(params) }
+        registry.registerCondition(Material.ITEM_FRAME) { params -> HasItemNode(params) }
     }
 }

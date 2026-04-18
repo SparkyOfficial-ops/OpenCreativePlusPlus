@@ -37,6 +37,19 @@ import com.opencreativeplus.plugin.node.inventory.GiveItemNode
 import com.opencreativeplus.plugin.node.inventory.RemoveItemNode
 import com.opencreativeplus.plugin.node.inventory.ClearInventoryNode
 import com.opencreativeplus.plugin.node.inventory.HasItemNode
+import com.opencreativeplus.plugin.node.world.SetBlockNode
+import com.opencreativeplus.plugin.node.world.GetBlockNode
+import com.opencreativeplus.plugin.node.world.SetWeatherNode
+import com.opencreativeplus.plugin.node.world.SetTimeNode
+import com.opencreativeplus.plugin.node.world.CreateExplosionNode
+import com.opencreativeplus.plugin.node.ui.SendTitleNode
+import com.opencreativeplus.plugin.node.ui.SendActionBarNode
+import com.opencreativeplus.plugin.node.ui.PlayAnimationNode
+import com.opencreativeplus.plugin.node.ui.SendBossBarNode
+import com.opencreativeplus.plugin.node.scoreboard.CreateScoreboardNode
+import com.opencreativeplus.plugin.node.scoreboard.SetScoreboardLineNode
+import com.opencreativeplus.plugin.node.scoreboard.ShowScoreboardNode
+import com.opencreativeplus.plugin.node.scoreboard.HideScoreboardNode
 import com.opencreativeplus.plugin.node.value.DivideValue
 import com.opencreativeplus.plugin.node.value.EqualsValue
 import com.opencreativeplus.plugin.node.value.GreaterThanValue
@@ -63,6 +76,9 @@ object BuiltInNodeRegistry {
         registerTeleportNodes(registry)
         registerPlayerStatNodes(registry)
         registerInventoryNodes(registry)
+        registerWorldNodes(registry)
+        registerUINodes(registry)
+        registerScoreboardNodes(registry)
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {
@@ -161,5 +177,27 @@ object BuiltInNodeRegistry {
         registry.registerAction(Material.HOPPER_MINECART) { params -> RemoveItemNode(params) }
         registry.registerAction(Material.TNT_MINECART) { params -> ClearInventoryNode(params) }
         registry.registerCondition(Material.ITEM_FRAME) { params -> HasItemNode(params) }
+    }
+
+    private fun registerWorldNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.GRASS_BLOCK) { params -> SetBlockNode(params) }
+        registry.registerValue(Material.STONE) { params -> GetBlockNode(params) }
+        registry.registerAction(Material.LIGHTNING_ROD) { params -> SetWeatherNode(params) }
+        registry.registerAction(Material.SUNFLOWER) { params -> SetTimeNode(params) }
+        registry.registerAction(Material.TNT) { params -> CreateExplosionNode(params) }
+    }
+
+    private fun registerUINodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.BOOK) { params -> SendTitleNode(params) }
+        registry.registerAction(Material.WRITABLE_BOOK) { params -> SendActionBarNode(params) }
+        registry.registerAction(Material.BLAZE_ROD) { params -> PlayAnimationNode(params) }
+        registry.registerAction(Material.DRAGON_EGG) { params -> SendBossBarNode(params) }
+    }
+
+    private fun registerScoreboardNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.OAK_SIGN) { params -> CreateScoreboardNode(params) }
+        registry.registerAction(Material.BIRCH_SIGN) { params -> SetScoreboardLineNode(params) }
+        registry.registerAction(Material.SPRUCE_SIGN) { params -> ShowScoreboardNode(params) }
+        registry.registerAction(Material.JUNGLE_SIGN) { params -> HideScoreboardNode(params) }
     }
 }

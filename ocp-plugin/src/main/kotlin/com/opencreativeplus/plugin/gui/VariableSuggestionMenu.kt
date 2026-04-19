@@ -25,7 +25,11 @@ class VariableSuggestionMenu(
     private val player: Player,
     private val plotId: UUID,
     private val variableManager: VariableManager,
-    private val onSelect: (String) -> Unit
+    private val onSelect: (String) -> Unit,
+    private val inventoryFactory: (String) -> org.bukkit.inventory.Inventory = { title ->
+        Bukkit.createInventory(null, 54, title)
+    },
+    private val itemFactory: (Material, String, List<String>) -> ItemStack = ::variableSuggestionMakeItem
 ) : Listener {
 
     private val pageSize = 45
@@ -109,7 +113,7 @@ class VariableSuggestionMenu(
      */
     internal fun render() {
         val title = "Choose Variable (page ${currentPage + 1})"
-        val inv = Bukkit.createInventory(null, 54, title)
+        val inv = inventoryFactory(title)
 
         val pageVars = variables.drop(currentPage * pageSize).take(pageSize)
 
@@ -138,14 +142,8 @@ class VariableSuggestionMenu(
         player.openInventory(inv)
     }
 
-    private fun makeItem(material: Material, name: String, lore: List<String>): ItemStack {
-        val item = ItemStack(material)
-        val meta: ItemMeta = item.itemMeta ?: return item
-        meta.setDisplayName(name)
-        meta.lore = lore
-        item.itemMeta = meta
-        return item
-    }
+    private fun makeItem(material: Material, name: String, lore: List<String>): ItemStack =
+        itemFactory(material, name, lore)
 }
 
 /**
@@ -153,3 +151,12 @@ class VariableSuggestionMenu(
  * s: 2.4
  */
 data class VariableEntry(val name: String, val lastKnownType: String)
+
+internal fun variableSuggestionMakeItem(material: Material, name: String, lore: List<String>): ItemStack {
+    val item = ItemStack(material)
+    val meta: ItemMeta = item.itemMeta ?: return item
+    meta.setDisplayName(name)
+    meta.lore = lore
+    item.itemMeta = meta
+    return item
+}

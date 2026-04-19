@@ -35,16 +35,29 @@ class SmartGUI(
     private val scope: CoroutineScope,
     private val plotId: UUID,
     private val variableManager: com.opencreativeplus.core.execution.VariableManager,
-    inventoryFactory: () -> Inventory = { Bukkit.createInventory(null, 54, GUI_TITLE) }
+    inventoryFactory: () -> Inventory = { Bukkit.createInventory(null, 54, GUI_TITLE) },
+    private val itemFactory: (Material, String, List<String>) -> ItemStack = { mat, name, lore ->
+        smartGuiMakeItem(mat, name, lore)
+    },
+    private val menuInventoryFactory: (String) -> Inventory = { title ->
+        Bukkit.createInventory(null, 54, title)
+    }
 ) : Listener {
 
     companion object {
         private const val GUI_TITLE = "Node Parameters"
         private const val SAVE_SLOT = 53
 
-        // Slot layout: each param occupies 2 consecutive slots (Edit + optionally Choose Variable)
-        // We keep a simple mapping: paramIndex * 2 = edit slot, paramIndex * 2 + 1 = variable slot
-        // Max 26 params (slots 0..51), slot 52 unused, slot 53 = Save
+        fun defaultMakeItem(material: Material, name: String, lore: List<String>): ItemStack {
+            val item = ItemStack(material)
+            val meta: ItemMeta = item.itemMeta ?: return item
+            meta.setDisplayName(name)
+            meta.lore = lore
+            item.itemMeta = meta
+            return item
+        }
+
+        // Slot layout
 
         /**
          * Build a list of (displayName, loreValue) pairs for the given params map.
@@ -150,7 +163,9 @@ class SmartGUI(
                         currentParams[paramName] = varName to ParamType.VARIABLE_REF
                         paramSerializer.save(block, paramName, varName)
                         open()
-                    }
+                    },
+                    inventoryFactory = menuInventoryFactory,
+                    itemFactory = itemFactory
                 )
                 scope.launch { menu.open() }
             }
@@ -218,14 +233,8 @@ class SmartGUI(
         currentParams[name] = (existing ?: initialValue) to type
     }
 
-    private fun makeItem(material: Material, name: String, lore: List<String>): ItemStack {
-        val item = ItemStack(material)
-        val meta: ItemMeta = item.itemMeta ?: return item
-        meta.setDisplayName(name)
-        meta.lore = lore
-        item.itemMeta = meta
-        return item
-    }
+    private fun makeItem(material: Material, name: String, lore: List<String>): ItemStack =
+        itemFactory(material, name, lore)
 }
 
 /**
@@ -233,4 +242,17 @@ class SmartGUI(
  */
 enum class ParamType {
     STRING, INT, DOUBLE, BOOLEAN, LOCATION, VARIABLE_REF
+}
+
+/**
+ * Default item factory for SmartGUI — creates a real Bukkit ItemStack.
+ * Extracted as a top-level function so it can be referenced as a default parameter.
+ */
+internal fun smartGuiMakeItem(material: Material, name: String, lore: List<String>): ItemStack {
+    val item = ItemStack(material)
+    val meta: ItemMeta = item.itemMeta ?: return item
+    meta.setDisplayName(name)
+    meta.lore = lore
+    item.itemMeta = meta
+    return item
 }

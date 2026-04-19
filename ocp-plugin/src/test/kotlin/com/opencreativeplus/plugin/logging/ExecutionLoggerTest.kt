@@ -8,6 +8,7 @@ import io.mockk.*
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.runBlocking
 import org.bson.Document
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -32,20 +33,23 @@ class ExecutionLoggerTest {
     fun setUp() {
         database = mockk()
         collection = mockk(relaxed = true)
+        connectionManager = mockk(relaxed = true)
 
-        // Use a real MongoConnectionManager with a fake config — withRetry will execute the block directly
-        val config = com.opencreativeplus.core.database.DatabaseConfig(
-            connectionString = "mongodb://localhost:27017",
-            databaseName = "test",
-            maxRetries = 1,
-            retryDelayMs = 0
-        )
-        connectionManager = spyk(MongoConnectionManager(config))
+        // Make withRetry execute the block directly without real DB connection
+        coEvery { connectionManager.withRetry<Any?>(block = any()) } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            val block = firstArg<suspend () -> Any?>()
+            block()
+        }
 
         every { database.getCollection("execution_logs", Document::class.java) } returns collection
         executionLogger = ExecutionLogger(database, connectionManager, collection)
     }
 
+    @AfterEach
+    fun tearDown() {
+        unmockkAll()
+    }
 
     // -------------------------------------------------------------------------
     // Log creation — correct fields (req 37.1, 37.2, 37.3)
@@ -58,7 +62,7 @@ class ExecutionLoggerTest {
         val endTime = 1_000_250L
         val docSlot = slot<Document>()
 
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = plotId,
@@ -69,6 +73,7 @@ class ExecutionLoggerTest {
             endTime = endTime
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         val doc = docSlot.captured
 
@@ -92,7 +97,7 @@ class ExecutionLoggerTest {
     @Test
     fun `logExecution stores error message when status is ERROR`() = runBlocking {
         val docSlot = slot<Document>()
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = UUID.randomUUID(),
@@ -102,6 +107,7 @@ class ExecutionLoggerTest {
             errorMessage = "NullPointerException in SendMessageAction"
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals("ERROR", docSlot.captured.getString("status"))
         assertEquals("NullPointerException in SendMessageAction", docSlot.captured.getString("error_message"))
@@ -110,7 +116,7 @@ class ExecutionLoggerTest {
     @Test
     fun `logExecution stores TERMINATED status`() = runBlocking {
         val docSlot = slot<Document>()
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = UUID.randomUUID(),
@@ -120,6 +126,7 @@ class ExecutionLoggerTest {
             errorMessage = "Watchdog: operation limit exceeded"
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals("TERMINATED", docSlot.captured.getString("status"))
     }
@@ -127,7 +134,7 @@ class ExecutionLoggerTest {
     @Test
     fun `logExecution duration_ms equals endTime minus startTime`() = runBlocking {
         val docSlot = slot<Document>()
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = UUID.randomUUID(),
@@ -138,6 +145,7 @@ class ExecutionLoggerTest {
             endTime = 5_750L
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals(750L, docSlot.captured.getLong("duration_ms"))
     }
@@ -146,7 +154,7 @@ class ExecutionLoggerTest {
     fun `logExecution stores plot_id as string`() = runBlocking {
         val plotId = UUID.randomUUID()
         val docSlot = slot<Document>()
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = plotId,
@@ -155,6 +163,7 @@ class ExecutionLoggerTest {
             status = ExecutionLogger.ExecutionStatus.SUCCESS
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         assertEquals(plotId.toString(), docSlot.captured.getString("plot_id"))
     }
@@ -162,7 +171,7 @@ class ExecutionLoggerTest {
     @Test
     fun `logExecution stores empty actions list`() = runBlocking {
         val docSlot = slot<Document>()
-        coEvery { collection.insertOne(capture(docSlot)) } returns mockk()
+        coEvery { collection.insertOne(capture(docSlot), any<com.mongodb.client.model.InsertOneOptions>()) } returns mockk(relaxed = true)
 
         executionLogger.logExecution(
             plotId = UUID.randomUUID(),
@@ -171,6 +180,7 @@ class ExecutionLoggerTest {
             status = ExecutionLogger.ExecutionStatus.SUCCESS
         )
 
+        coVerify { collection.insertOne(any(), any<com.mongodb.client.model.InsertOneOptions>()) }
         assertTrue(docSlot.isCaptured, "insertOne should have been called")
         @Suppress("UNCHECKED_CAST")
         val actions = docSlot.captured.get("actions") as List<String>

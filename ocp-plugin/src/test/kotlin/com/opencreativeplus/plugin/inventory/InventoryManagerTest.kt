@@ -15,6 +15,7 @@ import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -41,24 +42,27 @@ class InventoryManagerTest {
     fun setup() {
         database = mockk(relaxed = true)
         collection = mockk(relaxed = true)
-        // Use relaxed mock — withRetry will return null by default (no real implementation called)
         connectionManager = mockk(relaxed = true)
 
-        every { database.getCollection<Document>("player_inventories") } returns collection
-
-        // Make withRetry execute the block for save operations (returns UpdateResult mock)
-        // and return null for load operations (no document found by default)
-        coEvery { connectionManager.withRetry<Any?>(any<suspend () -> Any?>()) } coAnswers {
-            val block = firstArg<suspend () -> Any?>()
+        // Make withRetry execute the block directly
+        coEvery { connectionManager.withRetry(block = any<suspend () -> Any?>()) } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            val block = arg<suspend () -> Any?>(0)
             block()
         }
-        coEvery { connectionManager.withRetry<Any?>(any<Int>(), any<suspend () -> Any?>()) } coAnswers {
-            val block = secondArg<suspend () -> Any?>()
+        coEvery { connectionManager.withRetry(any<Int>(), any<suspend () -> Any?>()) } coAnswers {
+            @Suppress("UNCHECKED_CAST")
+            val block = arg<suspend () -> Any?>(1)
             block()
         }
 
         val registry = NodeRegistryImpl()
-        inventoryManager = InventoryManager(database, connectionManager, registry)
+        inventoryManager = InventoryManager(database, connectionManager, registry, collection)
+    }
+
+    @AfterEach
+    fun teardown() {
+        unmockkAll()
     }
     // -------------------------------------------------------------------------
     // Helpers
@@ -153,11 +157,12 @@ class InventoryManagerTest {
     fun `loadInventory clears player inventory when no saved state exists`() = runTest {
         val plotId = UUID.randomUUID()
         val player = mockPlayer()
+        val inventory = player.inventory
         every { collection.find(any<Document>()) } returns emptyFindFlow()
 
         inventoryManager.loadInventory(player, plotId, PlotMode.BUILD)
 
-        verify { player.inventory.clear() }
+        verify { inventory.clear() }
     }
 
     @Test
@@ -179,6 +184,7 @@ class InventoryManagerTest {
     fun `loadInventory applies saved contents to player inventory when document exists`() = runTest {
         val plotId = UUID.randomUUID()
         val player = mockPlayer()
+        val inventory = player.inventory
 
         // Step 1: capture the document produced by saveInventory
         val capturedDoc = slot<Document>()
@@ -191,10 +197,10 @@ class InventoryManagerTest {
 
         inventoryManager.loadInventory(player, plotId, PlotMode.BUILD)
 
-        verify { player.inventory.clear() }
-        verify { player.inventory.contents = any() }
-        verify { player.inventory.armorContents = any() }
-        verify { player.inventory.setItemInOffHand(any()) }
+        verify { inventory.clear() }
+        verify { inventory.contents = any() }
+        verify { inventory.armorContents = any() }
+        verify { inventory.setItemInOffHand(any()) }
     }
 
     // -------------------------------------------------------------------------
@@ -309,10 +315,11 @@ class InventoryManagerTest {
     @Test
     fun `provisionDevInventory clears player inventory before provisioning`() {
         val player = mockPlayer()
+        val inventory = player.inventory
 
         inventoryManager.provisionDevInventory(player)
 
-        verify { player.inventory.clear() }
+        verify { inventory.clear() }
     }
 
     @Test
@@ -376,7 +383,7 @@ class InventoryManagerTest {
             }
         }
 
-        val manager = InventoryManager(database, connectionManager, registry)
+        val manager = InventoryManager(database, connectionManager, registry, collection)
         manager.provisionDevInventory(player)
 
         val materials = setItems.values.map { it.type }.toSet()

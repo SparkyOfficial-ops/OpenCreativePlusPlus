@@ -27,9 +27,10 @@ import java.util.UUID
 class InventoryManager(
     private val database: MongoDatabase,
     private val connectionManager: MongoConnectionManager,
-    private val nodeRegistry: NodeRegistry
+    private val nodeRegistry: NodeRegistry,
+    collectionOverride: com.mongodb.kotlin.client.coroutine.MongoCollection<Document>? = null
 ) {
-    private val collection = database.getCollection<Document>("player_inventories")
+    private val collection = collectionOverride ?: database.getCollection<Document>("player_inventories")
 
     // -------------------------------------------------------------------------
     // Save / Load

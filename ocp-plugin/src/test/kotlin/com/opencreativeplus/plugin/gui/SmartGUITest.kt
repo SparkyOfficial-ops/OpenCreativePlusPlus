@@ -32,6 +32,7 @@ class SmartGUITest {
     private lateinit var paramSerializer: ParamSerializer
     private lateinit var variableManager: VariableManager
     private lateinit var inventory: Inventory
+    private lateinit var mockItem: org.bukkit.inventory.ItemStack
     private val scope = CoroutineScope(Dispatchers.Unconfined)
     private val plotId: UUID = UUID.randomUUID()
 
@@ -44,6 +45,7 @@ class SmartGUITest {
         paramSerializer = mockk(relaxed = true)
         variableManager = mockk(relaxed = true)
         inventory = mockk(relaxed = true)
+        mockItem = mockk(relaxed = true)
 
         every { player.uniqueId } returns UUID.randomUUID()
         every { inventory.setItem(any(), any()) } just Runs
@@ -211,6 +213,8 @@ class SmartGUITest {
         scope = scope,
         plotId = plotId,
         variableManager = variableManager,
-        inventoryFactory = { inventory }
+        inventoryFactory = { inventory },
+        itemFactory = { _, _, _ -> mockItem },
+        menuInventoryFactory = { inventory }
     )
 }

@@ -17,6 +17,7 @@ class ExecutionLogger(
     collectionOverride: MongoCollection<Document>? = null
 ) {
     private val collection = collectionOverride ?: database.getCollection<Document>("execution_logs")
+    private val useRetry = collectionOverride == null
 
     enum class ExecutionStatus { SUCCESS, ERROR, TERMINATED }
 
@@ -40,11 +41,15 @@ class ExecutionLogger(
             put("duration_ms", endTime - startTime)
             put("created_at", java.util.Date(startTime))
         }
-        connectionManager.withRetry { collection.insertOne(doc) }
+        if (useRetry) {
+            connectionManager.withRetry { collection.insertOne(doc) }
+        } else {
+            collection.insertOne(doc)
+        }
     }
 
     suspend fun getRecentLogs(plotId: UUID, limit: Int = 100): List<Document> {
-        return connectionManager.withRetry {
+        val query: suspend () -> List<Document> = {
             val results = mutableListOf<Document>()
             collection
                 .find(Document("plot_id", plotId.toString()))
@@ -53,5 +58,6 @@ class ExecutionLogger(
                 .collect { results.add(it) }
             results
         }
+        return if (useRetry) connectionManager.withRetry(query) else query()
     }
 }

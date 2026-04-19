@@ -7,6 +7,8 @@ import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.core.execution.CoroutineConfiguration
 import com.opencreativeplus.core.execution.ExecutionEngine
 import com.opencreativeplus.core.execution.VariableManager
+import com.opencreativeplus.core.input.ChatInputManager
+import com.opencreativeplus.core.serialization.ParamSerializer
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
@@ -19,6 +21,8 @@ import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.event.PlotEventListener
 import com.opencreativeplus.plugin.gui.PlotBrowserGUI
 import com.opencreativeplus.plugin.gui.PlotConfigGUI
+import com.opencreativeplus.plugin.gui.SmartGUI
+import com.opencreativeplus.plugin.gui.smartGuiMakeItem
 import com.opencreativeplus.plugin.inventory.InventoryManager
 import com.opencreativeplus.plugin.logging.ExecutionLogger
 import com.opencreativeplus.plugin.logging.LogViewCommand
@@ -31,7 +35,20 @@ import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.watchdog.TpsMonitorTask
 import com.opencreativeplus.plugin.world.WorldManager
+import com.opencreativeplus.api.plot.PlotMode
+import com.opencreativeplus.api.registry.NodeRegistry
+import io.papermc.paper.event.player.AsyncChatEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
+import org.bukkit.NamespacedKey
+import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.block.Action
+import org.bukkit.event.player.PlayerInteractEvent
+import org.bukkit.event.player.PlayerQuitEvent
 import org.bukkit.plugin.java.JavaPlugin
 
 /**
@@ -50,6 +67,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
     private lateinit var tpsMonitor: TPSMonitor
     private lateinit var watchdog: Watchdog
     private lateinit var tpsMonitorTask: TpsMonitorTask
+    lateinit var chatInputManager: ChatInputManager
+        private set
+    lateinit var paramSerializer: ParamSerializer
+        private set
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -137,6 +158,40 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
 
+        // ── ChatInputManager + ParamSerializer ────────────────────────────────
+        chatInputManager = ChatInputManager()
+        paramSerializer = ParamSerializer { name -> NamespacedKey(this, name) }
+
+        // Chat input listener: intercepts AsyncChatEvent and PlayerQuitEvent
+        server.pluginManager.registerEvents(object : Listener {
+            @EventHandler
+            fun onChat(event: AsyncChatEvent) {
+                val text = PlainTextComponentSerializer.plainText().serialize(event.message())
+                if (chatInputManager.onChatMessage(event.player.uniqueId, text)) {
+                    event.isCancelled = true
+                }
+            }
+
+            @EventHandler
+            fun onQuit(event: PlayerQuitEvent) {
+                chatInputManager.onPlayerDisconnect(event.player.uniqueId)
+            }
+        }, this)
+
+        // Action node interact listener: opens SmartGUI on right-click in DEV mode
+        server.pluginManager.registerEvents(
+            ActionNodeInteractListener(
+                nodeRegistry = nodeRegistry,
+                modeManager = modeManager,
+                plotManager = plotManager,
+                chatInputManager = chatInputManager,
+                paramSerializer = paramSerializer,
+                variableManager = variableManager,
+                scope = scope,
+                plugin = this
+            ), this
+        )
+
         // ── Commands ──────────────────────────────────────────────────────────
         val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager)
         listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
@@ -162,5 +217,51 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         connectionManager.close()
         logger.info("[OCP] OpenCreative++ disabled.")
+    }
+}
+
+/**
+ * Listens for PlayerInteractEvent and opens SmartGUI when a player in DEV mode
+ * right-clicks a block registered as an action node.
+ *
+ * s: 1.1
+ */
+class ActionNodeInteractListener(
+    private val nodeRegistry: NodeRegistry,
+    private val modeManager: ModeManagerImpl,
+    private val plotManager: PlotManagerImpl,
+    private val chatInputManager: ChatInputManager,
+    private val paramSerializer: ParamSerializer,
+    private val variableManager: VariableManager,
+    private val scope: CoroutineScope,
+    private val plugin: JavaPlugin
+) : Listener {
+
+    @EventHandler
+    fun onInteract(event: PlayerInteractEvent) {
+        if (event.action != Action.RIGHT_CLICK_BLOCK) return
+        val block = event.clickedBlock ?: return
+        val player = event.player
+
+        scope.launch {
+            val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+            if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
+            if (nodeRegistry.getActionFactory(block.type) == null) return@launch
+
+            event.isCancelled = true
+            val gui = SmartGUI(
+                player = player,
+                block = block,
+                nodeRegistry = nodeRegistry,
+                chatInputManager = chatInputManager,
+                paramSerializer = paramSerializer,
+                scope = scope,
+                plotId = plot.id,
+                variableManager = variableManager,
+                itemFactory = { mat, name, lore -> smartGuiMakeItem(mat, name, lore) }
+            )
+            plugin.server.pluginManager.registerEvents(gui, plugin)
+            gui.open()
+        }
     }
 }

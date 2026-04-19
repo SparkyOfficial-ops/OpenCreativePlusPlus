@@ -11,6 +11,8 @@ import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
+import com.opencreativeplus.plugin.command.DialogueQuitListener
+import com.opencreativeplus.plugin.command.OcpDialogueCommand
 import com.opencreativeplus.plugin.command.PlotCommands
 import com.opencreativeplus.plugin.compiler.ASTCompiler
 import com.opencreativeplus.plugin.event.EventDispatcher
@@ -133,6 +135,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
         server.pluginManager.registerEvents(PlotBrowserGUI(plotPersistence, plotManager, scope), this)
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
+        server.pluginManager.registerEvents(DialogueQuitListener(), this)
 
         // ── Commands ──────────────────────────────────────────────────────────
         val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager)
@@ -140,6 +143,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             getCommand(cmd)?.setExecutor(plotCommands)
         }
         getCommand("ocplogs")?.setExecutor(LogViewCommand(executionLogger, plotManager, scope))
+        getCommand("ocp_dialogue")?.setExecutor(OcpDialogueCommand())
 
         logger.info("[OCP] OpenCreative++ enabled.")
     }

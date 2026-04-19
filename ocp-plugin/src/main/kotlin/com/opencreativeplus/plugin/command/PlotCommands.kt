@@ -3,6 +3,7 @@ package com.opencreativeplus.plugin.command
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
+import com.opencreativeplus.plugin.node.dialogue.DialogueManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import kotlinx.coroutines.CoroutineScope
@@ -11,6 +12,10 @@ import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
+import org.bukkit.event.EventHandler
+import org.bukkit.event.Listener
+import org.bukkit.event.player.PlayerQuitEvent
+import java.util.UUID
 
 /**
  * Handles /build, /dev, /play, /plot, /ocptps, and /ocp commands.
@@ -128,5 +133,36 @@ class PlotCommands(
             }
             else -> player.sendMessage("§7[OCP] Usage: /ocp <trace>")
         }
+    }
+}
+
+/**
+ * Hidden command executor for `/ocp_dialogue <dialogueId> <optionIndex>`.
+ * Triggered by clicking Adventure chat components — not shown in tab-completion or help.
+ * Silently ignores malformed arguments.
+ * s: 13.3
+ */
+class OcpDialogueCommand : CommandExecutor {
+    override fun onCommand(
+        sender: CommandSender,
+        command: Command,
+        label: String,
+        args: Array<out String>
+    ): Boolean {
+        val dialogueId = args.getOrNull(0)?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return true
+        val optionIndex = args.getOrNull(1)?.toIntOrNull() ?: return true
+        DialogueManager.onOptionClick(dialogueId, optionIndex)
+        return true
+    }
+}
+
+/**
+ * Listens for PlayerQuitEvent and cleans up any pending dialogues for the player.
+ * s: 13.5
+ */
+class DialogueQuitListener : Listener {
+    @EventHandler
+    fun onPlayerQuit(event: PlayerQuitEvent) {
+        DialogueManager.onPlayerQuit(event.player.uniqueId)
     }
 }

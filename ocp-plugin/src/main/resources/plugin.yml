@@ -28,3 +28,4 @@ commands:
     description: OpenCreative++ debug and utility commands
     usage: /ocp <trace>
     permission: ocp.use
+  ocp_dialogue:

@@ -50,6 +50,7 @@ import com.opencreativeplus.plugin.node.scoreboard.CreateScoreboardNode
 import com.opencreativeplus.plugin.node.scoreboard.SetScoreboardLineNode
 import com.opencreativeplus.plugin.node.scoreboard.ShowScoreboardNode
 import com.opencreativeplus.plugin.node.scoreboard.HideScoreboardNode
+import com.opencreativeplus.plugin.node.dialogue.SendDialogueNode
 import com.opencreativeplus.plugin.node.value.DivideValue
 import com.opencreativeplus.plugin.node.value.EqualsValue
 import com.opencreativeplus.plugin.node.value.GreaterThanValue
@@ -79,6 +80,7 @@ object BuiltInNodeRegistry {
         registerWorldNodes(registry)
         registerUINodes(registry)
         registerScoreboardNodes(registry)
+        registerDialogueNodes(registry)
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {
@@ -199,5 +201,9 @@ object BuiltInNodeRegistry {
         registry.registerAction(Material.BIRCH_SIGN) { params -> SetScoreboardLineNode(params) }
         registry.registerAction(Material.SPRUCE_SIGN) { params -> ShowScoreboardNode(params) }
         registry.registerAction(Material.JUNGLE_SIGN) { params -> HideScoreboardNode(params) }
+    }
+
+    private fun registerDialogueNodes(registry: NodeRegistryImpl) {
+        registry.registerAction(Material.WRITTEN_BOOK) { params -> SendDialogueNode(params) }
     }
 }

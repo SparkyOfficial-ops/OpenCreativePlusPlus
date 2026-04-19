@@ -12,8 +12,7 @@ import java.util.logging.Logger
 /**
  * Thread-safe implementation of NodeRegistry.
  * Maps Minecraft block types to node factories.
- * Validates nodes implement required interfaces before registration.
- 25.1, 25.2, 25.3, 25.4, 25.5, 11.3, 11.4
+ * nodeId is stored explicitly — factory is NEVER called during registration.
  */
 class NodeRegistryImpl(
     private val logger: Logger = Logger.getLogger(NodeRegistryImpl::class.java.name)
@@ -24,68 +23,68 @@ class NodeRegistryImpl(
     private val valueFactories = ConcurrentHashMap<Material, (Map<String, Any>) -> IValue<*>>()
     private val eventFactories = ConcurrentHashMap<Material, () -> IEvent>()
 
+    // nodeId metadata maps — populated by explicit-nodeId overloads
+    private val actionNodeIds = ConcurrentHashMap<Material, String>()
+    private val conditionNodeIds = ConcurrentHashMap<Material, String>()
+    private val valueNodeIds = ConcurrentHashMap<Material, String>()
+
+    // --- registerAction ---
+
     override fun registerAction(blockType: Material, factory: (params: Map<String, Any>) -> IAction) {
         validateNotAlreadyRegistered(blockType, "action")
-        try {
-            val testInstance = factory(emptyMap())
-            require(testInstance.nodeId.isNotBlank()) { "Action nodeId must not be blank" }
-            actionFactories[blockType] = factory
-            logger.fine("Registered action node for $blockType: ${testInstance.nodeId}")
-        } catch (e: IllegalArgumentException) {
-            logger.warning("Invalid action node for $blockType: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            logger.warning("Failed to validate action node for $blockType: ${e.message}")
-            // Still register - factory may require params at runtime
-            actionFactories[blockType] = factory
-        }
+        actionFactories[blockType] = factory
+        logger.fine("Registered action node for $blockType (nodeId unknown — use explicit overload)")
     }
+
+    override fun registerAction(blockType: Material, nodeId: String, factory: (params: Map<String, Any>) -> IAction) {
+        require(nodeId.isNotBlank()) { "Action nodeId must not be blank for $blockType" }
+        validateNotAlreadyRegistered(blockType, "action")
+        actionFactories[blockType] = factory
+        actionNodeIds[blockType] = nodeId
+        logger.fine("Registered action node for $blockType: $nodeId")
+    }
+
+    // --- registerCondition ---
 
     override fun registerCondition(blockType: Material, factory: (params: Map<String, Any>) -> ICondition) {
         validateNotAlreadyRegistered(blockType, "condition")
-        try {
-            val testInstance = factory(emptyMap())
-            require(testInstance.nodeId.isNotBlank()) { "Condition nodeId must not be blank" }
-            conditionFactories[blockType] = factory
-            logger.fine("Registered condition node for $blockType: ${testInstance.nodeId}")
-        } catch (e: IllegalArgumentException) {
-            logger.warning("Invalid condition node for $blockType: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            conditionFactories[blockType] = factory
-        }
+        conditionFactories[blockType] = factory
+        logger.fine("Registered condition node for $blockType (nodeId unknown — use explicit overload)")
     }
+
+    override fun registerCondition(blockType: Material, nodeId: String, factory: (params: Map<String, Any>) -> ICondition) {
+        require(nodeId.isNotBlank()) { "Condition nodeId must not be blank for $blockType" }
+        validateNotAlreadyRegistered(blockType, "condition")
+        conditionFactories[blockType] = factory
+        conditionNodeIds[blockType] = nodeId
+        logger.fine("Registered condition node for $blockType: $nodeId")
+    }
+
+    // --- registerValue ---
 
     override fun registerValue(blockType: Material, factory: (params: Map<String, Any>) -> IValue<*>) {
         validateNotAlreadyRegistered(blockType, "value")
-        try {
-            val testInstance = factory(emptyMap())
-            require(testInstance.nodeId.isNotBlank()) { "Value nodeId must not be blank" }
-            valueFactories[blockType] = factory
-            logger.fine("Registered value node for $blockType: ${testInstance.nodeId}")
-        } catch (e: IllegalArgumentException) {
-            logger.warning("Invalid value node for $blockType: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            valueFactories[blockType] = factory
-        }
+        valueFactories[blockType] = factory
+        logger.fine("Registered value node for $blockType (nodeId unknown — use explicit overload)")
     }
+
+    override fun registerValue(blockType: Material, nodeId: String, factory: (params: Map<String, Any>) -> IValue<*>) {
+        require(nodeId.isNotBlank()) { "Value nodeId must not be blank for $blockType" }
+        validateNotAlreadyRegistered(blockType, "value")
+        valueFactories[blockType] = factory
+        valueNodeIds[blockType] = nodeId
+        logger.fine("Registered value node for $blockType: $nodeId")
+    }
+
+    // --- registerEvent ---
 
     override fun registerEvent(blockType: Material, factory: () -> IEvent) {
         validateNotAlreadyRegistered(blockType, "event")
-        try {
-            val testInstance = factory()
-            require(testInstance.nodeId.isNotBlank()) { "Event nodeId must not be blank" }
-            require(testInstance.eventType.isNotBlank()) { "Event eventType must not be blank" }
-            eventFactories[blockType] = factory
-            logger.fine("Registered event node for $blockType: ${testInstance.nodeId} (${testInstance.eventType})")
-        } catch (e: IllegalArgumentException) {
-            logger.warning("Invalid event node for $blockType: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            eventFactories[blockType] = factory
-        }
+        eventFactories[blockType] = factory
+        logger.fine("Registered event node for $blockType")
     }
+
+    // --- getters ---
 
     override fun getActionFactory(blockType: Material): ((Map<String, Any>) -> IAction)? =
         actionFactories[blockType]
@@ -98,6 +97,12 @@ class NodeRegistryImpl(
 
     override fun getEventFactory(blockType: Material): (() -> IEvent)? =
         eventFactories[blockType]
+
+    override fun getActionNodeId(blockType: Material): String? = actionNodeIds[blockType]
+
+    override fun getConditionNodeId(blockType: Material): String? = conditionNodeIds[blockType]
+
+    override fun getValueNodeId(blockType: Material): String? = valueNodeIds[blockType]
 
     /**
      * Returns all registered action block types (used for inventory provisioning in DEV mode).

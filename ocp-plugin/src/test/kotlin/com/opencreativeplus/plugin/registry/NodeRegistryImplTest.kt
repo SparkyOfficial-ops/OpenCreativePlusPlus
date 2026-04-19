@@ -10,6 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class NodeRegistryImplTest {
@@ -160,5 +161,125 @@ class NodeRegistryImplTest {
         val event = reg.getEventFactory(Material.DIAMOND_BLOCK)!!.invoke()
         assertEquals("on_join", event.nodeId)
         assertEquals("player_join", event.eventType)
+    }
+
+    // --- Bug 1 fix check: factory with required params does not throw on registration ---
+
+    @Test
+    fun `registerAction with explicit nodeId and required-param factory does not throw`() {
+        var threw = false
+        try {
+            registry.registerAction(Material.STONE, "my_action") { params ->
+                object : IAction {
+                    private val target: String = params["target"] as? String
+                        ?: error("target param required")
+                    override val nodeId = "my_action"
+                    override val displayName = "My Action"
+                    override suspend fun execute(context: ExecutionContext) {}
+                }
+            }
+        } catch (e: Exception) {
+            threw = true
+        }
+        assertFalse(threw)
+        assertNotNull(registry.getActionFactory(Material.STONE))
+        assertEquals("my_action", registry.getActionNodeId(Material.STONE))
+    }
+
+    @Test
+    fun `registerCondition with explicit nodeId and required-param factory does not throw`() {
+        var threw = false
+        try {
+            registry.registerCondition(Material.STONE, "my_condition") { params ->
+                object : ICondition {
+                    private val threshold: Int = params["threshold"] as? Int
+                        ?: error("threshold param required")
+                    override val nodeId = "my_condition"
+                    override val displayName = "My Condition"
+                    override suspend fun evaluate(context: ExecutionContext) = threshold > 0
+                }
+            }
+        } catch (e: Exception) {
+            threw = true
+        }
+        assertFalse(threw)
+        assertNotNull(registry.getConditionFactory(Material.STONE))
+        assertEquals("my_condition", registry.getConditionNodeId(Material.STONE))
+    }
+
+    @Test
+    fun `registerValue with explicit nodeId and required-param factory does not throw`() {
+        var threw = false
+        try {
+            registry.registerValue(Material.STONE, "my_value") { params ->
+                object : IValue<Int> {
+                    private val value: Int = params["value"] as? Int
+                        ?: error("value param required")
+                    override val nodeId = "my_value"
+                    override val displayName = "My Value"
+                    override suspend fun compute(context: ExecutionContext) = value
+                }
+            }
+        } catch (e: Exception) {
+            threw = true
+        }
+        assertFalse(threw)
+        assertNotNull(registry.getValueFactory(Material.STONE))
+        assertEquals("my_value", registry.getValueNodeId(Material.STONE))
+    }
+
+    // --- Bug 1 preservation: nodes without required params still register and work identically ---
+
+    @Test
+    fun `registerAction without required params registers factory and nodeId correctly`() {
+        registry.registerAction(Material.SAND, "simple_action") { _ ->
+            object : IAction {
+                override val nodeId = "simple_action"
+                override val displayName = "Simple Action"
+                override suspend fun execute(context: ExecutionContext) {}
+            }
+        }
+        assertNotNull(registry.getActionFactory(Material.SAND))
+        assertEquals("simple_action", registry.getActionNodeId(Material.SAND))
+    }
+
+    @Test
+    fun `registerCondition without required params registers factory and nodeId correctly`() {
+        registry.registerCondition(Material.SAND, "simple_condition") { _ ->
+            object : ICondition {
+                override val nodeId = "simple_condition"
+                override val displayName = "Simple Condition"
+                override suspend fun evaluate(context: ExecutionContext) = true
+            }
+        }
+        assertNotNull(registry.getConditionFactory(Material.SAND))
+        assertEquals("simple_condition", registry.getConditionNodeId(Material.SAND))
+    }
+
+    @Test
+    fun `registerValue without required params registers factory and nodeId correctly`() {
+        registry.registerValue(Material.SAND, "simple_value") { _ ->
+            object : IValue<String> {
+                override val nodeId = "simple_value"
+                override val displayName = "Simple Value"
+                override suspend fun compute(context: ExecutionContext) = "hello"
+            }
+        }
+        assertNotNull(registry.getValueFactory(Material.SAND))
+        assertEquals("simple_value", registry.getValueNodeId(Material.SAND))
+    }
+
+    @Test
+    fun `getActionNodeId returns null for node registered without explicit nodeId`() {
+        registry.registerAction(Material.GRAVEL) { _ ->
+            object : IAction {
+                override val nodeId = "legacy_action"
+                override val displayName = "Legacy"
+                override suspend fun execute(context: ExecutionContext) {}
+            }
+        }
+        // Factory is registered but nodeId metadata is absent (legacy overload)
+        assertNotNull(registry.getActionFactory(Material.GRAVEL))
+        assertNull(registry.getActionNodeId(Material.GRAVEL))
     }
 }

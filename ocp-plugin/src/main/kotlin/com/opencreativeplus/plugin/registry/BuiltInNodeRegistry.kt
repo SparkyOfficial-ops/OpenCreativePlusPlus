@@ -61,7 +61,7 @@ import org.bukkit.Material
 
 /**
  * Registers all built-in nodes into the NodeRegistry.
- * 25.2, 7.1, 7.2, 7.3, 30.1, 30.2, 30.4, 31.1, 31.2, 31.3
+ * All registrations use the explicit nodeId overload — factory is never called during registration.
  */
 object BuiltInNodeRegistry {
 
@@ -88,122 +88,122 @@ object BuiltInNodeRegistry {
     }
 
     private fun registerActions(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.PAPER) { params -> SendMessageAction(params) }
-        registry.registerAction(Material.CLOCK) { params -> WaitAction(params) }
+        registry.registerAction(Material.PAPER, "send_message") { params -> SendMessageAction(params) }
+        registry.registerAction(Material.CLOCK, "wait") { params -> WaitAction(params) }
     }
 
     private fun registerConditions(registry: NodeRegistryImpl) {
-        registry.registerCondition(Material.COMPARATOR) { params ->
+        registry.registerCondition(Material.COMPARATOR, "equals") { params ->
             EqualsCondition(params["left"], params["right"])
         }
-        registry.registerCondition(Material.REPEATER) { params ->
+        registry.registerCondition(Material.REPEATER, "greater_than") { params ->
             GreaterThanCondition(params["left"], params["right"])
         }
-        registry.registerCondition(Material.DAYLIGHT_DETECTOR) { params ->
+        registry.registerCondition(Material.DAYLIGHT_DETECTOR, "less_than") { params ->
             LessThanCondition(params["left"], params["right"])
         }
     }
 
     private fun registerValues(registry: NodeRegistryImpl) {
         // Arithmetic
-        registry.registerValue(Material.GOLD_BLOCK) { params ->
+        registry.registerValue(Material.GOLD_BLOCK, "add") { params ->
             AddValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.IRON_BLOCK) { params ->
+        registry.registerValue(Material.IRON_BLOCK, "subtract") { params ->
             SubtractValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.EMERALD_BLOCK) { params ->
+        registry.registerValue(Material.EMERALD_BLOCK, "multiply") { params ->
             MultiplyValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.LAPIS_BLOCK) { params ->
+        registry.registerValue(Material.LAPIS_BLOCK, "divide") { params ->
             DivideValue(params["left"], params["right"])
         }
         // Comparisons
-        registry.registerValue(Material.REDSTONE_BLOCK) { params ->
+        registry.registerValue(Material.REDSTONE_BLOCK, "equals_value") { params ->
             EqualsValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.COAL_BLOCK) { params ->
+        registry.registerValue(Material.COAL_BLOCK, "greater_than_value") { params ->
             GreaterThanValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.NETHERITE_BLOCK) { params ->
+        registry.registerValue(Material.NETHERITE_BLOCK, "less_than_value") { params ->
             LessThanValue(params["left"], params["right"])
         }
     }
 
     private fun registerLoopNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.CHAIN) { params -> ForEachNode(params) }
-        registry.registerAction(Material.REPEATING_COMMAND_BLOCK) { params -> RepeatNode(params) }
+        registry.registerAction(Material.CHAIN, "foreach") { params -> ForEachNode(params) }
+        registry.registerAction(Material.REPEATING_COMMAND_BLOCK, "repeat") { params -> RepeatNode(params) }
     }
 
     private fun registerArrayNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.CHEST) { params -> CreateListNode(params) }
-        registry.registerAction(Material.HOPPER) { params -> AddToListNode(params) }
-        registry.registerValue(Material.OBSERVER) { params -> GetListSizeNode(params) }
-        registry.registerValue(Material.BARREL) { params -> GetListElementNode(params) }
-        registry.registerValue(Material.DROPPER) { params -> FilterListNode(params) }
+        registry.registerAction(Material.CHEST, "create_list") { params -> CreateListNode(params) }
+        registry.registerAction(Material.HOPPER, "add_to_list") { params -> AddToListNode(params) }
+        registry.registerValue(Material.OBSERVER, "get_list_size") { params -> GetListSizeNode(params) }
+        registry.registerValue(Material.BARREL, "get_list_element") { params -> GetListElementNode(params) }
+        registry.registerValue(Material.DROPPER, "filter_list") { params -> FilterListNode(params) }
     }
 
     private fun registerEntityNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.ZOMBIE_HEAD) { params -> SpawnEntityNode(params) }
-        registry.registerAction(Material.SKELETON_SKULL) { params -> KillEntityNode(params) }
-        registry.registerAction(Material.CREEPER_HEAD) { params -> SetEntityAINode(params) }
-        registry.registerAction(Material.WITHER_SKELETON_SKULL) { params -> SetEntityHealthNode(params) }
-        registry.registerAction(Material.PLAYER_HEAD) { params -> MoveEntityToNode(params) }
-        registry.registerValue(Material.DRAGON_HEAD) { params -> GetNearbyEntitiesNode(params) }
+        registry.registerAction(Material.ZOMBIE_HEAD, "spawn_entity") { params -> SpawnEntityNode(params) }
+        registry.registerAction(Material.SKELETON_SKULL, "kill_entity") { params -> KillEntityNode(params) }
+        registry.registerAction(Material.CREEPER_HEAD, "set_entity_ai") { params -> SetEntityAINode(params) }
+        registry.registerAction(Material.WITHER_SKELETON_SKULL, "set_entity_health") { params -> SetEntityHealthNode(params) }
+        registry.registerAction(Material.PLAYER_HEAD, "move_entity_to") { params -> MoveEntityToNode(params) }
+        registry.registerValue(Material.DRAGON_HEAD, "get_nearby_entities") { params -> GetNearbyEntitiesNode(params) }
     }
 
     private fun registerVisualEffectNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.FIREWORK_ROCKET) { params -> SpawnParticleNode(params) }
-        registry.registerAction(Material.JUKEBOX) { params -> PlaySoundNode(params) }
-        registry.registerAction(Material.GLOWSTONE) { params -> DrawLineNode(params) }
+        registry.registerAction(Material.FIREWORK_ROCKET, "spawn_particle") { params -> SpawnParticleNode(params) }
+        registry.registerAction(Material.JUKEBOX, "play_sound") { params -> PlaySoundNode(params) }
+        registry.registerAction(Material.GLOWSTONE, "draw_line") { params -> DrawLineNode(params) }
     }
 
     private fun registerTeleportNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.ENDER_PEARL) { params -> TeleportPlayerNode(params) }
-        registry.registerAction(Material.ENDER_EYE) { params -> TeleportToPlayerNode(params) }
-        registry.registerAction(Material.FEATHER) { params -> LaunchPlayerNode(params) }
-        registry.registerAction(Material.ELYTRA) { params -> SetPlayerFlightNode(params) }
+        registry.registerAction(Material.ENDER_PEARL, "teleport_player") { params -> TeleportPlayerNode(params) }
+        registry.registerAction(Material.ENDER_EYE, "teleport_to_player") { params -> TeleportToPlayerNode(params) }
+        registry.registerAction(Material.FEATHER, "launch_player") { params -> LaunchPlayerNode(params) }
+        registry.registerAction(Material.ELYTRA, "set_player_flight") { params -> SetPlayerFlightNode(params) }
     }
 
     private fun registerPlayerStatNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.POTION) { params -> ApplyPotionEffectNode(params) }
-        registry.registerAction(Material.GLASS_BOTTLE) { params -> RemovePotionEffectNode(params) }
-        registry.registerAction(Material.RED_DYE) { params -> SetPlayerHealthNode(params) }
-        registry.registerAction(Material.COOKED_BEEF) { params -> SetPlayerFoodLevelNode(params) }
-        registry.registerAction(Material.EXPERIENCE_BOTTLE) { params -> GiveExperienceNode(params) }
-        registry.registerAction(Material.NETHER_STAR) { params -> SetGameModeNode(params) }
+        registry.registerAction(Material.POTION, "apply_potion_effect") { params -> ApplyPotionEffectNode(params) }
+        registry.registerAction(Material.GLASS_BOTTLE, "remove_potion_effect") { params -> RemovePotionEffectNode(params) }
+        registry.registerAction(Material.RED_DYE, "set_player_health") { params -> SetPlayerHealthNode(params) }
+        registry.registerAction(Material.COOKED_BEEF, "set_player_food_level") { params -> SetPlayerFoodLevelNode(params) }
+        registry.registerAction(Material.EXPERIENCE_BOTTLE, "give_experience") { params -> GiveExperienceNode(params) }
+        registry.registerAction(Material.NETHER_STAR, "set_game_mode") { params -> SetGameModeNode(params) }
     }
 
     private fun registerInventoryNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.CHEST_MINECART) { params -> GiveItemNode(params) }
-        registry.registerAction(Material.HOPPER_MINECART) { params -> RemoveItemNode(params) }
-        registry.registerAction(Material.TNT_MINECART) { params -> ClearInventoryNode(params) }
-        registry.registerCondition(Material.ITEM_FRAME) { params -> HasItemNode(params) }
+        registry.registerAction(Material.CHEST_MINECART, "give_item") { params -> GiveItemNode(params) }
+        registry.registerAction(Material.HOPPER_MINECART, "remove_item") { params -> RemoveItemNode(params) }
+        registry.registerAction(Material.TNT_MINECART, "clear_inventory") { params -> ClearInventoryNode(params) }
+        registry.registerCondition(Material.ITEM_FRAME, "has_item") { params -> HasItemNode(params) }
     }
 
     private fun registerWorldNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.GRASS_BLOCK) { params -> SetBlockNode(params) }
-        registry.registerValue(Material.STONE) { params -> GetBlockNode(params) }
-        registry.registerAction(Material.LIGHTNING_ROD) { params -> SetWeatherNode(params) }
-        registry.registerAction(Material.SUNFLOWER) { params -> SetTimeNode(params) }
-        registry.registerAction(Material.TNT) { params -> CreateExplosionNode(params) }
+        registry.registerAction(Material.GRASS_BLOCK, "set_block") { params -> SetBlockNode(params) }
+        registry.registerValue(Material.STONE, "get_block") { params -> GetBlockNode(params) }
+        registry.registerAction(Material.LIGHTNING_ROD, "set_weather") { params -> SetWeatherNode(params) }
+        registry.registerAction(Material.SUNFLOWER, "set_time") { params -> SetTimeNode(params) }
+        registry.registerAction(Material.TNT, "create_explosion") { params -> CreateExplosionNode(params) }
     }
 
     private fun registerUINodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.BOOK) { params -> SendTitleNode(params) }
-        registry.registerAction(Material.WRITABLE_BOOK) { params -> SendActionBarNode(params) }
-        registry.registerAction(Material.BLAZE_ROD) { params -> PlayAnimationNode(params) }
-        registry.registerAction(Material.DRAGON_EGG) { params -> SendBossBarNode(params) }
+        registry.registerAction(Material.BOOK, "send_title") { params -> SendTitleNode(params) }
+        registry.registerAction(Material.WRITABLE_BOOK, "send_action_bar") { params -> SendActionBarNode(params) }
+        registry.registerAction(Material.BLAZE_ROD, "play_animation") { params -> PlayAnimationNode(params) }
+        registry.registerAction(Material.DRAGON_EGG, "send_boss_bar") { params -> SendBossBarNode(params) }
     }
 
     private fun registerScoreboardNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.OAK_SIGN) { params -> CreateScoreboardNode(params) }
-        registry.registerAction(Material.BIRCH_SIGN) { params -> SetScoreboardLineNode(params) }
-        registry.registerAction(Material.SPRUCE_SIGN) { params -> ShowScoreboardNode(params) }
-        registry.registerAction(Material.JUNGLE_SIGN) { params -> HideScoreboardNode(params) }
+        registry.registerAction(Material.OAK_SIGN, "create_scoreboard") { params -> CreateScoreboardNode(params) }
+        registry.registerAction(Material.BIRCH_SIGN, "set_scoreboard_line") { params -> SetScoreboardLineNode(params) }
+        registry.registerAction(Material.SPRUCE_SIGN, "show_scoreboard") { params -> ShowScoreboardNode(params) }
+        registry.registerAction(Material.JUNGLE_SIGN, "hide_scoreboard") { params -> HideScoreboardNode(params) }
     }
 
     private fun registerDialogueNodes(registry: NodeRegistryImpl) {
-        registry.registerAction(Material.WRITTEN_BOOK) { params -> SendDialogueNode(params) }
+        registry.registerAction(Material.WRITTEN_BOOK, "send_dialogue") { params -> SendDialogueNode(params) }
     }
 }

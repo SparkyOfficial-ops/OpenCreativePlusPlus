@@ -39,6 +39,5 @@ tasks {
 
     test {
         useJUnitPlatform()
-        enabled = false
     }
 }

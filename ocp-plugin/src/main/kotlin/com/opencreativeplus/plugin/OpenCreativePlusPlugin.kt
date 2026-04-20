@@ -24,6 +24,7 @@ import com.opencreativeplus.plugin.gui.PlotConfigGUI
 import com.opencreativeplus.plugin.gui.SmartGUI
 import com.opencreativeplus.plugin.gui.smartGuiMakeItem
 import com.opencreativeplus.plugin.inventory.InventoryManager
+import com.opencreativeplus.core.logging.BufferedExecutionLogger
 import com.opencreativeplus.plugin.logging.ExecutionLogger
 import com.opencreativeplus.plugin.logging.LogViewCommand
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
@@ -60,6 +61,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
     private lateinit var connectionManager: MongoConnectionManager
     private lateinit var coroutineConfig: CoroutineConfiguration
+    private lateinit var bufferedLogger: BufferedExecutionLogger
     private lateinit var plotManager: PlotManagerImpl
     private lateinit var modeManager: ModeManagerImpl
     private lateinit var executionEngine: ExecutionEngine
@@ -144,6 +146,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         // ── Logging ───────────────────────────────────────────────────────────
         val executionLogger = ExecutionLogger(database, connectionManager)
+        val logsCollection = database.getCollection<org.bson.Document>("execution_logs")
+        bufferedLogger = BufferedExecutionLogger(logsCollection, coroutineConfig.executionScope)
 
         // ── TPS task ──────────────────────────────────────────────────────────
         tpsMonitorTask = TpsMonitorTask(this, tpsMonitor, watchdog)
@@ -207,6 +211,11 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         logger.info("[OCP] Shutting down...")
 
         tpsMonitorTask.stop()
+
+        runBlocking {
+            bufferedLogger.flush()
+        }
+
         coroutineConfig.close()
 
         runBlocking {

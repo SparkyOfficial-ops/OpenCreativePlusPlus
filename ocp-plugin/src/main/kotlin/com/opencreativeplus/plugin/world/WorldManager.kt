@@ -1,14 +1,16 @@
 package com.opencreativeplus.plugin.world
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
 import org.bukkit.Difficulty
 import org.bukkit.World
 import org.bukkit.WorldCreator
 import org.bukkit.WorldType
+import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Manages plot world creation, loading, and unloading.
@@ -19,7 +21,9 @@ import java.util.concurrent.ConcurrentHashMap
  1.1, 1.2, 1.3, 1.5, 27.1, 27.2, 27.3, 27.4, 27.5, 35.1, 35.2, 35.3, 35.4
  */
 class WorldManager(
-    private val codingGridGenerator: CodingGridGenerator = CodingGridGenerator()
+    private val codingGridGenerator: CodingGridGenerator = CodingGridGenerator(),
+    private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
+        ?: error("OpenCreativePlus plugin not found")
 ) {
     /** plotId → (mainWorld, devWorld) */
     private val loadedWorlds = ConcurrentHashMap<UUID, Pair<World, World>>()
@@ -28,48 +32,65 @@ class WorldManager(
      * Create both worlds for a new plot.
      1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
      */
-    suspend fun createPlotWorlds(plotId: UUID): Pair<World, World> = withContext(Dispatchers.IO) {
-        val mainWorldName = plotId.toString()
-        val devWorldName = "${plotId}_dev"
-
-        val mainWorld = createWorld(mainWorldName, isDevWorld = false)
-        val devWorld = createWorld(devWorldName, isDevWorld = true)
-
-        configureMainWorld(mainWorld)
-        configureDevWorld(devWorld)
-
-        loadedWorlds[plotId] = Pair(mainWorld, devWorld)
-        Pair(mainWorld, devWorld)
-    }
+    suspend fun createPlotWorlds(plotId: UUID): Pair<World, World> =
+        suspendCancellableCoroutine { cont ->
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                try {
+                    val mainWorld = createWorld(plotId.toString(), isDevWorld = false)
+                    val devWorld = createWorld("${plotId}_dev", isDevWorld = true)
+                    configureMainWorld(mainWorld)
+                    configureDevWorld(devWorld)
+                    loadedWorlds[plotId] = Pair(mainWorld, devWorld)
+                    cont.resume(Pair(mainWorld, devWorld))
+                } catch (e: Exception) {
+                    cont.resumeWithException(e)
+                }
+            })
+        }
 
     /**
      * Load existing worlds for a plot (fallback to creation if not found).
      1.5, 27.2, 27.4
      */
-    suspend fun loadPlotWorlds(plotId: UUID): Pair<World, World> = withContext(Dispatchers.IO) {
-        val mainWorldName = plotId.toString()
-        val devWorldName = "${plotId}_dev"
-
-        val mainWorld = Bukkit.getWorld(mainWorldName) ?: createWorld(mainWorldName, isDevWorld = false).also {
-            configureMainWorld(it)
+    suspend fun loadPlotWorlds(plotId: UUID): Pair<World, World> =
+        suspendCancellableCoroutine { cont ->
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                try {
+                    val mainWorldName = plotId.toString()
+                    val devWorldName = "${plotId}_dev"
+                    val mainWorld = Bukkit.getWorld(mainWorldName)
+                        ?: createWorld(mainWorldName, isDevWorld = false).also { configureMainWorld(it) }
+                    val devWorld = Bukkit.getWorld(devWorldName)
+                        ?: createWorld(devWorldName, isDevWorld = true).also { configureDevWorld(it) }
+                    loadedWorlds[plotId] = Pair(mainWorld, devWorld)
+                    cont.resume(Pair(mainWorld, devWorld))
+                } catch (e: Exception) {
+                    cont.resumeWithException(e)
+                }
+            })
         }
-        val devWorld = Bukkit.getWorld(devWorldName) ?: createWorld(devWorldName, isDevWorld = true).also {
-            configureDevWorld(it)
-        }
-
-        loadedWorlds[plotId] = Pair(mainWorld, devWorld)
-        Pair(mainWorld, devWorld)
-    }
 
     /**
      * Unload both worlds for a plot, saving state.
      27.5
      */
-    suspend fun unloadPlotWorlds(plotId: UUID) = withContext(Dispatchers.IO) {
-        val (mainWorld, devWorld) = loadedWorlds.remove(plotId) ?: return@withContext
-        Bukkit.unloadWorld(mainWorld, true)
-        Bukkit.unloadWorld(devWorld, true)
-    }
+    suspend fun unloadPlotWorlds(plotId: UUID) =
+        suspendCancellableCoroutine<Unit> { cont ->
+            val pair = loadedWorlds.remove(plotId)
+            if (pair == null) {
+                cont.resume(Unit)
+                return@suspendCancellableCoroutine
+            }
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                try {
+                    Bukkit.unloadWorld(pair.first, true)
+                    Bukkit.unloadWorld(pair.second, true)
+                    cont.resume(Unit)
+                } catch (e: Exception) {
+                    cont.resumeWithException(e)
+                }
+            })
+        }
 
     /**
      * Get the loaded worlds for a plot, or null if not loaded.

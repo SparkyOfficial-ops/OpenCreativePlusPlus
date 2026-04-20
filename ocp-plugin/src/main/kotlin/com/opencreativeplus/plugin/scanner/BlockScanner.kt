@@ -3,6 +3,7 @@ package com.opencreativeplus.plugin.scanner
 import com.opencreativeplus.api.model.ItemVariableRef
 import com.opencreativeplus.api.model.ItemVariableType
 import com.opencreativeplus.api.registry.NodeRegistry
+import org.bukkit.ChunkSnapshot
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
 import org.bukkit.World
@@ -50,6 +51,44 @@ class BlockScanner(
             codeLines.addAll(scanLevel(y))
         }
         return codeLines
+    }
+
+    /**
+     * Scan a rectangular area of blocks using ChunkSnapshot batching (Bug 5 fix).
+     *
+     * Groups all requested (x, y, z) coordinates by their chunk (chunkX, chunkZ),
+     * takes one ChunkSnapshot per chunk, then reads block types from the snapshot.
+     * This avoids one `world.getBlockAt()` call per block and dramatically reduces
+     * main-thread overhead for large areas.
+     *
+     * @param xs  X coordinate range (inclusive)
+     * @param ys  Y coordinate range (inclusive)
+     * @param zs  Z coordinate range (inclusive)
+     * @return    Map of (x, y, z) triple to [Material]
+     */
+    fun scanArea(xs: IntRange, ys: IntRange, zs: IntRange): Map<Triple<Int, Int, Int>, Material> {
+        // Build full coordinate list
+        val coords = mutableListOf<Triple<Int, Int, Int>>()
+        for (x in xs) for (y in ys) for (z in zs) coords.add(Triple(x, y, z))
+
+        // Group by (chunkX, chunkZ)
+        val byChunk: Map<Pair<Int, Int>, List<Triple<Int, Int, Int>>> =
+            coords.groupBy { (x, _, z) -> (x shr 4) to (z shr 4) }
+
+        val result = mutableMapOf<Triple<Int, Int, Int>, Material>()
+
+        // One ChunkSnapshot per chunk
+        for ((chunkKey, chunkCoords) in byChunk) {
+            val (cx, cz) = chunkKey
+            val snapshot: ChunkSnapshot = world.getChunkAt(cx, cz).getChunkSnapshot()
+            for ((x, y, z) in chunkCoords) {
+                val localX = x and 15
+                val localZ = z and 15
+                result[Triple(x, y, z)] = snapshot.getBlockType(localX, y, localZ)
+            }
+        }
+
+        return result
     }
 
     /**

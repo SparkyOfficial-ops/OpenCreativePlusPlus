@@ -104,6 +104,16 @@ class NodeRegistryImpl(
 
     override fun getValueNodeId(blockType: Material): String? = valueNodeIds[blockType]
 
+    override fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material? {
+        // Search action, condition, and value factories by creating a test instance is not possible
+        // without params. Instead, we match by nodeId stored in the metadata maps.
+        val nodeId = node.nodeId
+        actionNodeIds.entries.firstOrNull { it.value == nodeId }?.key?.let { return it }
+        conditionNodeIds.entries.firstOrNull { it.value == nodeId }?.key?.let { return it }
+        valueNodeIds.entries.firstOrNull { it.value == nodeId }?.key?.let { return it }
+        return null
+    }
+
     /**
      * Returns all registered action block types (used for inventory provisioning in DEV mode).
      */

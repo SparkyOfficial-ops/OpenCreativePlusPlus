@@ -89,4 +89,10 @@ interface NodeRegistry {
      * Get the nodeId for a registered value block type.
      */
     fun getValueNodeId(blockType: Material): String?
+
+    /**
+     * Find the Material key for a given node instance by searching action, condition, and value registrations.
+     * Returns null if the node's type is not registered.
+     */
+    fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material?
 }

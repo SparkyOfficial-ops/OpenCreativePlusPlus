@@ -1,7 +1,7 @@
 // ocp-plugin module - Paper/Bukkit integration
 
 plugins {
-    id("com.github.johnrengelman.shadow")
+    id("com.gradleup.shadow")
 }
 
 dependencies {

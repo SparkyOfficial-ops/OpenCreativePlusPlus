@@ -43,15 +43,18 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
     fun save(block: Block, paramName: String, value: Any) {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return
         val key = namespacedKey(paramName)
+        val typeTag: String
         when (value) {
-            is String   -> pdc.set(key, PersistentDataType.STRING, value)
-            is Int      -> pdc.set(key, PersistentDataType.INTEGER, value)
-            is Double   -> pdc.set(key, PersistentDataType.DOUBLE, value)
-            is Boolean  -> pdc.set(key, PersistentDataType.BYTE, if (value) 1.toByte() else 0.toByte())
-            is Location -> pdc.set(key, PersistentDataType.STRING, serializeLocation(value))
-            is UUID     -> pdc.set(key, PersistentDataType.STRING, value.toString())
-            is List<*>  -> pdc.set(key, PersistentDataType.STRING, serializeList(value))
+            is String   -> { pdc.set(key, PersistentDataType.STRING, value);                                    typeTag = "STRING" }
+            is Int      -> { pdc.set(key, PersistentDataType.INTEGER, value);                                   typeTag = "INT" }
+            is Double   -> { pdc.set(key, PersistentDataType.DOUBLE, value);                                    typeTag = "DOUBLE" }
+            is Boolean  -> { pdc.set(key, PersistentDataType.BYTE, if (value) 1.toByte() else 0.toByte());     typeTag = "BOOLEAN" }
+            is Location -> { pdc.set(key, PersistentDataType.STRING, serializeLocation(value));                 typeTag = "LOCATION" }
+            is UUID     -> { pdc.set(key, PersistentDataType.STRING, value.toString());                         typeTag = "UUID" }
+            is List<*>  -> { pdc.set(key, PersistentDataType.STRING, serializeList(value));                     typeTag = "LIST" }
+            else        -> return
         }
+        pdc.set(namespacedKey("${paramName}_ocp_type"), PersistentDataType.STRING, typeTag)
         (block.state as TileState).update()
     }
 
@@ -72,10 +75,18 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
     fun load(block: Block, paramName: String): Any? {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
         val key = namespacedKey(paramName)
-        return pdc.get(key, PersistentDataType.STRING)
-            ?: pdc.get(key, PersistentDataType.INTEGER)
-            ?: pdc.get(key, PersistentDataType.DOUBLE)
-            ?: pdc.get(key, PersistentDataType.BYTE)?.let { it == 1.toByte() }
+        val typeTag = pdc.get(namespacedKey("${paramName}_ocp_type"), PersistentDataType.STRING)
+        return when (typeTag) {
+            "INT"      -> pdc.get(key, PersistentDataType.INTEGER)
+            "DOUBLE"   -> pdc.get(key, PersistentDataType.DOUBLE)
+            "BOOLEAN"  -> pdc.get(key, PersistentDataType.BYTE)?.let { it == 1.toByte() }
+            "STRING", "LOCATION", "UUID", "LIST" -> pdc.get(key, PersistentDataType.STRING)
+            else       -> // backward compatibility: no type tag — use original try-in-order logic
+                pdc.get(key, PersistentDataType.STRING)
+                    ?: pdc.get(key, PersistentDataType.INTEGER)
+                    ?: pdc.get(key, PersistentDataType.DOUBLE)
+                    ?: pdc.get(key, PersistentDataType.BYTE)?.let { it == 1.toByte() }
+        }
     }
 
     /**

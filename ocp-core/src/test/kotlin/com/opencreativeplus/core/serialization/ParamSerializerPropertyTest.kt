@@ -13,6 +13,7 @@ import io.kotest.property.arbitrary.double
 import io.kotest.property.arbitrary.filter
 import io.kotest.property.arbitrary.int
 import io.kotest.property.arbitrary.list
+import io.kotest.property.arbitrary.map
 import io.kotest.property.arbitrary.string
 import io.kotest.property.arbitrary.uuid
 import io.kotest.property.checkAll
@@ -275,6 +276,59 @@ class ParamSerializerPropertyTest : FreeSpec({
                 serializer.save(block, "paramB", valueB)
                 serializer.load(block, "paramA") shouldBe valueA
                 serializer.load(block, "paramB") shouldBe valueB
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Property 3j: type-tagged round-trip for all primitives
+    // -----------------------------------------------------------------------
+
+    "Property 3j: type-tagged round-trip — load(save(v)) returns same type and value for all primitives" - {
+        /**
+         * Validates: Requirements 2.9
+         *
+         * For any value of a supported primitive type (String, Int, Double, Boolean),
+         * save followed by load must return a value equal to the original with the same type.
+         */
+
+        "Int values survive save/load with correct type" {
+            checkAll(PropTestConfig(iterations = 30), Arb.int()) { value ->
+                val (serializer, block) = makePdcEnv()
+                serializer.save(block, "param", value)
+                val loaded = serializer.load(block, "param")
+                loaded shouldBe value
+                (loaded is Int) shouldBe true
+            }
+        }
+
+        "Double values survive save/load with correct type" {
+            checkAll(PropTestConfig(iterations = 30), arbFiniteDouble) { value ->
+                val (serializer, block) = makePdcEnv()
+                serializer.save(block, "param", value)
+                val loaded = serializer.load(block, "param")
+                loaded shouldBe value
+                (loaded is Double) shouldBe true
+            }
+        }
+
+        "Boolean values survive save/load with correct type" {
+            checkAll(PropTestConfig(iterations = 20), Arb.boolean()) { value ->
+                val (serializer, block) = makePdcEnv()
+                serializer.save(block, "param", value)
+                val loaded = serializer.load(block, "param")
+                loaded shouldBe value
+                (loaded is Boolean) shouldBe true
+            }
+        }
+
+        "String values survive save/load unchanged" {
+            checkAll(PropTestConfig(iterations = 30), Arb.string(0..50)) { value ->
+                val (serializer, block) = makePdcEnv()
+                serializer.save(block, "param", value)
+                val loaded = serializer.load(block, "param")
+                loaded shouldBe value
+                (loaded is String) shouldBe true
             }
         }
     }

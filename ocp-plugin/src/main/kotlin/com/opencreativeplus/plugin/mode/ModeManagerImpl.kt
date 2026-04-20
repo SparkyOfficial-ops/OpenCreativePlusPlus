@@ -148,10 +148,19 @@ class ModeManagerImpl(
         val worlds = worldManager.getLoadedWorlds(plot.id)
         if (worlds != null) {
             val spawnLoc: Location = worlds.second.spawnLocation
-            runOnMain { player.teleport(spawnLoc) }
+            runOnMain {
+                player.gameMode = GameMode.CREATIVE
+                player.allowFlight = true
+                player.teleport(spawnLoc)
+            }
+        } else {
+            runOnMain { player.gameMode = GameMode.CREATIVE }
         }
         // Provision the coding blocks inventory (req 36.1–36.4)
-        runOnMain { inventoryManager.provisionDevInventory(player) }
+        runOnMain {
+            inventoryManager.provisionDevInventory(player)
+            player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
+        }
     }
 
     /**

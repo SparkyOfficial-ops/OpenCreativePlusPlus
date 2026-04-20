@@ -103,8 +103,15 @@ class WorldManager(
 
     private fun createWorld(name: String, isDevWorld: Boolean): World {
         val creator = WorldCreator(name)
-            .type(WorldType.FLAT)
             .generateStructures(false)
+        if (isDevWorld) {
+            // Void world — no terrain, only our coding grid
+            creator.generator("void")
+                .type(WorldType.FLAT)
+                .generatorSettings("{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biome\":\"minecraft:the_void\"}")
+        } else {
+            creator.type(WorldType.FLAT)
+        }
         return Bukkit.createWorld(creator)
             ?: error("Failed to create world: $name")
     }
@@ -137,8 +144,13 @@ class WorldManager(
         world.setSpawnFlags(false, false)
         world.setGameRuleValue("doMobSpawning", "false")
         world.setGameRuleValue("doDaylightCycle", "false")
+        world.setGameRuleValue("doWeatherCycle", "false")
+        world.setGameRuleValue("fallDamage", "false")
 
         // Generate the coding grid (req 3.1)
         codingGridGenerator.generate(world)
+
+        // Spawn player above the first strip at level Y=10 (second level, more visible)
+        world.setSpawnLocation(0, 11, 0)
     }
 }

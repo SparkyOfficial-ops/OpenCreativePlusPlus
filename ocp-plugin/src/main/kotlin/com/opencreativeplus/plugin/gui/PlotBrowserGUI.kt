@@ -45,11 +45,12 @@ class PlotBrowserGUI(
 
     /**
      * Open the plot browser for [player], optionally filtered by [tagFilter].
+     * [page] is zero-based; defaults to 0 (first page).
      10.1, 10.2, 10.3, 21.4, 22.4
      */
-    fun open(player: Player, tagFilter: String? = null) {
+    fun open(player: Player, tagFilter: String? = null, page: Int = 0) {
         scope.launch {
-            val plots = loadPlots(tagFilter)
+            val plots = loadPlots(tagFilter, page)
             val inv = buildInventory(plots)
             // Store mapping so click handler can resolve the plot
             openInventories[player.uniqueId] = plots
@@ -96,22 +97,12 @@ class PlotBrowserGUI(
     // -------------------------------------------------------------------------
 
     /**
-     * Load plots from database, sorted by rating descending, limited to [MAX_PLOTS].
+     * Load plots from database via paged MongoDB query, sorted by rating descending.
      * Optionally filter by [tagFilter].
      10.2, 21.4, 22.4
      */
-    private suspend fun loadPlots(tagFilter: String?): List<Plot> {
-        // We load all plots via the manager's in-memory cache + persistence
-        // For now, use the manager's loaded plots as the source
-        val allPlots = plotManager.getAllLoadedPlots()
-
-        return allPlots
-            .let { list ->
-                if (tagFilter != null) list.filter { tagFilter in it.metadata.tags }
-                else list
-            }
-            .sortedByDescending { it.metadata.rating }
-            .take(MAX_PLOTS)
+    private suspend fun loadPlots(tagFilter: String?, page: Int = 0): List<Plot> {
+        return plotPersistence.getPlotsPaged(page, MAX_PLOTS, tagFilter)
     }
 
     /**

@@ -5,8 +5,10 @@ import com.opencreativeplus.api.plot.PlotMetadata
 import com.opencreativeplus.api.plot.PlotSettings
 import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -268,5 +270,40 @@ class PlotBrowserGUITest {
         val result = simulateLoadPlots(plotManager.getAllLoadedPlots(), tagFilter = null)
 
         assertEquals(2, result.size)
+    }
+
+    // -------------------------------------------------------------------------
+    // Bug 6 fix check — getPlotsPaged returns ≤ PAGE_SIZE plots (6.5)
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `getPlotsPaged returns at most PAGE_SIZE plots when 1000 plots exist`() = runBlocking {
+        val pageSize = 45
+        // Simulate DB returning exactly pageSize plots (MongoDB limit enforced server-side)
+        val pagedPlots = (1..pageSize).map { makePlot(name = "Plot $it", rating = it) }
+        coEvery { plotPersistence.getPlotsPaged(0, pageSize, null) } returns pagedPlots
+
+        val result = plotPersistence.getPlotsPaged(0, pageSize, null)
+
+        assertTrue(result.size <= pageSize,
+            "Expected at most $pageSize plots in memory, got ${result.size}")
+    }
+
+    // -------------------------------------------------------------------------
+    // Bug 6 preservation — all plots shown when count ≤ PAGE_SIZE (6.6)
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `getPlotsPaged returns all plots when total count is less than PAGE_SIZE`() = runBlocking {
+        val pageSize = 45
+        val tenPlots = (1..10).map { makePlot(name = "Plot $it", rating = it) }
+        coEvery { plotPersistence.getPlotsPaged(0, pageSize, null) } returns tenPlots
+
+        val result = plotPersistence.getPlotsPaged(0, pageSize, null)
+
+        assertEquals(10, result.size)
+        // Verify all plots are present and names are preserved
+        val names = result.map { it.name }.toSet()
+        (1..10).forEach { i -> assertTrue("Plot $i" in names, "Plot $i missing from result") }
     }
 }

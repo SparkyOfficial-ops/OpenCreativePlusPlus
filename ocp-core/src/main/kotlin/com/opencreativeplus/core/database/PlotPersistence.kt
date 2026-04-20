@@ -1,11 +1,14 @@
 package com.opencreativeplus.core.database
 
+import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ReplaceOptions
+import com.mongodb.client.model.Sorts
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.opencreativeplus.api.plot.Plot
 import com.opencreativeplus.api.plot.PlotMetadata
 import com.opencreativeplus.api.plot.PlotSettings
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.toList
 import org.bson.Document
 import java.util.UUID
 
@@ -157,6 +160,32 @@ class PlotPersistence(
         }
     }
     
+    /**
+     * Load a paged list of plots sorted by rating descending.
+     * Optionally filter by tag.
+     *
+     * @param page Zero-based page index
+     * @param pageSize Maximum number of plots to return
+     * @param tagFilter If non-null, only plots containing this tag are returned
+     * @return List of plots for the requested page
+     */
+    suspend fun getPlotsPaged(page: Int, pageSize: Int, tagFilter: String? = null): List<Plot> {
+        return connectionManager.withRetry {
+            val filter = if (tagFilter != null)
+                Filters.eq("metadata.tags", tagFilter)
+            else
+                Document()
+
+            collection
+                .find(filter)
+                .sort(Sorts.descending("metadata.rating"))
+                .skip(page * pageSize)
+                .limit(pageSize)
+                .toList()
+                .map { deserializePlot(it) }
+        }
+    }
+
     /**
      * Serialize a Plot object to a MongoDB Document.
      */

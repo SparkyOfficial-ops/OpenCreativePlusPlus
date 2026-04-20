@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bson.Document
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -29,6 +31,7 @@ class VariableManager(private val database: MongoDatabase) {
     
     private val plotScopes = ConcurrentHashMap<UUID, VariableScope>()
     private val savedScopes = ConcurrentHashMap<UUID, VariableScope>()
+    private val scopeMutexes = ConcurrentHashMap<UUID, Mutex>()
 
     /** Shared flow that emits every variable change across all plots. */
     private val _changes = MutableSharedFlow<VariableChange>(extraBufferCapacity = 64)
@@ -77,13 +80,20 @@ class VariableManager(private val database: MongoDatabase) {
      * Get the saved scope for a specific plot.
      * Saved scopes persist across server restarts.
      * Loads from database on first access.
-     * 
+     *
+     * Uses double-checked locking with a per-plot Mutex to prevent race conditions:
+     * concurrent callers for the same plotId will only trigger one DB load.
+     *
      * @param plotId The plot UUID
      * @return The saved scope
      */
     suspend fun getSavedScope(plotId: UUID): VariableScope {
-        return savedScopes.getOrPut(plotId) {
-            loadSavedScope(plotId)
+        // Fast path: already cached
+        savedScopes[plotId]?.let { return it }
+        // Slow path: acquire per-plot mutex and double-check
+        val mutex = scopeMutexes.getOrPut(plotId) { Mutex() }
+        return mutex.withLock {
+            savedScopes.getOrPut(plotId) { loadSavedScope(plotId) }
         }
     }
     

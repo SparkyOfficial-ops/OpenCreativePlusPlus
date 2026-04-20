@@ -5,15 +5,21 @@ import com.mongodb.kotlin.client.coroutine.FindFlow
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.mockk.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.bson.Document
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for VariableManager.
@@ -265,5 +271,59 @@ class VariableManagerTest {
         // Then: Variables are isolated
         assertEquals("value1", scope1.get("var"))
         assertEquals("value2", scope2.get("var"))
+    }
+
+    // -------------------------------------------------------------------------
+    // Bug 4 fix-check: 10 concurrent getSavedScope calls → exactly 1 DB query
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `test getSavedScope with 10 concurrent calls performs exactly 1 DB query`() = runBlocking {
+        // Given: A plot ID and a slow DB load (simulated with delay)
+        val plotId = UUID.randomUUID()
+        val dbCallCount = AtomicInteger(0)
+
+        coEvery { collection.find(Document("_id", plotId.toString())) } coAnswers {
+            dbCallCount.incrementAndGet()
+            findFlowOf()
+        }
+
+        // When: 10 coroutines call getSavedScope concurrently
+        val results = (1..10).map {
+            async(Dispatchers.Default) {
+                variableManager.getSavedScope(plotId)
+            }
+        }.awaitAll()
+
+        // Then: All coroutines received the same scope instance
+        val first = results.first()
+        results.forEach { assertSame(first, it) }
+
+        // And: DB was queried exactly once
+        assertEquals(1, dbCallCount.get(), "Expected exactly 1 DB query, got ${dbCallCount.get()}")
+    }
+
+    // -------------------------------------------------------------------------
+    // Bug 4 preservation: cached plotId → 0 additional DB queries
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `test getSavedScope for already-cached plotId makes no additional DB queries`() = runBlocking {
+        // Given: A plot scope already loaded
+        val plotId = UUID.randomUUID()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
+
+        val scope1 = variableManager.getSavedScope(plotId)
+
+        // When: Calling getSavedScope again for the same plotId
+        val scope2 = variableManager.getSavedScope(plotId)
+        val scope3 = variableManager.getSavedScope(plotId)
+
+        // Then: Same instance returned every time
+        assertSame(scope1, scope2)
+        assertSame(scope1, scope3)
+
+        // And: DB was queried only once (for the initial load)
+        coVerify(exactly = 1) { collection.find(Document("_id", plotId.toString())) }
     }
 }

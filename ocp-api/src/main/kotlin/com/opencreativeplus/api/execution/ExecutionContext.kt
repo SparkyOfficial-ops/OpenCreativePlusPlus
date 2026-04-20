@@ -43,6 +43,12 @@ interface ExecutionContext {
      * Counter for operations performed (used by watchdog)
      */
     val operationCount: AtomicInteger
+
+    /**
+     * Counter for current function call stack depth.
+     * Stored in ExecutionContext (not ThreadLocal) so it survives coroutine thread switches.
+     */
+    val callStackSize: AtomicInteger
     
     /**
      * Execute a block of code on the Bukkit main thread.

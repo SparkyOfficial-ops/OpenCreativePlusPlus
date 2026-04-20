@@ -47,6 +47,7 @@ class DialogueRoutingPropertyTest : FreeSpec({
         override val plotScope: VariableScope = mapScope()
         override val savedScope: VariableScope = mapScope()
         override val operationCount: AtomicInteger = AtomicInteger(0)
+        override val callStackSize: AtomicInteger = AtomicInteger(0)
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 

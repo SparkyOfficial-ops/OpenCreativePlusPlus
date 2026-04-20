@@ -13,7 +13,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-
 // ---------------------------------------------------------------------------
 // Fake helpers (same pattern as BuiltInNodeExecutionTest)
 // ---------------------------------------------------------------------------
@@ -35,6 +34,7 @@ private class FakeExecutionContext(
     override val plotScope: VariableScope = FakeVariableScope()
     override val savedScope: VariableScope = FakeVariableScope()
     override val operationCount: AtomicInteger = AtomicInteger(0)
+    override val callStackSize: AtomicInteger = AtomicInteger(0)
     override suspend fun <T> syncContext(block: () -> T): T = block()
 }
 
@@ -463,5 +463,188 @@ class FunctionCallActionRecursionTest {
         FunctionCallAction("safe", emptyMap(), registry).execute(ctx)
 
         assertEquals(listOf("ok", "ok"), log)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// FunctionCallAction – Bug 3 fix: callStackSize in ExecutionContext (not ThreadLocal)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fix-check tests for Bug 3: callStackSize must be tracked in ExecutionContext,
+ * not in a ThreadLocal, so it survives coroutine thread switches.
+ *
+ * Bug condition: execution.isCoroutine = true AND execution.threadSwitches > 0
+ */
+class FunctionCallActionCallStackSizeTest {
+
+    private lateinit var registry: FunctionRegistry
+    private val plotId = UUID.randomUUID()
+
+    @BeforeEach
+    fun setup() {
+        registry = FunctionRegistry()
+    }
+
+    /**
+     * Fix check (Bug 3): callStackSize on the context reflects the correct depth
+     * even when the coroutine switches to a different dispatcher mid-execution.
+     *
+     * With the old ThreadLocal approach, switching dispatchers would reset the counter
+     * to 0 on the new thread. With callStackSize in ExecutionContext, the counter
+     * persists correctly across thread switches.
+     */
+    @Test
+    fun `callStackSize on context is correct after coroutine thread switch`() = runTest {
+        val capturedDepths = mutableListOf<Int>()
+
+        // A dispatcher that always uses a different thread pool (simulates thread switch)
+        val altDispatcher = kotlinx.coroutines.Dispatchers.Default
+
+        // Context that switches to altDispatcher in syncContext (simulating a thread switch)
+        val ctx = object : ExecutionContext {
+            override val plotId: UUID = this@FunctionCallActionCallStackSizeTest.plotId
+            override val player = null
+            override val eventData: Map<String, Any> = emptyMap()
+            override val localScope: VariableScope = FakeVariableScope()
+            override val plotScope: VariableScope = FakeVariableScope()
+            override val savedScope: VariableScope = FakeVariableScope()
+            override val operationCount: AtomicInteger = AtomicInteger(0)
+            override val callStackSize: AtomicInteger = AtomicInteger(0)
+            override suspend fun <T> syncContext(block: () -> T): T =
+                kotlinx.coroutines.withContext(altDispatcher) { block() }
+        }
+
+        // Action that records the current callStackSize after a thread switch
+        val recordDepthAfterSwitch = object : IAction {
+            override val nodeId = "record_depth"
+            override val displayName = "Record Depth"
+            override suspend fun execute(context: ExecutionContext) {
+                // Switch threads, then record the depth — with ThreadLocal this would be 0
+                context.syncContext {
+                    capturedDepths.add(context.callStackSize.get())
+                }
+            }
+        }
+
+        registry.register(
+            plotId, FunctionRegistry.FunctionDefinition(
+                name = "fn",
+                parameterNames = emptyList(),
+                actions = listOf(recordDepthAfterSwitch)
+            )
+        )
+
+        FunctionCallAction("fn", emptyMap(), registry).execute(ctx)
+
+        // After the thread switch, callStackSize should be 1 (we are inside one function call)
+        // With the old ThreadLocal bug, this would be 0 on the new thread
+        assertEquals(listOf(1), capturedDepths,
+            "callStackSize must be 1 inside the function body even after a thread switch")
+
+        // After execute() returns, callStackSize must be back to 0
+        assertEquals(0, ctx.callStackSize.get(),
+            "callStackSize must be 0 after function call completes")
+    }
+
+    /**
+     * Fix check: nested calls increment callStackSize correctly across thread switches.
+     * Verifies that depth tracking works for 3 levels of nesting with thread switches.
+     */
+    @Test
+    fun `callStackSize tracks nested call depth correctly across thread switches`() = runTest {
+        val altDispatcher = kotlinx.coroutines.Dispatchers.Default
+        val depthsAtLevel = mutableListOf<Int>()
+
+        val ctx = object : ExecutionContext {
+            override val plotId: UUID = this@FunctionCallActionCallStackSizeTest.plotId
+            override val player = null
+            override val eventData: Map<String, Any> = emptyMap()
+            override val localScope: VariableScope = FakeVariableScope()
+            override val plotScope: VariableScope = FakeVariableScope()
+            override val savedScope: VariableScope = FakeVariableScope()
+            override val operationCount: AtomicInteger = AtomicInteger(0)
+            override val callStackSize: AtomicInteger = AtomicInteger(0)
+            override suspend fun <T> syncContext(block: () -> T): T =
+                kotlinx.coroutines.withContext(altDispatcher) { block() }
+        }
+
+        // "level3" records depth after thread switch, then returns
+        val recordAtLevel3 = object : IAction {
+            override val nodeId = "record3"
+            override val displayName = "Record3"
+            override suspend fun execute(context: ExecutionContext) {
+                context.syncContext { depthsAtLevel.add(context.callStackSize.get()) }
+            }
+        }
+        registry.register(plotId, FunctionRegistry.FunctionDefinition("level3", emptyList(), listOf(recordAtLevel3)))
+
+        // "level2" calls level3
+        val callLevel3 = FunctionCallAction("level3", emptyMap(), registry)
+        registry.register(plotId, FunctionRegistry.FunctionDefinition("level2", emptyList(), listOf(callLevel3)))
+
+        // "level1" calls level2
+        val callLevel2 = FunctionCallAction("level2", emptyMap(), registry)
+        registry.register(plotId, FunctionRegistry.FunctionDefinition("level1", emptyList(), listOf(callLevel2)))
+
+        FunctionCallAction("level1", emptyMap(), registry).execute(ctx)
+
+        // At level3 body, we are 3 calls deep: level1 → level2 → level3
+        assertEquals(listOf(3), depthsAtLevel,
+            "callStackSize must be 3 at level3 body even after thread switch")
+
+        // After all calls complete, counter must be 0
+        assertEquals(0, ctx.callStackSize.get())
+    }
+
+    /**
+     * Preservation test (Bug 3): a non-recursive function call does not trigger
+     * the recursion limit and callStackSize returns to 0 after completion.
+     */
+    @Test
+    fun `non-recursive function does not trigger recursion limit and callStackSize resets to zero`() = runTest {
+        val log = mutableListOf<String>()
+        registry.register(
+            plotId, FunctionRegistry.FunctionDefinition(
+                name = "simple",
+                parameterNames = emptyList(),
+                actions = listOf(recordingAction(log, "ran"))
+            )
+        )
+
+        val ctx = FakeExecutionContext(plotId)
+
+        // Should not throw
+        FunctionCallAction("simple", emptyMap(), registry).execute(ctx)
+
+        assertEquals(listOf("ran"), log)
+        assertEquals(0, ctx.callStackSize.get(),
+            "callStackSize must be 0 after a non-recursive call completes")
+    }
+
+    /**
+     * Preservation test: calling the same function multiple times sequentially
+     * does not accumulate callStackSize.
+     */
+    @Test
+    fun `sequential calls do not accumulate callStackSize`() = runTest {
+        val log = mutableListOf<String>()
+        registry.register(
+            plotId, FunctionRegistry.FunctionDefinition(
+                name = "fn",
+                parameterNames = emptyList(),
+                actions = listOf(recordingAction(log, "ok"))
+            )
+        )
+
+        val ctx = FakeExecutionContext(plotId)
+
+        repeat(5) {
+            FunctionCallAction("fn", emptyMap(), registry).execute(ctx)
+            assertEquals(0, ctx.callStackSize.get(),
+                "callStackSize must be 0 after each call, iteration $it")
+        }
+
+        assertEquals(List(5) { "ok" }, log)
     }
 }

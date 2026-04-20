@@ -62,6 +62,7 @@ class LoopWatchdogPropertyTest : FreeSpec({
             override val plotScope: VariableScope = mapScope()
             override val savedScope: VariableScope = mapScope()
             override val operationCount: AtomicInteger = opCount
+            override val callStackSize: AtomicInteger = AtomicInteger(0)
             override suspend fun <T> syncContext(block: () -> T): T = block()
         }
     }

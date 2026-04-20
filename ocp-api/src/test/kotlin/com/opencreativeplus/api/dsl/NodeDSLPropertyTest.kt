@@ -44,10 +44,18 @@ class NodeDSLPropertyTest : FreeSpec({
             override fun registerAction(blockType: Material, factory: (Map<String, Any>) -> IAction) {
                 actions[blockType] = factory
             }
+            override fun registerAction(blockType: Material, nodeId: String, factory: (Map<String, Any>) -> IAction) {
+                actions[blockType] = factory
+            }
             override fun registerCondition(blockType: Material, factory: (Map<String, Any>) -> ICondition) {
                 conditions[blockType] = factory
             }
+            override fun registerCondition(blockType: Material, nodeId: String, factory: (Map<String, Any>) -> ICondition) {
+                conditions[blockType] = factory
+            }
             override fun registerValue(blockType: Material, factory: (Map<String, Any>) -> IValue<*>) =
+                throw UnsupportedOperationException()
+            override fun registerValue(blockType: Material, nodeId: String, factory: (Map<String, Any>) -> IValue<*>) =
                 throw UnsupportedOperationException()
             override fun registerEvent(blockType: Material, factory: () -> IEvent) =
                 throw UnsupportedOperationException()
@@ -57,6 +65,10 @@ class NodeDSLPropertyTest : FreeSpec({
                 throw UnsupportedOperationException()
             override fun getEventFactory(blockType: Material): (() -> IEvent)? =
                 throw UnsupportedOperationException()
+            override fun getActionNodeId(blockType: Material): String? = null
+            override fun getConditionNodeId(blockType: Material): String? = null
+            override fun getValueNodeId(blockType: Material): String? = null
+            override fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material? = null
         }
     }
 
@@ -83,6 +95,7 @@ class NodeDSLPropertyTest : FreeSpec({
         override val plotScope: VariableScope = mapScope()
         override val savedScope: VariableScope = mapScope()
         override val operationCount: AtomicInteger = AtomicInteger(0)
+        override val callStackSize: AtomicInteger = AtomicInteger(0)
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 

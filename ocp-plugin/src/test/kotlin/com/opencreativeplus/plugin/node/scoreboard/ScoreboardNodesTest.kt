@@ -36,6 +36,7 @@ private class TrackingSyncContext(override val player: Player? = null) : Executi
     override val plotScope: VariableScope = FakeVariableScope()
     override val savedScope: VariableScope = FakeVariableScope()
     override val operationCount: AtomicInteger = AtomicInteger(0)
+    override val callStackSize: AtomicInteger = AtomicInteger(0)
 
     var syncContextCalled = false
 

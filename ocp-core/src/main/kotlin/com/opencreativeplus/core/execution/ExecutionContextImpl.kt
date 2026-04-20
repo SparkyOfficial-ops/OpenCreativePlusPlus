@@ -28,7 +28,8 @@ class ExecutionContextImpl(
     override val plotScope: VariableScope,
     override val savedScope: VariableScope,
     override val operationCount: AtomicInteger,
-    private val syncDispatcher: CoroutineDispatcher
+    private val syncDispatcher: CoroutineDispatcher,
+    override val callStackSize: AtomicInteger = AtomicInteger(0)
 ) : ExecutionContext {
 
     /**

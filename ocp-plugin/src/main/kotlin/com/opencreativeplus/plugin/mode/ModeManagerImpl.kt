@@ -10,10 +10,16 @@ import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.inventory.InventoryManager
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.world.WorldManager
+import kotlinx.coroutines.suspendCancellableCoroutine
+import org.bukkit.Bukkit
 import org.bukkit.GameMode
+import org.bukkit.Location
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Manages transitions between BUILD, DEV, and PLAY modes for players on plots.
@@ -31,7 +37,9 @@ class ModeManagerImpl(
     private val blockScannerFactory: (plot: Plot) -> BlockScanner,
     private val astCompiler: ASTCompiler,
     private val eventDispatcher: EventDispatcher,
-    private val executionEngine: ExecutionEngine
+    private val executionEngine: ExecutionEngine,
+    private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
+        ?: error("OpenCreativePlus plugin not found")
 ) : ModeManager {
 
     /** "$playerId:$plotId" → current PlotMode */
@@ -45,18 +53,29 @@ class ModeManagerImpl(
         val oldMode = getCurrentMode(player, plot)
         if (oldMode == mode) return
 
-        // 1. Save inventory for the mode we are leaving (req 2.8, 14.5)
-        inventoryManager.saveInventory(player, plot.id, oldMode)
+        // All Bukkit API calls (inventory, teleport, gameMode) must run on the main thread.
+        // We wrap the entire switch sequence in runOnMain, using a nested suspend bridge.
+        runOnMain {
+            // 1. Save inventory snapshot synchronously (we are on main thread here)
+            val contents = player.inventory.contents.clone()
+            val armor = player.inventory.armorContents.clone()
+            val offhand = player.inventory.itemInOffHand.clone()
+            Triple(contents, armor, offhand)
+        }.let { (contents, armor, offhand) ->
+            // Persist snapshot to DB (IO, off main thread is fine)
+            inventoryManager.saveInventorySnapshot(player, plot.id, oldMode, contents, armor, offhand)
+        }
 
         // 2. Cleanup for the mode we are leaving
         onModeExit(player, plot, oldMode)
 
-        // 3. Apply new mode setup — returns false if the switch was aborted (e.g. compilation failure)
+        // 3. Apply new mode setup
         val switched = onModeEnter(player, plot, mode)
         if (!switched) return
 
-        // 4. Restore inventory for the new mode (req 14.2, 14.3, 14.4)
-        inventoryManager.loadInventory(player, plot.id, mode)
+        // 4. Load inventory from DB, then apply on main thread
+        val doc = inventoryManager.fetchInventoryDoc(player, plot.id, mode)
+        runOnMain { inventoryManager.applyInventoryDoc(player, doc) }
 
         // 5. Persist current mode
         currentModes[modeKey(player.uniqueId, plot.id)] = mode
@@ -73,7 +92,7 @@ class ModeManagerImpl(
      * Perform cleanup when leaving [mode].
      2.8, 2.9, 5.5, 26.2
      */
-    private fun onModeExit(player: Player, plot: Plot, mode: PlotMode) {
+    private suspend fun onModeExit(player: Player, plot: Plot, mode: PlotMode) {
         when (mode) {
             PlotMode.PLAY -> {
                 // Cancel all running coroutines for this plot (req 26.2)
@@ -86,8 +105,10 @@ class ModeManagerImpl(
             }
             PlotMode.BUILD -> {
                 // Disable flight that was granted in BUILD mode
-                player.allowFlight = false
-                player.isFlying = false
+                runOnMain {
+                    player.allowFlight = false
+                    player.isFlying = false
+                }
             }
         }
     }
@@ -112,10 +133,12 @@ class ModeManagerImpl(
     /**
      * BUILD mode: creative gamemode + flight, scripts disabled (req 2.4, 2.5).
      */
-    private fun applyBuildMode(player: Player) {
-        player.gameMode = GameMode.CREATIVE
-        player.allowFlight = true
-        player.isFlying = true
+    private suspend fun applyBuildMode(player: Player) {
+        runOnMain {
+            player.gameMode = GameMode.CREATIVE
+            player.allowFlight = true
+            player.isFlying = true
+        }
     }
 
     /**
@@ -124,12 +147,11 @@ class ModeManagerImpl(
     private suspend fun applyDevMode(player: Player, plot: Plot) {
         val worlds = worldManager.getLoadedWorlds(plot.id)
         if (worlds != null) {
-            val devWorld = worlds.second
-            // Teleport to the coding zone spawn point
-            player.teleport(devWorld.spawnLocation)
+            val spawnLoc: Location = worlds.second.spawnLocation
+            runOnMain { player.teleport(spawnLoc) }
         }
         // Provision the coding blocks inventory (req 36.1–36.4)
-        inventoryManager.provisionDevInventory(player)
+        runOnMain { inventoryManager.provisionDevInventory(player) }
     }
 
     /**
@@ -162,4 +184,13 @@ class ModeManagerImpl(
     // -------------------------------------------------------------------------
 
     private fun modeKey(playerId: UUID, plotId: UUID) = "$playerId:$plotId"
+
+    /** Runs [block] on the Bukkit main thread and suspends until it completes. */
+    private suspend fun <T> runOnMain(block: () -> T): T =
+        suspendCancellableCoroutine { cont ->
+            Bukkit.getScheduler().runTask(plugin, Runnable {
+                try { cont.resume(block()) }
+                catch (e: Exception) { cont.resumeWithException(e) }
+            })
+        }
 }

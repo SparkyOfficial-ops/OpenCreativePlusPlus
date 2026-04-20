@@ -38,24 +38,33 @@ class InventoryManager(
 
     /**
      * Save the player's current inventory for [mode] on [plotId].
+     * Reads inventory on the calling (main) thread, then persists to DB.
      14.1, 14.5, 17.4
      */
     suspend fun saveInventory(player: Player, plotId: UUID, mode: PlotMode) {
-        val contents = serializeContents(player.inventory.contents)
-        val armor = serializeContents(player.inventory.armorContents)
-        val offhand = serializeItem(player.inventory.itemInOffHand)
+        val contents = player.inventory.contents
+        val armor = player.inventory.armorContents
+        val offhand = player.inventory.itemInOffHand
+        saveInventorySnapshot(player, plotId, mode, contents, armor, offhand)
+    }
 
+    /**
+     * Save a pre-captured inventory snapshot to DB (can be called from any thread).
+     */
+    suspend fun saveInventorySnapshot(
+        player: Player, plotId: UUID, mode: PlotMode,
+        contents: Array<ItemStack?>, armor: Array<ItemStack?>, offhand: ItemStack
+    ) {
         val doc = Document().apply {
             put("_id", inventoryKey(player.uniqueId, plotId, mode))
             put("player_id", player.uniqueId.toString())
             put("plot_id", plotId.toString())
             put("mode", mode.name)
-            put("contents", contents)
-            put("armor", armor)
-            put("offhand", offhand)
+            put("contents", serializeContents(contents))
+            put("armor", serializeContents(armor))
+            put("offhand", serializeItem(offhand))
             put("saved_at", System.currentTimeMillis())
         }
-
         connectionManager.withRetry {
             collection.replaceOne(
                 Document("_id", inventoryKey(player.uniqueId, plotId, mode)),
@@ -66,26 +75,34 @@ class InventoryManager(
     }
 
     /**
+     * Fetch the raw inventory document from DB (can be called from any thread).
+     */
+    suspend fun fetchInventoryDoc(player: Player, plotId: UUID, mode: PlotMode): Document? =
+        connectionManager.withRetry {
+            collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode))).firstOrNull()
+        }
+
+    /**
+     * Apply a fetched inventory document to the player. Must be called on the main thread.
+     */
+    fun applyInventoryDoc(player: Player, doc: Document?) {
+        player.inventory.clear()
+        if (doc != null) {
+            player.inventory.contents = deserializeContents(doc["contents"] as? String)
+            player.inventory.armorContents = deserializeContents(doc["armor"] as? String)
+            player.inventory.setItemInOffHand(deserializeItem(doc["offhand"] as? String))
+        }
+    }
+
+    /**
      * Load and apply the saved inventory for [mode] on [plotId] to [player].
+     * Fetches from DB first, then applies to player inventory on the calling thread.
      * If no saved state exists, clears the inventory.
      14.2, 14.3, 14.4
      */
     suspend fun loadInventory(player: Player, plotId: UUID, mode: PlotMode) {
-        val doc = connectionManager.withRetry {
-            collection.find(Document("_id", inventoryKey(player.uniqueId, plotId, mode))).firstOrNull()
-        }
-
-        player.inventory.clear()
-
-        if (doc != null) {
-            val contents = deserializeContents(doc["contents"] as? String)
-            val armor = deserializeContents(doc["armor"] as? String)
-            val offhand = deserializeItem(doc["offhand"] as? String)
-
-            player.inventory.contents = contents
-            player.inventory.armorContents = armor
-            player.inventory.setItemInOffHand(offhand)
-        }
+        val doc = fetchInventoryDoc(player, plotId, mode)
+        applyInventoryDoc(player, doc)
     }
 
     // -------------------------------------------------------------------------

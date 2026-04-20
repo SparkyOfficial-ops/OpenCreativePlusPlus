@@ -1,7 +1,14 @@
 package com.opencreativeplus.plugin.registry
 
+import com.opencreativeplus.plugin.event.EventDispatcher
+import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.node.action.SendMessageAction
 import com.opencreativeplus.plugin.node.action.WaitAction
+import com.opencreativeplus.plugin.node.gui.GUIDesignerNode
+import com.opencreativeplus.plugin.node.gui.OpenMenuNode
+import com.opencreativeplus.plugin.plot.PlotManagerImpl
+import kotlinx.coroutines.CoroutineScope
+import org.bukkit.plugin.Plugin
 import com.opencreativeplus.plugin.node.array.AddToListNode
 import com.opencreativeplus.plugin.node.array.CreateListNode
 import com.opencreativeplus.plugin.node.array.FilterListNode
@@ -81,6 +88,31 @@ object BuiltInNodeRegistry {
         registerUINodes(registry)
         registerScoreboardNodes(registry)
         registerDialogueNodes(registry)
+    }
+
+    /**
+     * Registers GUI nodes that require runtime service dependencies.
+     * Call this after [register] once the plugin services are available.
+     *
+     * Requirements: 1.1, 1.2
+     */
+    fun registerGUINodes(
+        registry: NodeRegistryImpl,
+        plugin: Plugin,
+        modeManager: ModeManagerImpl,
+        plotManager: PlotManagerImpl,
+        eventDispatcher: EventDispatcher,
+        scope: CoroutineScope
+    ) {
+        // GUIDesignerNode — opens the 54-slot editor for the player in DEV mode (req 1.2)
+        registry.registerAction(Material.CRAFTING_TABLE, "gui_designer") { params ->
+            GUIDesignerNode(params, plugin, modeManager, plotManager)
+        }
+
+        // OpenMenuNode — opens a custom menu for a target player (req 1.1)
+        registry.registerAction(Material.ENDER_CHEST, "open_menu") { params ->
+            OpenMenuNode(params, eventDispatcher, scope, plugin)
+        }
     }
 
     private fun registerEvents(registry: NodeRegistryImpl) {

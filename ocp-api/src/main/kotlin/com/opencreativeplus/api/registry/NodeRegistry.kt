@@ -95,4 +95,22 @@ interface NodeRegistry {
      * Returns null if the node's type is not registered.
      */
     fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material?
+
+    /**
+     * Get the action factory for a specific nodeId string.
+     * Returns null if no action is registered with the given nodeId.
+     */
+    fun getActionFactoryById(nodeId: String): ((Map<String, Any>) -> IAction)?
+
+    /**
+     * Get the condition factory for a specific nodeId string.
+     * Returns null if no condition is registered with the given nodeId.
+     */
+    fun getConditionFactoryById(nodeId: String): ((Map<String, Any>) -> ICondition)?
+
+    /**
+     * Get the value factory for a specific nodeId string.
+     * Returns null if no value is registered with the given nodeId.
+     */
+    fun getValueFactoryById(nodeId: String): ((Map<String, Any>) -> IValue<*>)?
 }

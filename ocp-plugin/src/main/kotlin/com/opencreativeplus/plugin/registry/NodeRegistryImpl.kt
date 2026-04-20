@@ -28,6 +28,11 @@ class NodeRegistryImpl(
     private val conditionNodeIds = ConcurrentHashMap<Material, String>()
     private val valueNodeIds = ConcurrentHashMap<Material, String>()
 
+    // nodeId → factory maps for string-based lookup (Requirement 5)
+    private val actionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IAction>()
+    private val conditionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> ICondition>()
+    private val valueFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IValue<*>>()
+
     // --- registerAction ---
 
     override fun registerAction(blockType: Material, factory: (params: Map<String, Any>) -> IAction) {
@@ -41,6 +46,7 @@ class NodeRegistryImpl(
         validateNotAlreadyRegistered(blockType, "action")
         actionFactories[blockType] = factory
         actionNodeIds[blockType] = nodeId
+        actionFactoriesById[nodeId] = factory
         logger.fine("Registered action node for $blockType: $nodeId")
     }
 
@@ -57,6 +63,7 @@ class NodeRegistryImpl(
         validateNotAlreadyRegistered(blockType, "condition")
         conditionFactories[blockType] = factory
         conditionNodeIds[blockType] = nodeId
+        conditionFactoriesById[nodeId] = factory
         logger.fine("Registered condition node for $blockType: $nodeId")
     }
 
@@ -73,6 +80,7 @@ class NodeRegistryImpl(
         validateNotAlreadyRegistered(blockType, "value")
         valueFactories[blockType] = factory
         valueNodeIds[blockType] = nodeId
+        valueFactoriesById[nodeId] = factory
         logger.fine("Registered value node for $blockType: $nodeId")
     }
 
@@ -103,6 +111,15 @@ class NodeRegistryImpl(
     override fun getConditionNodeId(blockType: Material): String? = conditionNodeIds[blockType]
 
     override fun getValueNodeId(blockType: Material): String? = valueNodeIds[blockType]
+
+    override fun getActionFactoryById(nodeId: String): ((Map<String, Any>) -> IAction)? =
+        actionFactoriesById[nodeId]
+
+    override fun getConditionFactoryById(nodeId: String): ((Map<String, Any>) -> ICondition)? =
+        conditionFactoriesById[nodeId]
+
+    override fun getValueFactoryById(nodeId: String): ((Map<String, Any>) -> IValue<*>)? =
+        valueFactoriesById[nodeId]
 
     override fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material? {
         // Search action, condition, and value factories by creating a test instance is not possible

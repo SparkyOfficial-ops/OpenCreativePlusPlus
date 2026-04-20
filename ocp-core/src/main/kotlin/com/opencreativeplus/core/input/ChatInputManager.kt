@@ -3,6 +3,7 @@ package com.opencreativeplus.core.input
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bukkit.entity.Player
 
 /**
@@ -21,6 +22,10 @@ import org.bukkit.entity.Player
  * s: 1.4, 1.5, 1.6, 1.7, 1.8, 3.1, 3.2, 3.3, 3.4, 3.5
  */
 class ChatInputManager {
+
+    companion object {
+        const val TIMEOUT_MS = 60_000L
+    }
 
     private val sessions = ConcurrentHashMap<UUID, CompletableDeferred<String?>>()
 
@@ -43,7 +48,12 @@ class ChatInputManager {
         sessions[player.uniqueId] = deferred
         player.sendMessage(prompt)
         return try {
-            deferred.await()
+            val result = withTimeoutOrNull(TIMEOUT_MS) { deferred.await() }
+            if (result == null && !deferred.isCompleted) {
+                // Timed out — deferred was not completed by onChatMessage/onPlayerDisconnect
+                player.sendMessage("§c[OCP] Время ввода истекло.")
+            }
+            result
         } finally {
             sessions.remove(player.uniqueId)
         }

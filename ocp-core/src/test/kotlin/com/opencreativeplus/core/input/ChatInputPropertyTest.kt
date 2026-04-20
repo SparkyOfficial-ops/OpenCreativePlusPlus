@@ -8,12 +8,14 @@ import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.filter
+import io.kotest.property.arbitrary.long
 import io.kotest.property.arbitrary.string
 import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
@@ -60,7 +62,7 @@ class ChatInputPropertyTest : FreeSpec({
                     val job = launch {
                         result = manager.awaitChatInput(player, "prompt")
                     }
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player.uniqueId, message)
                     job.join()
                 }
@@ -80,7 +82,7 @@ class ChatInputPropertyTest : FreeSpec({
                     val job = launch {
                         manager.awaitChatInput(player, "prompt")
                     }
-                    advanceUntilIdle()
+                    runCurrent()
                     consumed = manager.onChatMessage(player.uniqueId, message)
                     job.join()
                 }
@@ -99,7 +101,7 @@ class ChatInputPropertyTest : FreeSpec({
                     val job = launch {
                         manager.awaitChatInput(player, "prompt")
                     }
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player.uniqueId, message)
                     job.join()
                 }
@@ -128,7 +130,7 @@ class ChatInputPropertyTest : FreeSpec({
                     val job = launch {
                         result = manager.awaitChatInput(player, "prompt")
                     }
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player.uniqueId, variant)
                     job.join()
                 }
@@ -160,7 +162,7 @@ class ChatInputPropertyTest : FreeSpec({
                 runTest {
                     val job1 = launch { result1 = manager.awaitChatInput(player1, "p1") }
                     val job2 = launch { result2 = manager.awaitChatInput(player2, "p2") }
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player1.uniqueId, msg1)
                     manager.onChatMessage(player2.uniqueId, msg2)
                     job1.join()
@@ -169,6 +171,49 @@ class ChatInputPropertyTest : FreeSpec({
 
                 result1 shouldBe msg1
                 result2 shouldBe msg2
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Property 12 (Preservation) — response before timeout is returned correctly
+    // For any response time < 60 seconds, awaitChatInput returns the response.
+    // -----------------------------------------------------------------------
+
+    "Property 12: for any response time < 60 seconds, awaitChatInput returns the response" - {
+
+        /**
+         * Validates: Requirements 3.8
+         *
+         * For any arbitrary non-"cancel" message delivered at any virtual time
+         * strictly less than TIMEOUT_MS (60 000 ms), `awaitChatInput` SHALL return
+         * the exact message without modification.
+         */
+        "response delivered before timeout is returned unchanged" {
+            // Validates: Requirements 3.8
+            val arbResponseTime: Arb<Long> = Arb.long(0L until ChatInputManager.TIMEOUT_MS)
+
+            checkAll(
+                PropTestConfig(iterations = 20),
+                arbNonCancelString,
+                arbResponseTime
+            ) { message, delayMs ->
+                val manager = ChatInputManager()
+                val player = mockPlayer()
+                var result: String? = null
+
+                runTest {
+                    val job = launch {
+                        result = manager.awaitChatInput(player, "prompt")
+                    }
+                    runCurrent()
+                    // Advance virtual time to a point before the timeout
+                    advanceTimeBy(delayMs)
+                    manager.onChatMessage(player.uniqueId, message)
+                    job.join()
+                }
+
+                result shouldBe message
             }
         }
     }

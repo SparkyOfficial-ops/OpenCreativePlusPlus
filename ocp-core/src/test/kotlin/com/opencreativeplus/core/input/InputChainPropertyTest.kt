@@ -15,7 +15,7 @@ import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import java.util.UUID
@@ -73,7 +73,7 @@ class InputChainPropertyTest : FreeSpec({
                     }
                     // Deliver each response sequentially
                     for (response in responses) {
-                        advanceUntilIdle()
+                        runCurrent()
                         manager.onChatMessage(player.uniqueId, response)
                     }
                     job.join()
@@ -113,7 +113,7 @@ class InputChainPropertyTest : FreeSpec({
                         result = manager.inputChain(player, prompts)
                     }
                     for (response in responses) {
-                        advanceUntilIdle()
+                        runCurrent()
                         manager.onChatMessage(player.uniqueId, response)
                     }
                     job.join()
@@ -149,8 +149,8 @@ class InputChainPropertyTest : FreeSpec({
                     val job = launch {
                         result = manager.inputChain(player, prompts)
                     }
-                    responses.forEachIndexed { idx, resp ->
-                        advanceUntilIdle()
+                    responses.forEachIndexed { _, resp ->
+                        runCurrent()
                         // Verify only the current prompt's session is active
                         manager.hasActiveSession(player.uniqueId) shouldBe true
                         manager.onChatMessage(player.uniqueId, resp)
@@ -189,7 +189,7 @@ class InputChainPropertyTest : FreeSpec({
                             thrownException = e
                         }
                     }
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player.uniqueId, "cancel")
                     job.join()
                 }
@@ -221,11 +221,11 @@ class InputChainPropertyTest : FreeSpec({
                     }
                     // Deliver valid responses up to cancelAt
                     for (i in 0 until cancelAt) {
-                        advanceUntilIdle()
+                        runCurrent()
                         manager.onChatMessage(player.uniqueId, "response_$i")
                     }
                     // Then cancel
-                    advanceUntilIdle()
+                    runCurrent()
                     manager.onChatMessage(player.uniqueId, "cancel")
                     job.join()
                 }
@@ -273,7 +273,7 @@ class InputChainPropertyTest : FreeSpec({
                         manager.inputChain(player, prompts)
                     }
                     for (i in 0 until n) {
-                        advanceUntilIdle()
+                        runCurrent()
                         manager.onChatMessage(player.uniqueId, "response_$i")
                     }
                     job.join()

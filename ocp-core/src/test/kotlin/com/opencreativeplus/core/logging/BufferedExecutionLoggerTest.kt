@@ -1,5 +1,6 @@
 package com.opencreativeplus.core.logging
 
+import com.mongodb.client.model.InsertManyOptions
 import com.mongodb.kotlin.client.coroutine.MongoCollection
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -25,7 +26,7 @@ class BufferedExecutionLoggerTest {
         collection = mockk()
         capturedBatches.clear()
 
-        coEvery { collection.insertMany(any()) } coAnswers {
+        coEvery { collection.insertMany(any<List<Document>>(), any<InsertManyOptions>()) } coAnswers {
             @Suppress("UNCHECKED_CAST")
             capturedBatches.add(firstArg<List<Document>>().toList())
             mockk(relaxed = true)
@@ -59,7 +60,7 @@ class BufferedExecutionLoggerTest {
         val totalWritten = capturedBatches.sumOf { it.size }
         assertTrue(totalWritten == 200, "Expected 200 documents written, got $totalWritten")
 
-        coVerify(atLeast = 2) { collection.insertMany(any()) }
+        coVerify(atLeast = 2) { collection.insertMany(any<List<Document>>(), any<InsertManyOptions>()) }
     }
 
     @Test
@@ -103,7 +104,7 @@ class BufferedExecutionLoggerTest {
 
         logger.flush()
 
-        coVerify(exactly = 0) { collection.insertMany(any()) }
+        coVerify(exactly = 0) { collection.insertMany(any<List<Document>>(), any<InsertManyOptions>()) }
     }
 
     @Test

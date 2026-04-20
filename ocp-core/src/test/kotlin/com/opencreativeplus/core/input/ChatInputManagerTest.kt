@@ -6,7 +6,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.bukkit.entity.Player
 import org.junit.jupiter.api.BeforeEach
@@ -54,8 +55,8 @@ class ChatInputManagerTest {
             result = manager.awaitChatInput(player, "Enter value:")
         }
 
-        // Let the coroutine run and register the session
-        advanceUntilIdle()
+        // Let the coroutine run and register the session (without advancing virtual time)
+        runCurrent()
 
         val consumed = manager.onChatMessage(player.uniqueId, "hello world")
         job.join()
@@ -72,7 +73,7 @@ class ChatInputManagerTest {
             manager.awaitChatInput(player, "Please enter your name:")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "Alice")
         job.join()
 
@@ -95,7 +96,7 @@ class ChatInputManagerTest {
             manager.awaitChatInput(player, "prompt")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         assertTrue(manager.hasActiveSession(player.uniqueId))
 
         manager.onChatMessage(player.uniqueId, "response")
@@ -118,7 +119,7 @@ class ChatInputManagerTest {
             result = manager.awaitChatInput(player, "Enter value:")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "cancel")
         job.join()
 
@@ -134,7 +135,7 @@ class ChatInputManagerTest {
             result = manager.awaitChatInput(player, "Enter value:")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "CANCEL")
         job.join()
 
@@ -150,7 +151,7 @@ class ChatInputManagerTest {
             result = manager.awaitChatInput(player, "Enter value:")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "Cancel")
         job.join()
 
@@ -166,7 +167,7 @@ class ChatInputManagerTest {
             result = manager.awaitChatInput(player, "Enter value:")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "cancellation")
         job.join()
 
@@ -191,7 +192,7 @@ class ChatInputManagerTest {
             }
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onPlayerDisconnect(player.uniqueId)
         job.join()
 
@@ -209,7 +210,7 @@ class ChatInputManagerTest {
             } catch (_: ChatInputCancelledException) { }
         }
 
-        advanceUntilIdle()
+        runCurrent()
         assertTrue(manager.hasActiveSession(player.uniqueId))
 
         manager.onPlayerDisconnect(player.uniqueId)
@@ -243,11 +244,11 @@ class ChatInputManagerTest {
         }
 
         // Deliver responses one by one, advancing between each
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "Alice")
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "30")
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "Paris")
         job.join()
 
@@ -271,9 +272,9 @@ class ChatInputManagerTest {
             }
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "first answer")
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "cancel")
         job.join()
 
@@ -309,7 +310,7 @@ class ChatInputManagerTest {
             }
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onPlayerDisconnect(player.uniqueId)
         job.join()
 
@@ -334,9 +335,9 @@ class ChatInputManagerTest {
             }
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player.uniqueId, "first answer")
-        advanceUntilIdle()
+        runCurrent()
         manager.onPlayerDisconnect(player.uniqueId)
         job.join()
 
@@ -358,7 +359,7 @@ class ChatInputManagerTest {
         val job1 = launch { result1 = manager.awaitChatInput(player1, "p1 prompt") }
         val job2 = launch { result2 = manager.awaitChatInput(player2, "p2 prompt") }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onChatMessage(player1.uniqueId, "response1")
         manager.onChatMessage(player2.uniqueId, "response2")
         job1.join()
@@ -386,7 +387,7 @@ class ChatInputManagerTest {
             result2 = manager.awaitChatInput(player2, "p2 prompt")
         }
 
-        advanceUntilIdle()
+        runCurrent()
         manager.onPlayerDisconnect(player1.uniqueId)
         manager.onChatMessage(player2.uniqueId, "player2 answer")
         job1.join()
@@ -394,5 +395,56 @@ class ChatInputManagerTest {
 
         assertTrue(exception1 != null, "Player1 should get ChatInputCancelledException")
         assertEquals("player2 answer", result2, "Player2 session should be unaffected")
+    }
+
+    // =========================================================================
+    // 7. Timeout behavior — Bug 8 fix check (sub-task 8.4 & 8.5)
+    // =========================================================================
+
+    /**
+     * Fix check (sub-task 8.4): no response for 61 seconds → coroutine completes, session removed.
+     */
+    @Test
+    fun `awaitChatInput returns null and removes session after 60-second timeout (fix check)`() = runTest {
+        val player = mockPlayer()
+        var result: String? = "not_set"
+
+        val job = launch {
+            result = manager.awaitChatInput(player, "Enter value:")
+        }
+
+        runCurrent()
+        assertTrue(manager.hasActiveSession(player.uniqueId), "Session should be active before timeout")
+
+        // Advance virtual time past the 60-second timeout
+        advanceTimeBy(ChatInputManager.TIMEOUT_MS + 1_000L)
+        runCurrent()
+        job.join()
+
+        assertNull(result, "awaitChatInput should return null on timeout")
+        assertFalse(manager.hasActiveSession(player.uniqueId), "Session should be removed after timeout")
+        verify { player.sendMessage("§c[OCP] Время ввода истекло.") }
+    }
+
+    /**
+     * Preservation (sub-task 8.5): response within 5 seconds → returned correctly.
+     */
+    @Test
+    fun `awaitChatInput returns response correctly when player answers within 5 seconds (preservation)`() = runTest {
+        val player = mockPlayer()
+        var result: String? = null
+
+        val job = launch {
+            result = manager.awaitChatInput(player, "Enter value:")
+        }
+
+        runCurrent()
+        // Advance only 5 seconds — well within the 60-second timeout
+        advanceTimeBy(5_000L)
+        manager.onChatMessage(player.uniqueId, "quick answer")
+        job.join()
+
+        assertEquals("quick answer", result, "Response before timeout should be returned correctly")
+        assertFalse(manager.hasActiveSession(player.uniqueId), "Session should be cleaned up after response")
     }
 }

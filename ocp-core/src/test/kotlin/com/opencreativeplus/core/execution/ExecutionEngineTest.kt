@@ -4,10 +4,12 @@ import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.execution.VariableScope
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.IEvent
+import com.opencreativeplus.api.plot.Plot
+import com.opencreativeplus.api.plot.PlotManager
 import com.opencreativeplus.core.watchdog.Watchdog
-import io.mockk.every
-import io.mockk.mockk
+import io.mockk.*
 import kotlinx.coroutines.*
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -553,5 +555,110 @@ class ExecutionEngineTest {
         delay(300)
 
         assertTrue(plot2Completed.get(), "Script on plot2 should not be affected by failure on plot1")
+    }
+
+    // =========================================================================
+    // 5. WatchdogException — owner notification  (Bug 10)
+    // =========================================================================
+
+    @Test
+    fun `WatchdogException notifies plot owner via syncContext (fix check)`() = runBlocking {
+        // Given: a plot with a known owner
+        val plotId = UUID.randomUUID()
+        val ownerUuid = UUID.randomUUID()
+        val ownerPlayer = mockk<Player>(relaxed = true)
+        val receivedMessages = mutableListOf<String>()
+        every { ownerPlayer.sendMessage(any<String>()) } answers {
+            receivedMessages.add(firstArg())
+        }
+
+        val plotManager = mockk<PlotManager>()
+        val fakePlot = mockk<Plot>()
+        every { fakePlot.owner } returns ownerUuid
+        coEvery { plotManager.getPlot(plotId) } returns fakePlot
+
+        mockkStatic(Bukkit::class)
+        every { Bukkit.getPlayer(ownerUuid) } returns ownerPlayer
+
+        val tpsMonitor = mockk<com.opencreativeplus.core.watchdog.TPSMonitor>()
+        every { tpsMonitor.getCurrentTPS() } returns 20.0
+        val strictWatchdog = Watchdog(tpsMonitor)
+
+        val db = mockk<com.mongodb.kotlin.client.coroutine.MongoDatabase>(relaxed = true)
+        val vm = VariableManager(db)
+        val cfg = CoroutineConfiguration(syncRunner = { it() })
+        val engineWithPlotManager = ExecutionEngine(strictWatchdog, vm, cfg, plotManager = plotManager)
+
+        // First action: push operationCount over the limit (watchdog checks BEFORE each action)
+        // Second action: triggers the watchdog check that fires WatchdogException
+        val pushOverLimitAction = object : IAction {
+            override val nodeId = "push"; override val displayName = "Push"
+            override suspend fun execute(context: ExecutionContext) {
+                // Set counter to MAX so the watchdog fires before the next action
+                repeat(Watchdog.MAX_OPERATIONS) { context.operationCount.incrementAndGet() }
+            }
+        }
+        val triggerCheckAction = object : IAction {
+            override val nodeId = "trigger"; override val displayName = "Trigger"
+            override suspend fun execute(context: ExecutionContext) {
+                // This body never runs — watchdog fires before this action
+            }
+        }
+
+        // When: script with two actions — first saturates the counter, second triggers the check
+        engineWithPlotManager.executeScript(script(pushOverLimitAction, triggerCheckAction), plotId, null, emptyMap())
+        delay(300)
+
+        // Then: owner received the watchdog notification message
+        assertTrue(
+            receivedMessages.any { it.contains("остановлен") && it.contains(plotId.toString()) },
+            "Plot owner should receive a watchdog notification message"
+        )
+
+        cfg.close()
+        unmockkStatic(Bukkit::class)
+    }
+
+    @Test
+    fun `normal script completion does not send any notification to plot owner (preservation)`() = runBlocking {
+        // Given: a plot with a known owner
+        val plotId = UUID.randomUUID()
+        val ownerUuid = UUID.randomUUID()
+        val ownerPlayer = mockk<Player>(relaxed = true)
+
+        val plotManager = mockk<PlotManager>()
+        val fakePlot = mockk<Plot>()
+        every { fakePlot.owner } returns ownerUuid
+        coEvery { plotManager.getPlot(plotId) } returns fakePlot
+
+        mockkStatic(Bukkit::class)
+        every { Bukkit.getPlayer(ownerUuid) } returns ownerPlayer
+
+        val tpsMonitor = mockk<com.opencreativeplus.core.watchdog.TPSMonitor>()
+        every { tpsMonitor.getCurrentTPS() } returns 20.0
+        val normalWatchdog = Watchdog(tpsMonitor)
+
+        val db = mockk<com.mongodb.kotlin.client.coroutine.MongoDatabase>(relaxed = true)
+        val vm = VariableManager(db)
+        val cfg = CoroutineConfiguration(syncRunner = { it() })
+        val engineWithPlotManager = ExecutionEngine(normalWatchdog, vm, cfg, plotManager = plotManager)
+
+        // Script that completes normally (well within operation limit)
+        val normalAction = object : IAction {
+            override val nodeId = "normal"; override val displayName = "Normal"
+            override suspend fun execute(context: ExecutionContext) {
+                delay(10)
+            }
+        }
+
+        // When
+        engineWithPlotManager.executeScript(script(normalAction), plotId, null, emptyMap())
+        delay(200)
+
+        // Then: owner never received any message
+        verify(exactly = 0) { ownerPlayer.sendMessage(any<String>()) }
+
+        cfg.close()
+        unmockkStatic(Bukkit::class)
     }
 }

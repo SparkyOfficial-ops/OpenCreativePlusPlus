@@ -1,14 +1,18 @@
 package com.opencreativeplus.core.execution
 
+import com.opencreativeplus.api.plot.PlotManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.Watchdog
+import com.opencreativeplus.core.watchdog.WatchdogException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.logging.Logger
 
 /**
  * Launches and manages coroutine-based script executions.
@@ -23,7 +27,9 @@ class ExecutionEngine(
     private val watchdog: Watchdog,
     private val variableManager: VariableManager,
     private val coroutineConfig: CoroutineConfiguration,
-    private var traceManager: TraceManager? = null
+    private var traceManager: TraceManager? = null,
+    private val plotManager: PlotManager? = null,
+    private val logger: Logger = Logger.getLogger("ExecutionEngine")
 ) {
     /** plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
@@ -81,11 +87,21 @@ class ExecutionEngine(
                 }
             } catch (e: CancellationException) {
                 throw e  // always rethrow so the coroutine machinery can clean up
+            } catch (e: WatchdogException) {
+                // 10.1 plotId is available from context; 10.4 use logger.warning instead of System.err
+                logger.warning("[OCP] Script stopped for plot $plotId: ${e.message}")
+                // 10.2 find plot owner; 10.3 notify via syncContext
+                val ownerUuid = plotManager?.getPlot(plotId)?.owner
+                if (ownerUuid != null) {
+                    context.syncContext {
+                        Bukkit.getPlayer(ownerUuid)?.sendMessage(
+                            "§c[OCP] Ваш скрипт на плоту #${plotId} остановлен (превышен лимит операций)."
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 // Isolate the failure to this script only — log and continue (req 38.1)
-                System.err.println(
-                    "[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}"
-                )
+                logger.warning("[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}")
             } finally {
                 // Trace hook: execution complete summary (s: 14.7)
                 player?.let { p ->

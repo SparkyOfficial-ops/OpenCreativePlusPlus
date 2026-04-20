@@ -1,4 +1,4 @@
-name: OpenCreative++
+name: OpenCreativePlus
 version: 1.0.0
 main: com.opencreativeplus.plugin.OpenCreativePlusPlugin
 api-version: 1.20

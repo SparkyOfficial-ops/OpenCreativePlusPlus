@@ -18,9 +18,9 @@ class CodingGridGenerator {
     companion object {
         const val STRIP_LENGTH = 64
         const val STRIP_COUNT = 32
-        const val LEVEL_SPACING = 5
-        const val STRIP_SPACING = 2
-        const val LEVEL_COUNT = 8  // 8 levels: Y=5,10,...,40
+        const val LEVEL_SPACING = 15 // 15 blocks between levels — plenty of headroom
+        const val STRIP_SPACING = 4  // 4 blocks between strips — easier to navigate
+        const val LEVEL_COUNT = 10   // 10 levels: Y=15,30,...,150
     }
 
     /**
@@ -40,6 +40,10 @@ class CodingGridGenerator {
     private fun generateLevel(world: World, y: Int) {
         for (stripIndex in 0 until STRIP_COUNT) {
             val z = stripIndex * STRIP_SPACING
+            // White glass floor under each strip so you don't fall into the void
+            for (x in -2 until STRIP_LENGTH + 2) {
+                world.getBlockAt(x, y - 1, z).type = Material.WHITE_STAINED_GLASS
+            }
             generateStrip(world, y, z)
         }
     }

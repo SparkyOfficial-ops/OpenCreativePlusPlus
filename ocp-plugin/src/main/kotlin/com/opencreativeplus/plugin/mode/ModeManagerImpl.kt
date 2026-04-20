@@ -124,17 +124,19 @@ class ModeManagerImpl(
      */
     private suspend fun onModeEnter(player: Player, plot: Plot, mode: PlotMode): Boolean {
         return when (mode) {
-            PlotMode.BUILD -> { applyBuildMode(player); true }
+            PlotMode.BUILD -> { applyBuildMode(player, plot); true }
             PlotMode.DEV   -> { applyDevMode(player, plot); true }
             PlotMode.PLAY  -> applyPlayMode(player, plot)
         }
     }
 
     /**
-     * BUILD mode: creative gamemode + flight, scripts disabled (req 2.4, 2.5).
+     * BUILD mode: teleport to main world, creative gamemode + flight (req 2.4, 2.5).
      */
-    private suspend fun applyBuildMode(player: Player) {
+    private suspend fun applyBuildMode(player: Player, plot: Plot) {
+        val mainWorld = worldManager.getLoadedWorlds(plot.id)?.first
         runOnMain {
+            if (mainWorld != null) player.teleport(mainWorld.spawnLocation)
             player.gameMode = GameMode.CREATIVE
             player.allowFlight = true
             player.isFlying = true
@@ -184,7 +186,13 @@ class ModeManagerImpl(
         // Register compiled scripts with the event dispatcher (req 16.1, 16.2)
         eventDispatcher.registerScripts(plot.id, result.scripts)
 
-        player.sendMessage("§a[OCP] ${result.scripts.size} script(s) compiled and active.")
+        // Teleport to main world and set survival mode
+        val mainWorld = worldManager.getLoadedWorlds(plot.id)?.first
+        runOnMain {
+            if (mainWorld != null) player.teleport(mainWorld.spawnLocation)
+            player.gameMode = GameMode.SURVIVAL
+            player.sendMessage("§a[OCP] ${result.scripts.size} script(s) compiled and active.")
+        }
         return true
     }
 

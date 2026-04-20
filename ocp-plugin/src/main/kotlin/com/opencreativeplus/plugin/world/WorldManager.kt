@@ -105,10 +105,9 @@ class WorldManager(
         val creator = WorldCreator(name)
             .generateStructures(false)
         if (isDevWorld) {
-            // Void world — no terrain, only our coding grid
-            creator.generator("void")
-                .type(WorldType.FLAT)
-                .generatorSettings("{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"biome\":\"minecraft:the_void\"}")
+            // Flat void — no terrain, only our coding grid
+            creator.type(WorldType.FLAT)
+                .generatorSettings("{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"structures\":{\"structures\":{}}}")
         } else {
             creator.type(WorldType.FLAT)
         }
@@ -150,7 +149,7 @@ class WorldManager(
         // Generate the coding grid (req 3.1)
         codingGridGenerator.generate(world)
 
-        // Spawn player above the first strip at level Y=10 (second level, more visible)
-        world.setSpawnLocation(0, 11, 0)
+        // Spawn player above the first strip at level Y=15 (first level)
+        world.setSpawnLocation(0, 16, 0)
     }
 }

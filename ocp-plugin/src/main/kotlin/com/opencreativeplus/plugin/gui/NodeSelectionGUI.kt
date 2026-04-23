@@ -6,6 +6,7 @@ import com.opencreativeplus.plugin.registry.ActionDescriptor
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.registry.NodeCategory
 import com.opencreativeplus.plugin.scanner.ParameterPlacer
+import kotlinx.coroutines.CoroutineScope
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -23,57 +24,59 @@ import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
-import kotlinx.coroutines.CoroutineScope
 
 /**
- * Bukkit inventory GUI for selecting an action from a NodeCategory.
+ * GUI for selecting an action from a NodeCategory.
  *
- * Layout (54 slots):
- *   Slots 0-44  - Action_Items (up to ITEMS_PER_PAGE per page)
- *   Slot  45    - Previous page
- *   Slot  53    - Next page
+ * Opens when a player right-clicks a Category_Block in the Coding_Zone.
+ * Writes the selected `action_id` to the block's PDC and triggers ParameterPlacer.
  *
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 6.1, 6.2, 6.3, 6.4
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 6.1, 6.2, 6.3, 6.4
  */
 class NodeSelectionGUI(
     private val categoryRegistry: CategoryRegistry,
     private val parameterPlacer: ParameterPlacer,
-    private val modeManager: ModeManager,
-    private val plotManager: PlotManagerImpl,
-    private val scope: CoroutineScope,
-    private val plugin: Plugin
+    private val plugin: Plugin,
+    private val modeManager: ModeManager? = null,
+    private val plotManager: PlotManagerImpl? = null,
+    private val scope: CoroutineScope? = null
 ) : Listener {
 
-    private val keyActionId = NamespacedKey(plugin, "action_id")
+    companion object {
+        const val ITEMS_PER_PAGE = 45
+        private val KEY_ACTION_ID = NamespacedKey("ocp", "action_id")
+        private const val GUI_TITLE_PREFIX = "Выбор действия: "
+    }
 
-    private val sessions = mutableMapOf<String, Triple<Block, NodeCategory, Int>>()
-
+    /**
+     * Open the action selection GUI for [category] at [page].
+     * Requirements: 3.1, 3.2, 3.3
+     */
     fun open(player: Player, block: Block, category: NodeCategory, page: Int = 0) {
         val descriptors = categoryRegistry.getDescriptors(category)
-        val totalPages = totalPages(descriptors.size)
-        val safePage = page.coerceIn(0, maxOf(0, totalPages - 1))
+        val totalPages = maxOf(1, (descriptors.size + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE)
+        val safePage = page.coerceIn(0, totalPages - 1)
 
-        val title = category.russianLabel
-        val inventory = Bukkit.createInventory(null, 54, Component.text(title))
+        val inventory = Bukkit.createInventory(null, 54, Component.text("$GUI_TITLE_PREFIX${category.russianLabel}"))
 
-        val pageStart = safePage * ITEMS_PER_PAGE
-        val pageItems = descriptors.drop(pageStart).take(ITEMS_PER_PAGE)
+        val start = safePage * ITEMS_PER_PAGE
+        val end = minOf(start + ITEMS_PER_PAGE, descriptors.size)
+        val currentActionId = readCurrentActionId(block)
 
-        val existingId = readActionId(block)
-
-        pageItems.forEachIndexed { slot, descriptor ->
-            val item = createActionItem(descriptor, highlighted = descriptor.id == existingId)
-            inventory.setItem(slot, item)
+        for (i in start until end) {
+            val descriptor = descriptors[i]
+            val item = createActionItem(descriptor, descriptor.id == currentActionId)
+            inventory.setItem(i - start, item)
         }
 
+        // Navigation buttons
         if (safePage > 0) {
-            inventory.setItem(SLOT_PREV, createNavItem(Material.ARROW, "Prev"))
+            inventory.setItem(45, createNavItem(Material.ARROW, "← Назад"))
         }
         if (safePage < totalPages - 1) {
-            inventory.setItem(SLOT_NEXT, createNavItem(Material.ARROW, "Next"))
+            inventory.setItem(53, createNavItem(Material.ARROW, "Вперёд →"))
         }
 
-        sessions[player.name] = Triple(block, category, safePage)
         player.openInventory(inventory)
     }
 
@@ -88,44 +91,92 @@ class NodeSelectionGUI(
 
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
-        val player = event.whoClicked as? Player ?: return
-        val session = sessions[player.name] ?: return
+        val title = event.view.title()
+        val titleStr = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(title)
+        if (!titleStr.startsWith(GUI_TITLE_PREFIX)) return
+
         event.isCancelled = true
+        val item = event.currentItem ?: return
+        val meta = item.itemMeta ?: return
 
-        val (block, category, page) = session
-        val slot = event.rawSlot
+        val actionId = meta.persistentDataContainer.get(KEY_ACTION_ID, PersistentDataType.STRING) ?: return
 
-        if (slot == SLOT_PREV && page > 0) {
-            open(player, block, category, page - 1)
-            return
-        }
-        if (slot == SLOT_NEXT) {
-            open(player, block, category, page + 1)
-            return
-        }
-
-        if (slot !in 0 until ITEMS_PER_PAGE) return
-
-        val descriptors = categoryRegistry.getDescriptors(category)
-        val pageStart = page * ITEMS_PER_PAGE
-        val descriptor = descriptors.getOrNull(pageStart + slot) ?: return
-
-        writeActionId(block, descriptor.id)
-
-        if (descriptor.expectedParams.isNotEmpty()) {
-            parameterPlacer.placeChest(block)
-        }
-
-        placeOrUpdateSign(block, descriptor.displayName)
-
-        sessions.remove(player.name)
+        val player = event.whoClicked as? Player ?: return
         player.closeInventory()
+
+        val targetBlock = player.getTargetBlockExact(5) ?: return
+        if (!categoryRegistry.isCategoryMaterial(targetBlock.type)) return
+
+        writeActionId(targetBlock, actionId)
+        placeOrUpdateSign(targetBlock, categoryRegistry.getDescriptorById(actionId)?.displayName ?: actionId)
+        parameterPlacer.placeChest(targetBlock)
+    }
+
+    // -----------------------------------------------------------------------
+    // Public helpers (also used by tests)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Place a new sign or update an existing sign on an adjacent face of [block].
+     * Writes [displayName] to the first line.
+     * Requirements: 6.1, 6.2, 6.3, 6.4
+     */
+    fun placeOrUpdateSign(block: Block, displayName: String) {
+        val faces = listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
+
+        // Check for existing sign first — update it
+        for (face in faces) {
+            val adjacent = block.getRelative(face)
+            if (adjacent.type == Material.OAK_SIGN || adjacent.type == Material.OAK_WALL_SIGN) {
+                val signState = adjacent.state as? org.bukkit.block.Sign ?: continue
+                @Suppress("DEPRECATION")
+                signState.setLine(0, displayName)
+                signState.update()
+                return
+            }
+        }
+
+        // Place new sign on first available AIR face
+        for (face in faces) {
+            val adjacent = block.getRelative(face)
+            if (adjacent.type == Material.AIR) {
+                adjacent.type = Material.OAK_WALL_SIGN
+                val signState = adjacent.state as? org.bukkit.block.Sign ?: continue
+                @Suppress("DEPRECATION")
+                signState.setLine(0, displayName)
+                signState.update()
+                return
+            }
+        }
+
+        plugin.logger.warning(
+            "NodeSelectionGUI: all four faces of block at ${block.location} are occupied — sign not placed"
+        )
+    }
+
+    // -----------------------------------------------------------------------
+    // Private helpers
+    // -----------------------------------------------------------------------
+
+    private fun readCurrentActionId(block: Block): String? {
+        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
+        return pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
+    }
+
+    private fun writeActionId(block: Block, actionId: String) {
+        val state = block.state as? TileState ?: return
+        state.persistentDataContainer.set(KEY_ACTION_ID, PersistentDataType.STRING, actionId)
+        state.update()
     }
 
     private fun createActionItem(descriptor: ActionDescriptor, highlighted: Boolean): ItemStack {
         val item = ItemStack(descriptor.icon)
-        val meta: ItemMeta = item.itemMeta ?: return item
+        val meta = item.itemMeta ?: return item
         meta.displayName(Component.text(descriptor.displayName))
+        meta.persistentDataContainer.set(KEY_ACTION_ID, PersistentDataType.STRING, descriptor.id)
+        if (highlighted) {
+            meta.addEnchant(org.bukkit.enchantments.Enchantment.LUCK, 1, true)
+        }
         item.itemMeta = meta
         return item
     }
@@ -136,45 +187,5 @@ class NodeSelectionGUI(
         meta.displayName(Component.text(name))
         item.itemMeta = meta
         return item
-    }
-
-    fun writeActionId(block: Block, actionId: String) {
-        val state = block.state as? TileState ?: return
-        state.persistentDataContainer.set(keyActionId, PersistentDataType.STRING, actionId)
-        state.update()
-    }
-
-    fun readActionId(block: Block): String? {
-        val state = block.state as? TileState ?: return null
-        return state.persistentDataContainer.get(keyActionId, PersistentDataType.STRING)
-    }
-
-    @Suppress("DEPRECATION")
-    internal fun placeOrUpdateSign(block: Block, displayName: String) {
-        val faces = listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
-        val existingSignFace = faces.firstOrNull { face ->
-            block.getRelative(face).type == Material.OAK_WALL_SIGN
-        }
-        val targetFace = existingSignFace ?: faces.firstOrNull { face ->
-            block.getRelative(face).type == Material.AIR
-        }
-        if (targetFace == null) {
-            plugin.logger.warning("NodeSelectionGUI: no available face for sign at ${block.location}")
-            return
-        }
-        val signBlock = block.getRelative(targetFace)
-        signBlock.type = Material.OAK_WALL_SIGN
-        val signState = signBlock.state as? org.bukkit.block.Sign ?: return
-        signState.setLine(0, displayName)
-        signState.update()
-    }
-
-    private fun totalPages(n: Int): Int =
-        if (n == 0) 1 else (n + ITEMS_PER_PAGE - 1) / ITEMS_PER_PAGE
-
-    companion object {
-        const val ITEMS_PER_PAGE = 45
-        private const val SLOT_PREV = 45
-        private const val SLOT_NEXT = 53
     }
 }

@@ -38,6 +38,6 @@ tasks {
     }
 
     test {
-        enabled = false
+        enabled = true
     }
 }

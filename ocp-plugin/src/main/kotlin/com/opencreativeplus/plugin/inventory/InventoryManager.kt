@@ -4,17 +4,21 @@ import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.core.database.MongoConnectionManager
+import com.opencreativeplus.plugin.registry.CategoryRegistry
+import com.opencreativeplus.plugin.registry.NodeCategory
 import kotlinx.coroutines.flow.firstOrNull
 import org.bson.Document
 import org.bukkit.Material
 import org.bukkit.entity.Player
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.util.io.BukkitObjectInputStream
 import org.bukkit.util.io.BukkitObjectOutputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.UUID
+import java.util.logging.Logger
 
 /**
  * Manages per-player per-plot inventory states across the three modes.
@@ -22,13 +26,15 @@ import java.util.UUID
  * Each player has three separate inventory states per plot (BUILD, DEV, PLAY).
  * Inventories are serialized to Base64 and stored in MongoDB.
  *
- 14.1, 14.2, 14.3, 14.4, 14.5, 17.4, 36.1, 36.2, 36.3, 36.4
+ * Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 17.4, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 7.2
  */
 class InventoryManager(
     private val database: MongoDatabase,
     private val connectionManager: MongoConnectionManager,
     private val nodeRegistry: NodeRegistry,
-    collectionOverride: com.mongodb.kotlin.client.coroutine.MongoCollection<Document>? = null
+    collectionOverride: com.mongodb.kotlin.client.coroutine.MongoCollection<Document>? = null,
+    private val categoryRegistry: CategoryRegistry? = null,
+    private val logger: Logger? = null
 ) {
     private val collection = collectionOverride ?: database.getCollection<Document>("player_inventories")
 
@@ -106,36 +112,63 @@ class InventoryManager(
     }
 
     // -------------------------------------------------------------------------
-    // DEV mode provisioning (s 36.1–36.4)
+    // DEV mode provisioning (Requirements 2.1–2.6, 7.2)
     // -------------------------------------------------------------------------
 
     /**
-     * Provision the DEV mode inventory: all registered action node blocks,
-     * glass blocks, signs, and chests in infinite quantities.
-     36.1, 36.2, 36.3, 36.4
+     * Provision the DEV mode inventory with category blocks, glass, signs, and chests.
+     *
+     * Slots 0–5: one ItemStack (qty 64) per NodeCategory, display name = russianLabel.
+     * Slots 6–8: BLUE_STAINED_GLASS (64), WHITE_STAINED_GLASS (64), GRAY_STAINED_GLASS (64).
+     * Slots 9–10: OAK_SIGN (64), CHEST (1).
+     *
+     * If total item types exceed 36, logs a WARNING and fills only the first 36 slots.
+     *
+     * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
      */
     fun provisionDevInventory(player: Player) {
         player.inventory.clear()
 
         val items = mutableListOf<ItemStack>()
 
-        // All registered action node materials (req 36.1)
-        if (nodeRegistry is com.opencreativeplus.plugin.registry.NodeRegistryImpl) {
-            nodeRegistry.getRegisteredActionMaterials().forEach { material ->
-                items.add(ItemStack(material, 64))
+        // Slots 0–5: six NodeCategory blocks with Russian display names (Req 2.2, 2.5)
+        if (categoryRegistry != null) {
+            NodeCategory.entries.forEach { category ->
+                val stack = ItemStack(category.material, 64)
+                val meta: ItemMeta? = stack.itemMeta
+                if (meta != null) {
+                    meta.setDisplayName(category.russianLabel)
+                    stack.itemMeta = meta
+                }
+                items.add(stack)
+            }
+        } else {
+            // Fallback: legacy material-based provisioning when no CategoryRegistry provided
+            if (nodeRegistry is com.opencreativeplus.plugin.registry.NodeRegistryImpl) {
+                nodeRegistry.getRegisteredActionMaterials().forEach { material ->
+                    items.add(ItemStack(material, 64))
+                }
             }
         }
 
-        // Glass blocks for grid extension (req 36.2)
+        // Slots 6–8: glass blocks (Req 2.3)
         items.add(ItemStack(Material.BLUE_STAINED_GLASS, 64))
         items.add(ItemStack(Material.WHITE_STAINED_GLASS, 64))
         items.add(ItemStack(Material.GRAY_STAINED_GLASS, 64))
 
-        // Signs and chests for parameters (req 36.3)
+        // Slots 9–10: sign and chest (Req 2.4)
         items.add(ItemStack(Material.OAK_SIGN, 64))
-        items.add(ItemStack(Material.CHEST, 64))
+        items.add(ItemStack(Material.CHEST, 1))
 
-        // Fill inventory slots
+        // Warn if exceeding 36 slots (Req 2.6)
+        if (items.size > 36) {
+            logger?.warning(
+                "provisionDevInventory: total item types (${items.size}) exceeds 36 — " +
+                "provisioning only the first 36 slots."
+            )
+        }
+
+        // Fill inventory slots (Req 2.6: max 36)
         items.forEachIndexed { index, item ->
             if (index < 36) player.inventory.setItem(index, item)
         }

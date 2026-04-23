@@ -7,6 +7,8 @@ import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.database.MongoConnectionManager
+import com.opencreativeplus.plugin.registry.CategoryRegistry
+import com.opencreativeplus.plugin.registry.NodeCategory
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
@@ -421,5 +423,100 @@ class InventoryManagerTest {
         inventoryManager.provisionDevInventory(player)
 
         assertTrue(setItems.keys.all { it < 36 }, "Items must only be placed in slots 0–35")
+    }
+
+    // -------------------------------------------------------------------------
+    // Category-based DEV provisioning — Requirements 2.2, 2.3, 2.4, 2.5, 2.6
+    // -------------------------------------------------------------------------
+
+    private fun categoryInventoryManager(): Pair<InventoryManager, CategoryRegistry> {
+        val registry = NodeRegistryImpl()
+        val categoryRegistry = CategoryRegistry()
+        val manager = InventoryManager(database, connectionManager, registry, collection, categoryRegistry)
+        return manager to categoryRegistry
+    }
+
+    @Test
+    fun `provisionDevInventory with CategoryRegistry places six category blocks in slots 0-5`() {
+        val (manager, _) = categoryInventoryManager()
+        val player = mockPlayer()
+        val inventory = player.inventory
+
+        val setItems = mutableMapOf<Int, ItemStack>()
+        every { inventory.setItem(any<Int>(), any()) } answers {
+            setItems[firstArg<Int>()] = secondArg()
+        }
+
+        manager.provisionDevInventory(player)
+
+        val expectedMaterials = NodeCategory.entries.map { it.material }
+        expectedMaterials.forEachIndexed { index, material ->
+            val item = setItems[index]
+            assertNotNull(item, "Slot $index must have an item")
+            assertEquals(material, item.type, "Slot $index must be ${material.name}")
+            assertEquals(64, item.amount, "Slot $index must have quantity 64")
+        }
+    }
+
+    @Test
+    fun `provisionDevInventory with CategoryRegistry sets russianLabel as display name on category blocks`() {
+        val (manager, _) = categoryInventoryManager()
+        val player = mockPlayer()
+        val inventory = player.inventory
+
+        val setItems = mutableMapOf<Int, ItemStack>()
+        every { inventory.setItem(any<Int>(), any()) } answers {
+            setItems[firstArg<Int>()] = secondArg()
+        }
+
+        manager.provisionDevInventory(player)
+
+        NodeCategory.entries.forEachIndexed { index, category ->
+            val item = setItems[index]
+            assertNotNull(item, "Slot $index must have an item")
+            val displayName = item.itemMeta?.displayName
+            assertEquals(category.russianLabel, displayName,
+                "Slot $index display name must be '${category.russianLabel}'")
+        }
+    }
+
+    @Test
+    fun `provisionDevInventory with CategoryRegistry places glass blocks in slots 6-8`() {
+        val (manager, _) = categoryInventoryManager()
+        val player = mockPlayer()
+        val inventory = player.inventory
+
+        val setItems = mutableMapOf<Int, ItemStack>()
+        every { inventory.setItem(any<Int>(), any()) } answers {
+            setItems[firstArg<Int>()] = secondArg()
+        }
+
+        manager.provisionDevInventory(player)
+
+        assertEquals(Material.BLUE_STAINED_GLASS, setItems[6]?.type, "Slot 6 must be BLUE_STAINED_GLASS")
+        assertEquals(64, setItems[6]?.amount, "Slot 6 must have quantity 64")
+        assertEquals(Material.WHITE_STAINED_GLASS, setItems[7]?.type, "Slot 7 must be WHITE_STAINED_GLASS")
+        assertEquals(64, setItems[7]?.amount, "Slot 7 must have quantity 64")
+        assertEquals(Material.GRAY_STAINED_GLASS, setItems[8]?.type, "Slot 8 must be GRAY_STAINED_GLASS")
+        assertEquals(64, setItems[8]?.amount, "Slot 8 must have quantity 64")
+    }
+
+    @Test
+    fun `provisionDevInventory with CategoryRegistry places OAK_SIGN and CHEST in slots 9-10`() {
+        val (manager, _) = categoryInventoryManager()
+        val player = mockPlayer()
+        val inventory = player.inventory
+
+        val setItems = mutableMapOf<Int, ItemStack>()
+        every { inventory.setItem(any<Int>(), any()) } answers {
+            setItems[firstArg<Int>()] = secondArg()
+        }
+
+        manager.provisionDevInventory(player)
+
+        assertEquals(Material.OAK_SIGN, setItems[9]?.type, "Slot 9 must be OAK_SIGN")
+        assertEquals(64, setItems[9]?.amount, "Slot 9 must have quantity 64")
+        assertEquals(Material.CHEST, setItems[10]?.type, "Slot 10 must be CHEST")
+        assertEquals(1, setItems[10]?.amount, "Slot 10 must have quantity 1")
     }
 }

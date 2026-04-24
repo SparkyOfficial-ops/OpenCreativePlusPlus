@@ -176,6 +176,7 @@ class ModeManagerImpl(
      * Returns true on success, false if compilation failed and the switch was aborted.
      */
     private suspend fun applyPlayMode(player: Player, plot: Plot): Boolean {
+        runOnMain { resetPlayerState(player) }
         val scanner = blockScannerFactory(plot)
         val codeLines = scanner.scanCodingZone()
         val result: CompilationResult = astCompiler.compile(codeLines)
@@ -211,10 +212,12 @@ class ModeManagerImpl(
      * Must be called on the main thread.
      */
     private fun resetPlayerState(player: Player) {
-        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
+        player.activePotionEffects.toList().forEach { player.removePotionEffect(it.type) }
         player.fireTicks = 0
         val maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
         player.health = maxHealth
+        player.foodLevel = 20
+        player.velocity = org.bukkit.util.Vector(0.0, 0.0, 0.0)
         player.fallDistance = 0f
     }
 

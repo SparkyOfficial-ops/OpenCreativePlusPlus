@@ -1,5 +1,6 @@
 package com.opencreativeplus.core.execution
 
+import com.opencreativeplus.api.node.ICondition
 import com.opencreativeplus.api.plot.PlotManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.Watchdog
@@ -78,11 +79,29 @@ class ExecutionEngine(
         val job = coroutineConfig.executionScope.launch {
             val startTime = System.currentTimeMillis()
             try {
-                for (action in script.actions) {
+                for ((index, action) in script.actions.withIndex()) {
                     watchdog.checkExecution(context)
                     // Trace hook: notify before/at node execution (s: 14.2, 14.3)
                     traceManager?.onNodeExecute(null, action.displayName, emptyMap())
-                    action.execute(context)
+
+                    // Piston System (Req 8.3): if this action is also a condition, evaluate it
+                    // and execute or skip the child branch accordingly.
+                    val condition = action as? ICondition
+                    if (condition != null) {
+                        val conditionResult = condition.evaluate(context)
+                        val childBranch = script.conditionalBranches[index]
+                        if (conditionResult && childBranch != null) {
+                            for (childAction in childBranch) {
+                                watchdog.checkExecution(context)
+                                traceManager?.onNodeExecute(null, childAction.displayName, emptyMap())
+                                childAction.execute(context)
+                                context.operationCount.incrementAndGet()
+                            }
+                        }
+                        // If condition is false, child branch is skipped (Req 8.3)
+                    } else {
+                        action.execute(context)
+                    }
                     context.operationCount.incrementAndGet()
                 }
             } catch (e: CancellationException) {

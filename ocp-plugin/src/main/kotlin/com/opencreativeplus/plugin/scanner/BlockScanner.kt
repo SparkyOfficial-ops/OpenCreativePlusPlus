@@ -50,6 +50,13 @@ class BlockScanner(
             Material.GRAY_STAINED_GLASS
         )
 
+        /** Conditional node materials that trigger perpendicular branch scanning (Piston System, Req 8.2, 8.3). */
+        private val CONDITIONAL_MATERIALS = setOf(
+            Material.OAK_PLANKS,   // IF_PLAYER
+            Material.OBSIDIAN,     // IF_VARIABLE
+            Material.BRICK         // IF_ENTITY
+        )
+
         /** PDC key for the selected action id on a Category_Block. */
         private val KEY_ACTION_ID = NamespacedKey("ocp", "action_id")
 
@@ -94,7 +101,8 @@ class BlockScanner(
     private data class TraversalState(
         val block: Block,
         val direction: Direction,
-        val codeLine: MutableList<ScannedNode>
+        val codeLine: MutableList<ScannedNode>,
+        val children: MutableList<CodeLine> = mutableListOf()
     )
 
     // -----------------------------------------------------------------------
@@ -184,6 +192,22 @@ class BlockScanner(
                 val node = buildScannedNode(above)
                 if (node != null) {
                     nodeList.add(node)
+                    // Piston System: if this is a conditional node, scan perpendicular branch as child
+                    if (above.type in CONDITIONAL_MATERIALS) {
+                        val perpDir = dir.turnLeft()
+                        val perpBlock = block.getRelative(perpDir.toBlockFace())
+                        if (perpBlock.type in GLASS_STRIP_MATERIALS) {
+                            val child = scanChildBranch(perpBlock, perpDir, visited)
+                            state.children.add(child)
+                        } else {
+                            val perpDirRight = dir.turnRight()
+                            val perpBlockRight = block.getRelative(perpDirRight.toBlockFace())
+                            if (perpBlockRight.type in GLASS_STRIP_MATERIALS) {
+                                val child = scanChildBranch(perpBlockRight, perpDirRight, visited)
+                                state.children.add(child)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -200,17 +224,17 @@ class BlockScanner(
             when (candidates.size) {
                 0 -> {
                     // Dead end — finalise this path
-                    results.add(CodeLine(startBlock.location, nodeList))
+                    results.add(CodeLine(startBlock.location, nodeList, state.children))
                 }
                 1 -> {
                     // Continue along the single candidate
                     val (next, nextDir) = candidates[0]
                     visited.add(LocationKey.of(next.location))
-                    queue.add(TraversalState(next, nextDir, nodeList))
+                    queue.add(TraversalState(next, nextDir, nodeList, state.children))
                 }
                 else -> {
                     // Branch — current path is done; each candidate starts a new independent path
-                    results.add(CodeLine(startBlock.location, nodeList))
+                    results.add(CodeLine(startBlock.location, nodeList, state.children))
                     for ((next, nextDir) in candidates) {
                         visited.add(LocationKey.of(next.location))
                         queue.add(TraversalState(next, nextDir, mutableListOf()))
@@ -225,6 +249,58 @@ class BlockScanner(
     // -----------------------------------------------------------------------
     // Node building
     // -----------------------------------------------------------------------
+
+    /**
+     * Scans a perpendicular branch as a child CodeLine until STICKY_PISTON or end-of-chain.
+     * Used by the Piston System (Requirement 8.2, 8.3).
+     */
+    private fun scanChildBranch(
+        startBlock: Block,
+        direction: Direction,
+        visited: MutableSet<LocationKey>
+    ): CodeLine {
+        val childNodes = mutableListOf<ScannedNode>()
+        var current = startBlock
+        var dir = direction
+
+        while (true) {
+            // Mark visited
+            visited.add(LocationKey.of(current.location))
+
+            // Stop at STICKY_PISTON (branch-end marker)
+            if (current.type == Material.STICKY_PISTON) break
+
+            // Collect block above
+            val above = current.getRelative(BlockFace.UP)
+            if (above.type != Material.AIR) {
+                val node = buildScannedNode(above)
+                if (node != null) childNodes.add(node)
+            }
+
+            // Find next block: prefer straight ahead, then turns
+            val ahead = current.getRelative(dir.toBlockFace())
+            val leftDir = dir.turnLeft()
+            val rightDir = dir.turnRight()
+            val leftBlock = current.getRelative(leftDir.toBlockFace())
+            val rightBlock = current.getRelative(rightDir.toBlockFace())
+
+            val next = listOf(
+                ahead to dir,
+                leftBlock to leftDir,
+                rightBlock to rightDir
+            ).firstOrNull { (b, _) ->
+                (b.type in GLASS_STRIP_MATERIALS || b.type == Material.STICKY_PISTON) &&
+                LocationKey.of(b.location) !in visited
+            }
+
+            if (next == null) break
+            val (nextBlock, nextDir) = next
+            current = nextBlock
+            dir = nextDir
+        }
+
+        return CodeLine(startBlock.location, childNodes)
+    }
 
     /**
      * Build a [ScannedNode] for [block] (a block above a glass strip).

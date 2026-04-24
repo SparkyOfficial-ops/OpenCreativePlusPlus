@@ -91,6 +91,16 @@ object BuiltInNodeRegistry {
     }
 
     /**
+     * Registers action nodes that require a Plugin instance (e.g. BukkitScheduler access).
+     * Call this after [register] once the plugin is available.
+     *
+     * Requirements: 11.1
+     */
+    fun registerPluginActions(registry: NodeRegistryImpl, plugin: Plugin) {
+        registry.registerAction(Material.CLOCK, "wait") { params -> WaitAction(params, plugin) }
+    }
+
+    /**
      * Registers GUI nodes that require runtime service dependencies.
      * Call this after [register] once the plugin services are available.
      *
@@ -121,7 +131,7 @@ object BuiltInNodeRegistry {
 
     private fun registerActions(registry: NodeRegistryImpl) {
         registry.registerAction(Material.PAPER, "send_message") { params -> SendMessageAction(params) }
-        registry.registerAction(Material.CLOCK, "wait") { params -> WaitAction(params) }
+        // WaitAction requires a Plugin instance — registered via registerPluginActions()
     }
 
     private fun registerConditions(registry: NodeRegistryImpl) {

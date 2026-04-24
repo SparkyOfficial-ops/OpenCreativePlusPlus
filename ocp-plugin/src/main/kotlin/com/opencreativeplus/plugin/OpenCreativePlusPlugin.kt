@@ -14,6 +14,10 @@ import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
 import com.opencreativeplus.plugin.command.DialogueQuitListener
+import com.opencreativeplus.plugin.listener.PlotProtectionListener
+import com.opencreativeplus.plugin.registry.CategoryRegistry
+import com.opencreativeplus.plugin.scanner.ParameterPlacer
+import com.opencreativeplus.plugin.gui.NodeSelectionGUI
 import com.opencreativeplus.plugin.command.OcpDialogueCommand
 import com.opencreativeplus.plugin.command.PlotCommands
 import com.opencreativeplus.plugin.compiler.ASTCompiler
@@ -69,6 +73,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
     private lateinit var tpsMonitor: TPSMonitor
     private lateinit var watchdog: Watchdog
     private lateinit var tpsMonitorTask: TpsMonitorTask
+    private lateinit var categoryRegistry: CategoryRegistry
     lateinit var chatInputManager: ChatInputManager
         private set
     lateinit var paramSerializer: ParamSerializer
@@ -120,7 +125,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         val nodeRegistry = NodeRegistryImpl()
         BuiltInNodeRegistry.register(nodeRegistry)
+        BuiltInNodeRegistry.registerPluginActions(nodeRegistry, this)
         OpenCreativePlusAPI.initialize(nodeRegistry)
+
+        categoryRegistry = CategoryRegistry()
 
         val worldManager = WorldManager()
         val plotPersistence = PlotPersistence(database, connectionManager)
@@ -161,6 +169,15 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(PlotBrowserGUI(plotPersistence, plotManager, scope), this)
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
+
+        // Category-based coding UI listeners
+        val parameterPlacer = ParameterPlacer(this)
+        server.pluginManager.registerEvents(
+            NodeSelectionGUI(categoryRegistry, parameterPlacer, this), this
+        )
+        server.pluginManager.registerEvents(
+            PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
+        )
 
         // ── ChatInputManager + ParamSerializer ────────────────────────────────
         chatInputManager = ChatInputManager()

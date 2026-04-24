@@ -151,13 +151,13 @@ object BuiltInNodeRegistry {
         registry.registerValue(Material.GOLD_BLOCK, "add") { params ->
             AddValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.IRON_BLOCK, "subtract") { params ->
+        registry.registerValue(Material.COPPER_BLOCK, "subtract") { params ->
             SubtractValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.EMERALD_BLOCK, "multiply") { params ->
+        registry.registerValue(Material.AMETHYST_BLOCK, "multiply") { params ->
             MultiplyValue(params["left"], params["right"])
         }
-        registry.registerValue(Material.LAPIS_BLOCK, "divide") { params ->
+        registry.registerValue(Material.QUARTZ_BLOCK, "divide") { params ->
             DivideValue(params["left"], params["right"])
         }
         // Comparisons

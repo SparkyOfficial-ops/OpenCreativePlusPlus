@@ -4,21 +4,26 @@ import org.bukkit.Material
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Defines the six node categories, each mapped to a unique Category_Block material
- * and a human-readable Russian label.
+ * Defines the eleven node categories (Mineland Style), each mapped to a unique
+ * Category_Block material and a human-readable Russian label.
  *
- * Requirements: 1.1, 1.2
+ * Requirements: 3.1–3.12 (ocp-manifest-roadmap)
  */
 enum class NodeCategory(
     val material: Material,
     val russianLabel: String
 ) {
-    PLAYER_EVENT(Material.DIAMOND_BLOCK,  "Событие игрока"),
-    PLAYER_ACTION(Material.COBBLESTONE,   "Действие игрока"),
-    CONDITION(Material.OAK_PLANKS,        "Условие"),
-    GAME_ACTION(Material.STONE_BRICKS,    "Игровое действие"),
-    SET_VARIABLE(Material.GOLD_BLOCK,     "Установить переменную"),
-    CONTROL_FLOW(Material.IRON_BLOCK,     "Управление потоком")
+    PLAYER_EVENT  (Material.DIAMOND_BLOCK,    "Событие игрока"),
+    IF_PLAYER     (Material.OAK_PLANKS,       "Условие игрока"),
+    PLAYER_ACTION (Material.COBBLESTONE,      "Действие игрока"),
+    GAME_ACTION   (Material.NETHERITE_BRICKS, "Игровое действие"),
+    IF_VARIABLE   (Material.OBSIDIAN,         "Условие переменной"),
+    SET_VARIABLE  (Material.IRON_BLOCK,       "Установить переменную"),
+    SELECT_OBJECT (Material.PURPUR_BLOCK,     "Выбор объекта"),
+    IF_ENTITY     (Material.BRICK,            "Условие сущности"),
+    ARRAY_OP      (Material.BOOKSHELF,        "Операция с массивом"),
+    LOOP          (Material.EMERALD_BLOCK,    "Цикл"),
+    FUNCTION      (Material.LAPIS_BLOCK,      "Функция"),
 }
 
 /**

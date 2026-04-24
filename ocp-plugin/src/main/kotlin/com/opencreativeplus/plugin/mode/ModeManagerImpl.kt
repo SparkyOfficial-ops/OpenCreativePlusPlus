@@ -14,6 +14,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
 import org.bukkit.Location
+import org.bukkit.attribute.Attribute
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.util.UUID
@@ -136,6 +137,7 @@ class ModeManagerImpl(
     private suspend fun applyBuildMode(player: Player, plot: Plot) {
         val mainWorld = worldManager.getLoadedWorlds(plot.id)?.first
         runOnMain {
+            resetPlayerState(player)
             if (mainWorld != null) player.teleport(mainWorld.spawnLocation)
             player.gameMode = GameMode.CREATIVE
             player.allowFlight = true
@@ -151,12 +153,16 @@ class ModeManagerImpl(
         if (worlds != null) {
             val spawnLoc: Location = worlds.second.spawnLocation
             runOnMain {
+                resetPlayerState(player)
                 player.gameMode = GameMode.CREATIVE
                 player.allowFlight = true
                 player.teleport(spawnLoc)
             }
         } else {
-            runOnMain { player.gameMode = GameMode.CREATIVE }
+            runOnMain {
+                resetPlayerState(player)
+                player.gameMode = GameMode.CREATIVE
+            }
         }
         // Provision the coding blocks inventory (req 36.1–36.4)
         runOnMain {
@@ -199,6 +205,18 @@ class ModeManagerImpl(
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Resets transient player state when entering DEV or BUILD mode (req 12.1–12.5).
+     * Must be called on the main thread.
+     */
+    private fun resetPlayerState(player: Player) {
+        player.activePotionEffects.forEach { player.removePotionEffect(it.type) }
+        player.fireTicks = 0
+        val maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
+        player.health = maxHealth
+        player.fallDistance = 0f
+    }
 
     private fun modeKey(playerId: UUID, plotId: UUID) = "$playerId:$plotId"
 

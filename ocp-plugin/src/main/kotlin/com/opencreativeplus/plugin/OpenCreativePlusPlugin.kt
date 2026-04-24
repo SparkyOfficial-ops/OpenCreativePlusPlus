@@ -38,6 +38,7 @@ import com.opencreativeplus.plugin.rating.TagManager
 import com.opencreativeplus.plugin.registry.BuiltInNodeRegistry
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import com.opencreativeplus.plugin.scanner.BlockScanner
+import com.opencreativeplus.plugin.visualizer.DevVisualizer
 import com.opencreativeplus.plugin.watchdog.TpsMonitorTask
 import com.opencreativeplus.plugin.world.WorldManager
 import com.opencreativeplus.api.plot.PlotMode
@@ -143,6 +144,13 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         eventDispatcher = EventDispatcher(executionEngine, coroutineConfig.executionScope)
 
+        val devVisualizer = DevVisualizer(
+            plugin = this,
+            tpsMonitor = tpsMonitor,
+            blockScannerFactory = { world -> BlockScanner(world, nodeRegistry) }
+        )
+        server.pluginManager.registerEvents(devVisualizer, this)
+
         modeManager = ModeManagerImpl(
             inventoryManager = inventoryManager,
             worldManager = worldManager,
@@ -153,7 +161,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
-            executionEngine = executionEngine
+            executionEngine = executionEngine,
+            devVisualizer = devVisualizer
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)

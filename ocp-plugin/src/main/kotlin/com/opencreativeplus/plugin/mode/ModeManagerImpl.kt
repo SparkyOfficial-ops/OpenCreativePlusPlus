@@ -9,6 +9,7 @@ import com.opencreativeplus.plugin.compiler.CompilationResult
 import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.inventory.InventoryManager
 import com.opencreativeplus.plugin.scanner.BlockScanner
+import com.opencreativeplus.plugin.visualizer.DevVisualizer
 import com.opencreativeplus.plugin.world.WorldManager
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
@@ -40,7 +41,8 @@ class ModeManagerImpl(
     private val eventDispatcher: EventDispatcher,
     private val executionEngine: ExecutionEngine,
     private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
-        ?: error("OpenCreativePlus plugin not found")
+        ?: error("OpenCreativePlus plugin not found"),
+    private val devVisualizer: DevVisualizer? = null
 ) : ModeManager {
 
     /** "$playerId:$plotId" → current PlotMode */
@@ -102,7 +104,8 @@ class ModeManagerImpl(
                 eventDispatcher.unregisterScripts(plot.id)
             }
             PlotMode.DEV -> {
-                // Nothing extra — inventory already saved above
+                // Stop particle rendering for this player (req 9.2)
+                devVisualizer?.stopFor(player)
             }
             PlotMode.BUILD -> {
                 // Disable flight that was granted in BUILD mode
@@ -169,6 +172,10 @@ class ModeManagerImpl(
             inventoryManager.provisionDevInventory(player)
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }
+        // Start particle visualization for this player (req 9.1)
+        val scanner = blockScannerFactory(plot)
+        val codeLines = scanner.scanCodingZone()
+        devVisualizer?.startFor(player, codeLines)
     }
 
     /**

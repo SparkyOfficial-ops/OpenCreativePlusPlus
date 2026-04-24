@@ -18,6 +18,10 @@ import com.opencreativeplus.plugin.node.condition.EqualsCondition
 import com.opencreativeplus.plugin.node.condition.GreaterThanCondition
 import com.opencreativeplus.plugin.node.condition.LessThanCondition
 import com.opencreativeplus.plugin.node.event.OnJoinEvent
+import com.opencreativeplus.plugin.node.event.OnDamageEvent
+import com.opencreativeplus.plugin.node.event.OnInteractEvent
+import com.opencreativeplus.plugin.node.event.OnDeathEvent
+import com.opencreativeplus.plugin.node.event.OnVariableChangeEvent
 import com.opencreativeplus.plugin.node.entity.GetNearbyEntitiesNode
 import com.opencreativeplus.plugin.node.entity.KillEntityNode
 import com.opencreativeplus.plugin.node.entity.MoveEntityToNode
@@ -130,6 +134,10 @@ object BuiltInNodeRegistry {
 
     private fun registerEvents(registry: NodeRegistryImpl) {
         registry.registerEvent(Material.DIAMOND_BLOCK) { OnJoinEvent() }
+        registry.registerEvent(Material.DIAMOND_ORE) { OnDamageEvent() }
+        registry.registerEvent(Material.DIAMOND_SWORD) { OnInteractEvent() }
+        registry.registerEvent(Material.WITHER_ROSE) { OnDeathEvent() }
+        registry.registerEvent(Material.DETECTOR_RAIL) { OnVariableChangeEvent() }
     }
 
     private fun registerActions(registry: NodeRegistryImpl) {

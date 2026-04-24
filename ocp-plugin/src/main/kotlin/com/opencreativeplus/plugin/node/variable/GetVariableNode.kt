@@ -18,11 +18,11 @@ import com.opencreativeplus.core.execution.VariableManager
 class GetVariableNode(
     private val params: Map<String, Any>,
     private val variableManager: VariableManager
-) : IValue {
+) : IValue<Any?> {
     override val nodeId: String = "get_variable"
     override val displayName: String = "Get Variable"
 
-    override suspend fun evaluate(context: ExecutionContext): Any? {
+    override suspend fun compute(context: ExecutionContext): Any? {
         val rawName = params["name"]?.toString() ?: return null
         val playerName = context.player?.name
         val resolvedKey = variableManager.resolveVariableKey(rawName, playerName)

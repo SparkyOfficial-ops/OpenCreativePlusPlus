@@ -33,7 +33,10 @@ import org.bukkit.persistence.PersistentDataType
  */
 class CycleDetectionPropertyTest : FreeSpec({
 
-    val world = mockk<World>(relaxed = true)
+    val world = mockk<World>(relaxed = true).also {
+        every { it.name } returns "test_world"
+        every { it.hashCode() } returns 42
+    }
     val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
 
     every { nodeRegistry.getActionNodeId(any()) } returns null

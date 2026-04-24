@@ -166,13 +166,13 @@ class BlockScanner(
      * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
      */
     internal fun scanStrip(startBlock: Block): List<CodeLine> {
-        val visited = mutableSetOf<org.bukkit.Location>()
+        val visited = mutableSetOf<LocationKey>()
         val queue = ArrayDeque<TraversalState>()
         val results = mutableListOf<CodeLine>()
 
         val startNodes = mutableListOf<ScannedNode>()
         queue.add(TraversalState(startBlock, Direction.EAST, startNodes))
-        visited.add(startBlock.location)
+        visited.add(LocationKey.of(startBlock.location))
 
         while (queue.isNotEmpty()) {
             val state = queue.removeFirst()
@@ -195,7 +195,7 @@ class BlockScanner(
             val rightBlock = block.getRelative(rightDir.toBlockFace())
 
             val candidates = listOf(ahead to dir, leftBlock to leftDir, rightBlock to rightDir)
-                .filter { (b, _) -> b.type in GLASS_STRIP_MATERIALS && b.location !in visited }
+                .filter { (b, _) -> b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited }
 
             when (candidates.size) {
                 0 -> {
@@ -205,14 +205,14 @@ class BlockScanner(
                 1 -> {
                     // Continue along the single candidate
                     val (next, nextDir) = candidates[0]
-                    visited.add(next.location)
+                    visited.add(LocationKey.of(next.location))
                     queue.add(TraversalState(next, nextDir, nodeList))
                 }
                 else -> {
                     // Branch — current path is done; each candidate starts a new independent path
                     results.add(CodeLine(startBlock.location, nodeList))
                     for ((next, nextDir) in candidates) {
-                        visited.add(next.location)
+                        visited.add(LocationKey.of(next.location))
                         queue.add(TraversalState(next, nextDir, mutableListOf()))
                     }
                 }

@@ -58,7 +58,10 @@ import com.opencreativeplus.plugin.node.scoreboard.SetScoreboardLineNode
 import com.opencreativeplus.plugin.node.scoreboard.ShowScoreboardNode
 import com.opencreativeplus.plugin.node.scoreboard.HideScoreboardNode
 import com.opencreativeplus.plugin.node.dialogue.SendDialogueNode
+import com.opencreativeplus.plugin.node.variable.GetVariableNode
+import com.opencreativeplus.plugin.node.variable.SetVariableNode
 import com.opencreativeplus.plugin.node.value.DivideValue
+import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.plugin.node.value.EqualsValue
 import com.opencreativeplus.plugin.node.value.GreaterThanValue
 import com.opencreativeplus.plugin.node.value.LessThanValue
@@ -247,5 +250,20 @@ object BuiltInNodeRegistry {
 
     private fun registerDialogueNodes(registry: NodeRegistryImpl) {
         registry.registerAction(Material.WRITTEN_BOOK, "send_dialogue") { params -> SendDialogueNode(params) }
+    }
+
+    /**
+     * Registers variable nodes that require a VariableManager instance.
+     * Call this after [register] once the VariableManager is available.
+     *
+     * Requirements: 6.1, 6.2
+     */
+    fun registerVariableNodes(registry: NodeRegistryImpl, variableManager: VariableManager) {
+        registry.registerAction(Material.IRON_BLOCK, "set_variable") { params ->
+            SetVariableNode(params, variableManager)
+        }
+        registry.registerValue(Material.IRON_ORE, "get_variable") { params ->
+            GetVariableNode(params, variableManager)
+        }
     }
 }

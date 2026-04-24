@@ -326,4 +326,95 @@ class VariableManagerTest {
         // And: DB was queried only once (for the initial load)
         coVerify(exactly = 1) { collection.find(Document("_id", plotId.toString())) }
     }
+
+    // -------------------------------------------------------------------------
+    // Task 6.4: plot-scoped variable persists via savePlotVariables / getSavedScope
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `test plot-scoped variable is saved and reloaded via getSavedScope`() = runBlocking {
+        // Given: a plot with a saved scope variable
+        val plotId = UUID.randomUUID()
+        val savedDoc = Document().apply {
+            put("_id", plotId.toString())
+            put("variables", Document().apply {
+                put("globalScore", 42)
+                put("mapName", "lobby")
+            })
+            put("updated_at", System.currentTimeMillis())
+        }
+
+        // First call: DB returns the document
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf(savedDoc)
+
+        // When: loading the saved scope
+        val scope = variableManager.getSavedScope(plotId)
+
+        // Then: plot-scoped variables are present
+        assertEquals(42, scope.get("globalScore"))
+        assertEquals("lobby", scope.get("mapName"))
+    }
+
+    @Test
+    fun `test savePlotVariables persists plot-scoped variable and getSavedScope reloads it`() = runBlocking {
+        // Given: a plot with a saved scope
+        val plotId = UUID.randomUUID()
+        coEvery { collection.find(Document("_id", plotId.toString())) } returns findFlowOf()
+
+        val scope = variableManager.getSavedScope(plotId)
+        scope.set("globalScore", 100)
+        scope.set("mapName", "arena")
+
+        // When: saving
+        variableManager.savePlotVariables(plotId)
+
+        // Then: replaceOne was called with the correct variables
+        coVerify {
+            collection.replaceOne(
+                Document("_id", plotId.toString()),
+                match { doc ->
+                    val vars = doc.get("variables", Document::class.java)
+                    vars?.getInteger("globalScore") == 100 &&
+                    vars?.getString("mapName") == "arena"
+                },
+                any<com.mongodb.client.model.ReplaceOptions>()
+            )
+        }
+    }
+
+    @Test
+    fun `test resolveVariableKey returns raw name for non-prefixed variable`() {
+        // Given: a global variable name without %player%_ prefix
+        val vm = variableManager
+
+        // When: resolving with any player name
+        val key = vm.resolveVariableKey("globalScore", "Alice")
+
+        // Then: key is the raw name (plot-scoped)
+        assertEquals("globalScore", key)
+    }
+
+    @Test
+    fun `test resolveVariableKey returns player-scoped key for prefixed variable`() {
+        // Given: a player-scoped variable name
+        val vm = variableManager
+
+        // When: resolving for player "Alice"
+        val key = vm.resolveVariableKey("%player%_score", "Alice")
+
+        // Then: key is "Alice::score"
+        assertEquals("Alice::score", key)
+    }
+
+    @Test
+    fun `test resolveVariableKey returns raw name when playerName is null`() {
+        // Given: a player-scoped variable name but no player context
+        val vm = variableManager
+
+        // When: resolving with null playerName
+        val key = vm.resolveVariableKey("%player%_score", null)
+
+        // Then: key falls back to raw name
+        assertEquals("%player%_score", key)
+    }
 }

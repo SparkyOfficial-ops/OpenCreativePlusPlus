@@ -56,7 +56,24 @@ class VariableManager(private val database: MongoDatabase) {
     suspend fun emitChange(plotId: UUID, name: String, value: Any?, scope: VariableScopeType) {
         _changes.emit(VariableChange(plotId, name, value, scope))
     }
-    
+
+    /**
+     * Resolves a variable name to its storage key.
+     *
+     * - Names starting with `%player%_` are player-scoped: stored as `"$playerName::$varName"`,
+     *   where `varName` is the name with the `%player%_` prefix removed.
+     * - All other names are plot-scoped globals: stored as-is.
+     * - If [playerName] is `null` and [name] starts with `%player%_`, falls back to the raw name.
+     *
+     * @param name       The variable name as declared in the script.
+     * @param playerName The name of the player in context, or `null` if not player-scoped.
+     * @return The resolved storage key.
+     */
+    fun resolveVariableKey(name: String, playerName: String?): String =
+        if (name.startsWith("%player%_") && playerName != null)
+            "${playerName}::${name.removePrefix("%player%_")}"
+        else name
+
     /**
      * Create a new local scope for a single script execution.
      * Local scopes are not shared and are cleared after execution.

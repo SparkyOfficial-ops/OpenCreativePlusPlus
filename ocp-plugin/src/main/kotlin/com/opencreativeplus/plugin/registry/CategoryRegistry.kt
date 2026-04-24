@@ -16,7 +16,7 @@ enum class NodeCategory(
     PLAYER_EVENT  (Material.DIAMOND_BLOCK,    "Событие игрока"),
     IF_PLAYER     (Material.OAK_PLANKS,       "Условие игрока"),
     PLAYER_ACTION (Material.COBBLESTONE,      "Действие игрока"),
-    GAME_ACTION   (Material.NETHERITE_BRICKS, "Игровое действие"),
+    GAME_ACTION   (Material.NETHER_BRICKS,    "Игровое действие"),
     IF_VARIABLE   (Material.OBSIDIAN,         "Условие переменной"),
     SET_VARIABLE  (Material.IRON_BLOCK,       "Установить переменную"),
     SELECT_OBJECT (Material.PURPUR_BLOCK,     "Выбор объекта"),

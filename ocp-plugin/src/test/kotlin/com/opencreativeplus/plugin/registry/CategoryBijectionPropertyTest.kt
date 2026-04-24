@@ -94,7 +94,7 @@ class CategoryBijectionPropertyTest : FreeSpec({
             NodeCategory.PLAYER_EVENT.material  shouldBe org.bukkit.Material.DIAMOND_BLOCK
             NodeCategory.IF_PLAYER.material     shouldBe org.bukkit.Material.OAK_PLANKS
             NodeCategory.PLAYER_ACTION.material shouldBe org.bukkit.Material.COBBLESTONE
-            NodeCategory.GAME_ACTION.material   shouldBe org.bukkit.Material.NETHERITE_BRICKS
+            NodeCategory.GAME_ACTION.material   shouldBe org.bukkit.Material.NETHER_BRICKS
             NodeCategory.IF_VARIABLE.material   shouldBe org.bukkit.Material.OBSIDIAN
             NodeCategory.SET_VARIABLE.material  shouldBe org.bukkit.Material.IRON_BLOCK
             NodeCategory.SELECT_OBJECT.material shouldBe org.bukkit.Material.PURPUR_BLOCK

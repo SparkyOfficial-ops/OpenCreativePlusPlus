@@ -63,6 +63,18 @@ class NodeSelectionGUI(
         val end = minOf(start + ITEMS_PER_PAGE, descriptors.size)
         val currentActionId = readCurrentActionId(block)
 
+        if (descriptors.isEmpty()) {
+            // Req 4 AC5: show informational item when no actions are registered for this category
+            val infoItem = ItemStack(Material.BARRIER)
+            val infoMeta: ItemMeta = infoItem.itemMeta ?: Bukkit.getItemFactory().getItemMeta(Material.BARRIER)!!
+            @Suppress("DEPRECATION")
+            infoMeta.setDisplayName("§7Нет доступных действий")
+            @Suppress("DEPRECATION")
+            infoMeta.lore = listOf("§8Для этой категории не зарегистрировано ни одного действия.")
+            infoItem.itemMeta = infoMeta
+            inventory.setItem(22, infoItem)
+        }
+
         for (i in start until end) {
             val descriptor = descriptors[i]
             val item = createActionItem(descriptor, descriptor.id == currentActionId)
@@ -85,6 +97,8 @@ class NodeSelectionGUI(
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
+        // Req 4 AC1: only open GUI when block has no action_id assigned yet
+        if (readCurrentActionId(block) != null) return
         event.isCancelled = true
         open(event.player, block, category)
     }

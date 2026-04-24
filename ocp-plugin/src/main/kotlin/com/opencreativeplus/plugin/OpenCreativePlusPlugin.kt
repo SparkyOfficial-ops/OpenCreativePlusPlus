@@ -132,7 +132,13 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         val worldManager = WorldManager()
         val plotPersistence = PlotPersistence(database, connectionManager)
-        val inventoryManager = InventoryManager(database, connectionManager, nodeRegistry)
+        val inventoryManager = InventoryManager(
+            database = database,
+            connectionManager = connectionManager,
+            nodeRegistry = nodeRegistry,
+            categoryRegistry = categoryRegistry,
+            logger = logger
+        )
         val astCompiler = ASTCompiler(nodeRegistry)
 
         eventDispatcher = EventDispatcher(executionEngine, coroutineConfig.executionScope)

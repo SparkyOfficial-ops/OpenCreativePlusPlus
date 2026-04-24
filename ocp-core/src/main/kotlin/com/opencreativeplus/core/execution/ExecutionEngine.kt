@@ -30,7 +30,8 @@ class ExecutionEngine(
     private val coroutineConfig: CoroutineConfiguration,
     private var traceManager: TraceManager? = null,
     private val plotManager: PlotManager? = null,
-    private val logger: Logger = Logger.getLogger("ExecutionEngine")
+    private val logger: Logger = Logger.getLogger("ExecutionEngine"),
+    private val errorReporter: ((sourceLocation: String, message: String) -> Unit)? = null
 ) {
     /** plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
@@ -121,6 +122,7 @@ class ExecutionEngine(
             } catch (e: Exception) {
                 // Isolate the failure to this script only — log and continue (req 38.1)
                 logger.warning("[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}")
+                errorReporter?.invoke(script.sourceLocation, e.message ?: "Unknown error")
             } finally {
                 // Trace hook: execution complete summary (s: 14.7)
                 player?.let { p ->

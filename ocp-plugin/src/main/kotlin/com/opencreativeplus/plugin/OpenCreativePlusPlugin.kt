@@ -39,6 +39,7 @@ import com.opencreativeplus.plugin.registry.BuiltInNodeRegistry
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.visualizer.DevVisualizer
+import com.opencreativeplus.plugin.visualizer.HologramReporter
 import com.opencreativeplus.plugin.watchdog.TpsMonitorTask
 import com.opencreativeplus.plugin.world.WorldManager
 import com.opencreativeplus.api.plot.PlotMode
@@ -75,6 +76,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
     private lateinit var watchdog: Watchdog
     private lateinit var tpsMonitorTask: TpsMonitorTask
     private lateinit var categoryRegistry: CategoryRegistry
+    private lateinit var hologramReporter: HologramReporter
     lateinit var chatInputManager: ChatInputManager
         private set
     lateinit var paramSerializer: ParamSerializer
@@ -118,7 +120,20 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         // ── Core components ───────────────────────────────────────────────────
         val variableManager = VariableManager(database)
-        executionEngine = ExecutionEngine(watchdog, variableManager, coroutineConfig)
+        hologramReporter = HologramReporter(this)
+        executionEngine = ExecutionEngine(
+            watchdog = watchdog,
+            variableManager = variableManager,
+            coroutineConfig = coroutineConfig,
+            errorReporter = { sourceLocation, message ->
+                // ArmorStand spawning requires the main thread
+                server.scheduler.runTask(this@OpenCreativePlusPlugin) { _ ->
+                    parseLocation(sourceLocation)?.let { loc ->
+                        hologramReporter.reportError(loc, message)
+                    }
+                }
+            }
+        )
 
         // ── Trace Manager ─────────────────────────────────────────────────────
         val traceManager = TraceManager(this)
@@ -256,8 +271,23 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             }
         }
 
+        hologramReporter.clearAll()
         connectionManager.close()
         logger.info("[OCP] OpenCreative++ disabled.")
+    }
+
+    private fun parseLocation(sourceLocation: String): org.bukkit.Location? {
+        return try {
+            val atIdx = sourceLocation.indexOf('@')
+            if (atIdx < 0) return null
+            val worldName = sourceLocation.substring(0, atIdx)
+            val coords = sourceLocation.substring(atIdx + 1).split(",")
+            if (coords.size < 3) return null
+            val world = server.getWorld(worldName) ?: return null
+            org.bukkit.Location(world, coords[0].trim().toDouble(), coords[1].trim().toDouble(), coords[2].trim().toDouble())
+        } catch (e: Exception) {
+            null
+        }
     }
 }
 

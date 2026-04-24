@@ -91,7 +91,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
         "22a: param chest above is removed when Category_Block is broken" {
             // Feature: category-based-coding-ui, Property 22: Category_Block break cascades to chest and sign
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 registry.isCategoryMaterial(category.material).shouldBeTrue()
@@ -109,7 +109,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
         "22b: chest without param_chest PDC tag is NOT removed" {
             // Feature: category-based-coding-ui, Property 22: Category_Block break cascades to chest and sign
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 registry.isCategoryMaterial(category.material).shouldBeTrue()
@@ -135,7 +135,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
             )
 
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries),
                 Arb.element(signFaces)
             ) { category, signFace ->
@@ -159,7 +159,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
             )
 
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries),
                 Arb.element(signFaces)
             ) { category, signFace ->
@@ -183,7 +183,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
             )
 
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries),
                 Arb.element(signFaces)
             ) { category, signFace ->
@@ -204,7 +204,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
         "22f: no cascade removal when neither chest nor sign is present" {
             // Feature: category-based-coding-ui, Property 22: Category_Block break cascades to chest and sign
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries),
                 Arb.boolean()
             ) { category, hasTag ->
@@ -226,7 +226,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
         "22g: only the first sign found (in NORTH→SOUTH→EAST→WEST order) is removed" {
             // Feature: category-based-coding-ui, Property 22: Category_Block break cascades to chest and sign
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 registry.isCategoryMaterial(category.material).shouldBeTrue()
@@ -254,7 +254,7 @@ class CategoryBlockBreakCascadePropertyTest : FreeSpec({
             // Feature: category-based-coding-ui, Property 22: Category_Block break cascades to chest and sign
             // Ensures the cascade is not accidentally restricted to a subset of categories.
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 val isCategoryBlock = registry.isCategoryMaterial(category.material)

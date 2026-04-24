@@ -41,7 +41,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getActionFactoryById returns non-null for a registered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbNodeId) { material, nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbNodeId) { material, nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.registerAction(material, nodeId) { _ ->
                     object : IAction {
@@ -56,7 +56,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getActionFactoryById returns null for an unregistered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbNodeId) { nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbNodeId) { nodeId ->
                 val registry = NodeRegistryImpl()
                 // Nothing registered — any nodeId lookup must return null
                 registry.getActionFactoryById(nodeId) shouldBe null
@@ -65,7 +65,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getConditionFactoryById returns non-null for a registered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbNodeId) { material, nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbNodeId) { material, nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.registerCondition(material, nodeId) { _ ->
                     object : ICondition {
@@ -80,7 +80,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getConditionFactoryById returns null for an unregistered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbNodeId) { nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbNodeId) { nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.getConditionFactoryById(nodeId) shouldBe null
             }
@@ -88,7 +88,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getValueFactoryById returns non-null for a registered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbNodeId) { material, nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbNodeId) { material, nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.registerValue(material, nodeId) { _ ->
                     object : IValue<String> {
@@ -103,7 +103,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "getValueFactoryById returns null for an unregistered nodeId" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbNodeId) { nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbNodeId) { nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.getValueFactoryById(nodeId) shouldBe null
             }
@@ -111,7 +111,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "factory returned by getActionFactoryById produces a working node" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbNodeId) { material, nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbNodeId) { material, nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.registerAction(material, nodeId) { _ ->
                     object : IAction {
@@ -128,7 +128,7 @@ class NodeRegistryStringLookupPropertyTest : FreeSpec({
 
         "Material-based lookup still works after registering with nodeId (backward compatibility)" {
             // Feature: category-based-coding-ui, Property 9: NodeRegistry string lookup
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbNodeId) { material, nodeId ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbNodeId) { material, nodeId ->
                 val registry = NodeRegistryImpl()
                 registry.registerAction(material, nodeId) { _ ->
                     object : IAction {

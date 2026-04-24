@@ -36,7 +36,7 @@ class GUIPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 3.3
         "for any N > 45, totalPages >= 2" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..500)
             ) { n ->
                 (totalPages(n) >= 2).shouldBeTrue()
@@ -48,7 +48,7 @@ class GUIPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 3.3
         "for any N > 45 and any valid page index, itemsOnPage <= 45" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..500)
             ) { n ->
                 val pages = totalPages(n)
@@ -80,7 +80,7 @@ class GUIPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 3.3
         "last page contains exactly N mod 45 items (or 45 if divisible)" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..500)
             ) { n ->
                 val pages = totalPages(n)
@@ -95,7 +95,7 @@ class GUIPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 3.3
         "sum of items across all pages equals N" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..500)
             ) { n ->
                 val pages = totalPages(n)

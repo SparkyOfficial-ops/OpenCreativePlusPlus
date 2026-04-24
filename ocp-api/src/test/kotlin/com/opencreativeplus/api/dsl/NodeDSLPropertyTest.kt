@@ -69,6 +69,9 @@ class NodeDSLPropertyTest : FreeSpec({
             override fun getConditionNodeId(blockType: Material): String? = null
             override fun getValueNodeId(blockType: Material): String? = null
             override fun getMaterialForNode(node: com.opencreativeplus.api.node.INode): Material? = null
+            override fun getActionFactoryById(nodeId: String): ((Map<String, Any>) -> IAction)? = null
+            override fun getConditionFactoryById(nodeId: String): ((Map<String, Any>) -> ICondition)? = null
+            override fun getValueFactoryById(nodeId: String): ((Map<String, Any>) -> IValue<*>)? = null
         }
     }
 

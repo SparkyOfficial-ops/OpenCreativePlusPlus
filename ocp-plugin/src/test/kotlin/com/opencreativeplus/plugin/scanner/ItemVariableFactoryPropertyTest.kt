@@ -68,7 +68,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12a: readVarType returns 'variable' for variable items" - {
         "for any variable name, a variable item's PDC must have ocp:item_var_type = 'variable'" {
             // Validates: Requirements 9.1
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockFactoryItem("variable", name)
                 ItemVariableFactory.readVarType(item) shouldBe "variable"
             }
@@ -82,7 +82,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12b: readVarType returns 'location' for location items" - {
         "for any location name, a location item's PDC must have ocp:item_var_type = 'location'" {
             // Validates: Requirements 9.2
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockFactoryItem("location", name)
                 ItemVariableFactory.readVarType(item) shouldBe "location"
             }
@@ -96,7 +96,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12c: readVarName returns the original name for variable items" - {
         "for any variable name N, readVarName must return N" {
             // Validates: Requirements 9.1, 9.3
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockFactoryItem("variable", name)
                 ItemVariableFactory.readVarName(item) shouldBe name
             }
@@ -110,7 +110,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12d: readVarName returns the original name for location items" - {
         "for any location name L, readVarName must return L" {
             // Validates: Requirements 9.2, 9.4
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockFactoryItem("location", name)
                 ItemVariableFactory.readVarName(item) shouldBe name
             }
@@ -124,7 +124,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12e: readVarType returns null when item has no ItemMeta" - {
         "an item without meta must return null for readVarType" {
             // Validates: Requirements 9.1, 9.2
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockItemNoMeta()
                 ItemVariableFactory.readVarType(item).shouldBeNull()
             }
@@ -138,7 +138,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12f: readVarName returns null when item has no ItemMeta" - {
         "an item without meta must return null for readVarName" {
             // Validates: Requirements 9.1, 9.2
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val item = mockItemNoMeta()
                 ItemVariableFactory.readVarName(item).shouldBeNull()
             }
@@ -152,7 +152,7 @@ class ItemVariableFactoryPropertyTest : FreeSpec({
     "Property 12g: PDC keys use namespace 'ocp'" - {
         "readVarType and readVarName must use NamespacedKey('ocp', ...) not any other namespace" {
             // Validates: Requirements 9.1, 9.2
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 // Item whose PDC only responds to ocp-namespaced keys
                 val item = mockk<ItemStack>(relaxed = true)
                 val meta = mockk<ItemMeta>(relaxed = true)

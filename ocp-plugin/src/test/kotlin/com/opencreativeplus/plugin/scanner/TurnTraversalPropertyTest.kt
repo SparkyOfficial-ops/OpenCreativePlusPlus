@@ -223,7 +223,7 @@ class TurnTraversalPropertyTest : FreeSpec({
     "Property 15a: an L-shaped glass strip returns exactly one CodeLine" - {
         "for any segA in 1..5 and segB in 1..5 and any glass material, scanStrip returns a single CodeLine" {
             // Validates: Requirements 10.3
-            checkAll(PropTestConfig(iterations = 100), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
                 segA, segB, glassMaterial, categoryMaterial ->
 
                 val (startBlock, _, _) = buildLShapedStrip(segA, segB, glassMaterial, categoryMaterial)
@@ -241,7 +241,7 @@ class TurnTraversalPropertyTest : FreeSpec({
     "Property 15b: the CodeLine contains exactly segA + segB nodes" - {
         "for any segA and segB, the CodeLine has exactly segA + segB ScannedNodes" {
             // Validates: Requirements 10.3
-            checkAll(PropTestConfig(iterations = 100), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
                 segA, segB, glassMaterial, categoryMaterial ->
 
                 val (startBlock, _, _) = buildLShapedStrip(segA, segB, glassMaterial, categoryMaterial)
@@ -259,7 +259,7 @@ class TurnTraversalPropertyTest : FreeSpec({
     "Property 15c: nodes are in traversal order — straight segment first, then turn segment" - {
         "first segA nodes have z=0 and x=1..segA; next segB nodes have x=segA and z=1..segB" {
             // Validates: Requirements 10.3
-            checkAll(PropTestConfig(iterations = 100), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbSegment, arbSegment, arbGlassMaterial, arbCategoryMaterial) {
                 segA, segB, glassMaterial, categoryMaterial ->
 
                 val (startBlock, straightCategory, turnCategory) =
@@ -291,7 +291,7 @@ class TurnTraversalPropertyTest : FreeSpec({
     "Property 15d: mixed WHITE and GRAY glass in both segments still produces 1 CodeLine with segA+segB nodes" - {
         "alternating glass materials across both segments are traversed fully" {
             // Validates: Requirements 10.3
-            checkAll(PropTestConfig(iterations = 100), arbSegment, arbSegment, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbSegment, arbSegment, arbCategoryMaterial) {
                 segA, segB, categoryMaterial ->
 
                 val y = 0

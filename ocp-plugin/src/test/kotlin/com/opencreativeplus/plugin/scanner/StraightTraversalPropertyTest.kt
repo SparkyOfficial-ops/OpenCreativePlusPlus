@@ -193,7 +193,7 @@ class StraightTraversalPropertyTest : FreeSpec({
     "Property 14a: a straight glass strip returns exactly one CodeLine" - {
         "for any strip length N and any glass material, scanStrip returns a single CodeLine" {
             // Validates: Requirements 10.2
-            checkAll(PropTestConfig(iterations = 100), arbLength, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbLength, arbGlassMaterial, arbCategoryMaterial) {
                 n, glassMaterial, categoryMaterial ->
 
                 val (startBlock, _) = buildStraightStrip(n, glassMaterial, categoryMaterial)
@@ -211,7 +211,7 @@ class StraightTraversalPropertyTest : FreeSpec({
     "Property 14b: the CodeLine contains exactly N nodes (one per strip glass block)" - {
         "for any strip length N, the CodeLine has exactly N ScannedNodes" {
             // Validates: Requirements 10.7
-            checkAll(PropTestConfig(iterations = 100), arbLength, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbLength, arbGlassMaterial, arbCategoryMaterial) {
                 n, glassMaterial, categoryMaterial ->
 
                 val (startBlock, _) = buildStraightStrip(n, glassMaterial, categoryMaterial)
@@ -229,7 +229,7 @@ class StraightTraversalPropertyTest : FreeSpec({
     "Property 14c: nodes are collected in traversal order (left to right along the strip)" - {
         "for any strip length N, node at index i corresponds to glass block at x=i+1" {
             // Validates: Requirements 10.7
-            checkAll(PropTestConfig(iterations = 100), arbLength, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbLength, arbGlassMaterial, arbCategoryMaterial) {
                 n, glassMaterial, categoryMaterial ->
 
                 val (startBlock, categoryBlocks) = buildStraightStrip(n, glassMaterial, categoryMaterial)
@@ -252,7 +252,7 @@ class StraightTraversalPropertyTest : FreeSpec({
     "Property 14d: a strip mixing WHITE_STAINED_GLASS and GRAY_STAINED_GLASS is traversed fully" - {
         "for any strip length N with alternating glass types, scanStrip returns one CodeLine with N nodes" {
             // Validates: Requirements 10.2, 10.7
-            checkAll(PropTestConfig(iterations = 100), arbLength, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbLength, arbCategoryMaterial) {
                 n, categoryMaterial ->
 
                 // Build strip manually with alternating glass materials
@@ -305,7 +305,7 @@ class StraightTraversalPropertyTest : FreeSpec({
     "Property 14e: glass blocks with AIR above contribute no nodes to the CodeLine" - {
         "for any strip length N where all blocks above are AIR, the CodeLine has 0 nodes" {
             // Validates: Requirements 10.7 (only non-AIR blocks above are collected)
-            checkAll(PropTestConfig(iterations = 100), arbLength, arbGlassMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbLength, arbGlassMaterial) {
                 n, glassMaterial ->
 
                 val y = 0

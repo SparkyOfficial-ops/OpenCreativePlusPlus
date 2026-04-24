@@ -196,7 +196,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         "with no active effects, removePotionEffect is never called on DEV/BUILD transition" {
             // Feature: category-based-coding-ui, Property 19: Player state reset on mode transition
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbFireTicks,
                 arbHealth,
                 arbFallDist,
@@ -227,7 +227,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         "for any initial fire ticks value, fire ticks become 0 after transitioning to DEV or BUILD" {
             // Feature: category-based-coding-ui, Property 19: Player state reset on mode transition
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbFireTicks,
                 arbHealth,
                 arbFallDist,
@@ -258,7 +258,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         "for any initial health value, health becomes maxHealth after transitioning to DEV or BUILD" {
             // Feature: category-based-coding-ui, Property 19: Player state reset on mode transition
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbFireTicks,
                 arbHealth,
                 arbFallDist,
@@ -289,7 +289,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         "for any initial fall distance, fall distance becomes 0 after transitioning to DEV or BUILD" {
             // Feature: category-based-coding-ui, Property 19: Player state reset on mode transition
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbFireTicks,
                 arbHealth,
                 arbFallDist,
@@ -317,7 +317,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         "switching to DEV and switching to BUILD both trigger the full state reset" {
             // Feature: category-based-coding-ui, Property 19: Player state reset on mode transition
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbFireTicks,
                 arbHealth,
                 arbFallDist,

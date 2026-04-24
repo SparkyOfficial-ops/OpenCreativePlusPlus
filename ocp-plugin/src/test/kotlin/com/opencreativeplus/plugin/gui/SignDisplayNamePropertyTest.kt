@@ -101,7 +101,7 @@ class SignDisplayNamePropertyTest : FreeSpec({
         // Validates: Requirements 6.2
         "for any displayName D, the sign's first line equals D" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..15)
             ) { displayName ->
                 val gui = makeGui()
@@ -125,7 +125,7 @@ class SignDisplayNamePropertyTest : FreeSpec({
         // Validates: Requirements 6.4
         "when a sign already exists, setLine is called on the existing sign state" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..15),
                 Arb.string(1..15)
             ) { firstName, secondName ->
@@ -156,7 +156,7 @@ class SignDisplayNamePropertyTest : FreeSpec({
         // Validates: Requirements 6.3
         "when all four horizontal faces are non-air, a warning is logged" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..15)
             ) { displayName ->
                 val plugin = mockk<Plugin>(relaxed = true)

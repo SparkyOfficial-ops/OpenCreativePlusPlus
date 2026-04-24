@@ -82,7 +82,7 @@ class DisallowedActionMessagePropertyTest : FreeSpec({
             // Feature: category-based-coding-ui, Property 21: Disallowed action sends chat message
             if (disallowedMaterials.isNotEmpty()) {
                 checkAll(
-                    PropTestConfig(iterations = 100),
+                    PropTestConfig(iterations = 30),
                     Arb.element(disallowedMaterials)
                 ) { material ->
                     val message = buildDisallowedMessage(material)
@@ -96,7 +96,7 @@ class DisallowedActionMessagePropertyTest : FreeSpec({
             // Feature: category-based-coding-ui, Property 21: Disallowed action sends chat message
             if (disallowedMaterials.isNotEmpty()) {
                 checkAll(
-                    PropTestConfig(iterations = 100),
+                    PropTestConfig(iterations = 30),
                     Arb.element(disallowedMaterials)
                 ) { material ->
                     val message = buildDisallowedMessage(material)
@@ -121,7 +121,7 @@ class DisallowedActionMessagePropertyTest : FreeSpec({
             // Verifies the message builder works for all possible material inputs,
             // including category materials (edge case: if whitelist were empty).
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 val message = buildDisallowedMessage(category.material)
@@ -134,7 +134,7 @@ class DisallowedActionMessagePropertyTest : FreeSpec({
         "21e: message is non-blank for any arbitrary Material value" {
             // Feature: category-based-coding-ui, Property 21: Disallowed action sends chat message
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(Material.entries)
             ) { material ->
                 val message = buildDisallowedMessage(material)

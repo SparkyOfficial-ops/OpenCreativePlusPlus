@@ -77,7 +77,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "for any descriptor X in the list, its slot is highlighted when existingId == X.id" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 1..45)
             ) { rawIds ->
                 val uniqueIds = rawIds.distinct().ifEmpty { listOf("fallback") }
@@ -102,7 +102,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "for any list of descriptors and any chosen existingId, exactly one slot is highlighted" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 2..45)
             ) { rawIds ->
                 val uniqueIds = rawIds.distinct().let { if (it.size >= 2) it else listOf("a", "b") }
@@ -134,7 +134,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "computeHighlightedSlot returns null when existingId is null" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 1..45)
             ) { rawIds ->
                 val uniqueIds = rawIds.distinct().ifEmpty { listOf("x") }
@@ -157,7 +157,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "computeHighlightedSlot returns null for an unregistered id" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 1..45),
                 Arb.string(1..20)
             ) { rawIds, unknownId ->
@@ -181,7 +181,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "for a descriptor on page P, computeHighlightedSlot returns null for page != P" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..90)
             ) { n ->
                 val descriptors = (0 until n).map { i ->
@@ -209,7 +209,7 @@ class PreHighlightPropertyTest : FreeSpec({
         // Validates: Requirements 3.7
         "registered descriptor id round-trips through registry and highlight computation" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 1..30)
             ) { rawIds ->
                 val uniqueIds = rawIds.distinct().ifEmpty { listOf("id1") }

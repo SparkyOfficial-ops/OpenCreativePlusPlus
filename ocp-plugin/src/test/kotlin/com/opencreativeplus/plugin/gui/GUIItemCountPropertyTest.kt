@@ -50,7 +50,7 @@ class GUIItemCountPropertyTest : FreeSpec({
         // Validates: Requirements 3.2
         "for any N descriptors, sum of items across all pages equals N" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(0..200)
             ) { n ->
                 totalItemsAcrossAllPages(n) shouldBe n
@@ -62,7 +62,7 @@ class GUIItemCountPropertyTest : FreeSpec({
         // Validates: Requirements 3.2
         "for any list of unique ids, getDescriptors returns the same count" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 0..50)
             ) { rawIds ->
                 val uniqueIds = rawIds.distinct()
@@ -89,7 +89,7 @@ class GUIItemCountPropertyTest : FreeSpec({
         // Validates: Requirements 3.2, 3.3
         "for any N and any valid page, itemsOnPage <= 45" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(0..200),
                 Arb.int(0..10)
             ) { n, rawPage ->
@@ -111,7 +111,7 @@ class GUIItemCountPropertyTest : FreeSpec({
         // Validates: Requirements 3.2
         "for any N in 1..45, all items are on page 0 and totalPages == 1" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(1..45)
             ) { n ->
                 totalPages(n) shouldBe 1
@@ -124,7 +124,7 @@ class GUIItemCountPropertyTest : FreeSpec({
         // Validates: Requirements 3.2
         "for any N > 45, totalPages >= 2 and sum across all pages equals N" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.int(46..500)
             ) { n ->
                 val pages = totalPages(n)

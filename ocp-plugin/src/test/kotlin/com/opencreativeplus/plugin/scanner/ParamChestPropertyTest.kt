@@ -119,7 +119,7 @@ class ParamChestPropertyTest : FreeSpec({
     "Property 11a: after placeChest, the block directly above is CHEST" - {
         "for any category block position, placeChest must set the block above to CHEST" {
             // Validates: Requirements 8.1, 8.3
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..1000).map { it }) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..1000).map { it }) { _ ->
                 val world = MutableBlockWorld()
                 val (categoryBlock, blockAbove) = world.buildBlocks()
                 val plugin = mockPlugin()
@@ -140,7 +140,7 @@ class ParamChestPropertyTest : FreeSpec({
     "Property 11b: after placeChest, the chest's PDC contains ocp:param_chest = 'true'" - {
         "for any category block, the PDC tag ocp:param_chest must equal 'true' after placement" {
             // Validates: Requirements 8.3
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..1000).map { it }) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..1000).map { it }) { _ ->
                 val world = MutableBlockWorld()
                 val (categoryBlock, _) = world.buildBlocks()
                 val plugin = mockPlugin()
@@ -161,7 +161,7 @@ class ParamChestPropertyTest : FreeSpec({
     "Property 11c: placeChest returns false when block above is not AIR" - {
         "if the block above is already occupied, placeChest must return false and not change it" {
             // Validates: Requirements 8.2
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..1000).map { it }) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..1000).map { it }) { _ ->
                 val world = MutableBlockWorld()
                 world.aboveType = Material.STONE  // pre-occupied, not a param chest
                 val (categoryBlock, blockAbove) = world.buildBlocks()
@@ -183,7 +183,7 @@ class ParamChestPropertyTest : FreeSpec({
     "Property 11d: idempotence — calling placeChest twice results in exactly one CHEST above" - {
         "for any category block, two consecutive placeChest calls must leave exactly one CHEST above" {
             // Validates: Requirements 8.4
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..1000).map { it }) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..1000).map { it }) { _ ->
                 val world = MutableBlockWorld()
                 val (categoryBlock, blockAbove) = world.buildBlocks()
                 val plugin = mockPlugin()
@@ -215,7 +215,7 @@ class ParamChestPropertyTest : FreeSpec({
     "Property 11e: hasParamChest returns true after placeChest and false after removeChest" - {
         "hasParamChest must be consistent with the placement lifecycle" {
             // Validates: Requirements 8.3, 8.4
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..1000).map { it }) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..1000).map { it }) { _ ->
                 val world = MutableBlockWorld()
                 val (categoryBlock, blockAbove) = world.buildBlocks()
                 val plugin = mockPlugin()

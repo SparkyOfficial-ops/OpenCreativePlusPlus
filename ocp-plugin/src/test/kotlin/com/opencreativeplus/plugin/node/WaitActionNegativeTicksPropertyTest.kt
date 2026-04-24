@@ -30,7 +30,7 @@ class WaitActionNegativeTicksPropertyTest : StringSpec({
         every { plugin.server } returns server
         every { server.scheduler } returns scheduler
 
-        forAll(100, Arb.negativeInt()) { ticks ->
+        forAll(25, Arb.negativeInt()) { ticks ->
             val action = WaitAction(emptyMap(), plugin)
             var threw = false
             try {

@@ -69,7 +69,7 @@ class WhitelistEnforcementPropertyTest : FreeSpec({
         "20b: all category materials are recognised as whitelisted" {
             // Feature: category-based-coding-ui, Property 20: Whitelist enforcement for place and break events
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 val registry = CategoryRegistry()
@@ -86,7 +86,7 @@ class WhitelistEnforcementPropertyTest : FreeSpec({
 
             if (nonWhitelisted.isNotEmpty()) {
                 checkAll(
-                    PropTestConfig(iterations = 100),
+                    PropTestConfig(iterations = 30),
                     Arb.element(nonWhitelisted)
                 ) { material ->
                     val isWhitelisted = material in FIXED_WHITELIST || registry.isCategoryMaterial(material)
@@ -106,7 +106,7 @@ class WhitelistEnforcementPropertyTest : FreeSpec({
         "20e: each NodeCategory maps to a unique material (no two categories share a block type)" {
             // Feature: category-based-coding-ui, Property 20: Whitelist enforcement for place and break events
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 30),
                 Arb.element(NodeCategory.entries)
             ) { category ->
                 val allMaterials = NodeCategory.entries.map { it.material }

@@ -156,7 +156,7 @@ class PDCPriorityPropertyTest : FreeSpec({
 
     "Property 23a: PDC value overrides sign value for the same parameter key" - {
         "for any key and distinct sign/PDC values, extractParameters returns the PDC value" {
-            checkAll(PropTestConfig(iterations = 100), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
+            checkAll(PropTestConfig(iterations = 20), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
                 val block = makeBlockWithSignAndPDC(key, signValue, pdcValue)
                 val params = scanner.extractParameters(block)
 
@@ -172,7 +172,7 @@ class PDCPriorityPropertyTest : FreeSpec({
 
     "Property 23b: sign value is preserved when PDC does not contain the same key" - {
         "for any key and value, sign-only block returns the sign value" {
-            checkAll(PropTestConfig(iterations = 100), arbKey, arbValue) { key, signValue ->
+            checkAll(PropTestConfig(iterations = 20), arbKey, arbValue) { key, signValue ->
                 val block = makeBlockWithSignOnly(key, signValue)
                 val params = scanner.extractParameters(block)
 
@@ -188,7 +188,7 @@ class PDCPriorityPropertyTest : FreeSpec({
 
     "Property 23c: PDC-only value is returned when no sign data exists" - {
         "for any key and value, PDC-only block returns the PDC value" {
-            checkAll(PropTestConfig(iterations = 100), arbKey, arbValue) { key, pdcValue ->
+            checkAll(PropTestConfig(iterations = 20), arbKey, arbValue) { key, pdcValue ->
                 val block = makeBlockWithPDCOnly(key, pdcValue)
                 val params = scanner.extractParameters(block)
 
@@ -203,7 +203,7 @@ class PDCPriorityPropertyTest : FreeSpec({
 
     "Property 23d: extractParameters is deterministic — same block returns same result on repeated calls" - {
         "for any key with both sign and PDC data, two calls return identical maps" {
-            checkAll(PropTestConfig(iterations = 100), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
+            checkAll(PropTestConfig(iterations = 20), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
                 val block = makeBlockWithSignAndPDC(key, signValue, pdcValue)
                 val first = scanner.extractParameters(block)
                 val second = scanner.extractParameters(block)

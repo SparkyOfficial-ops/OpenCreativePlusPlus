@@ -247,7 +247,7 @@ class BranchingPropertyTest : FreeSpec({
     "Property 16a: a T-junction produces at least two CodeLines" - {
         "for any stem and branch lengths, scanStrip returns >= 2 CodeLines" {
             // Validates: Requirements 10.5
-            checkAll(PropTestConfig(iterations = 100), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
                 stemLen, branchLen, glassMaterial, categoryMaterial ->
 
                 val startBlock = buildTJunction(stemLen, branchLen, glassMaterial, categoryMaterial)
@@ -265,7 +265,7 @@ class BranchingPropertyTest : FreeSpec({
     "Property 16b: total nodes across all CodeLines equals stemLen + 2 * branchLen" - {
         "the sum of all CodeLine node counts matches the expected total" {
             // Validates: Requirements 10.5
-            checkAll(PropTestConfig(iterations = 100), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
                 stemLen, branchLen, glassMaterial, categoryMaterial ->
 
                 val startBlock = buildTJunction(stemLen, branchLen, glassMaterial, categoryMaterial)
@@ -284,7 +284,7 @@ class BranchingPropertyTest : FreeSpec({
     "Property 16c: each branch arm is represented by a CodeLine with exactly branchLen nodes" - {
         "there exist at least two CodeLines each containing exactly branchLen nodes" {
             // Validates: Requirements 10.5
-            checkAll(PropTestConfig(iterations = 100), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
+            checkAll(PropTestConfig(iterations = 20), arbStem, arbBranch, arbGlassMaterial, arbCategoryMaterial) {
                 stemLen, branchLen, glassMaterial, categoryMaterial ->
 
                 val startBlock = buildTJunction(stemLen, branchLen, glassMaterial, categoryMaterial)

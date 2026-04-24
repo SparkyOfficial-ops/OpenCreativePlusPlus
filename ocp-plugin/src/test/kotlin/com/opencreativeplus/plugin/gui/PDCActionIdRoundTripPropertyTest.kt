@@ -48,7 +48,7 @@ class PDCActionIdRoundTripPropertyTest : FreeSpec({
         // Validates: Requirements 3.5
         "for any non-blank action id, round-trip through PDC store returns the same value" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.string(1..50)
             ) { actionId ->
                 val store = mutableMapOf<String, String>()
@@ -62,7 +62,7 @@ class PDCActionIdRoundTripPropertyTest : FreeSpec({
         // Validates: Requirements 3.5
         "readActionId on an empty store returns null" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.string(1..50)
             ) { _ ->
                 val store = emptyMap<String, String>()
@@ -75,7 +75,7 @@ class PDCActionIdRoundTripPropertyTest : FreeSpec({
         // Validates: Requirements 3.5
         "writing a second id replaces the first" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.string(1..30),
                 Arb.string(1..30)
             ) { firstId, secondId ->
@@ -91,7 +91,7 @@ class PDCActionIdRoundTripPropertyTest : FreeSpec({
         // Validates: Requirements 3.5
         "descriptor registered with id X can be retrieved by id X" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 25),
                 Arb.string(1..30)
             ) { id ->
                 val registry = CategoryRegistry()

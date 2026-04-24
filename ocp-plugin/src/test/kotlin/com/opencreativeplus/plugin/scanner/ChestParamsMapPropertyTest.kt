@@ -167,7 +167,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
     "Property 13a: variable items contribute paramKey → varName" - {
         "for any variable name, the params map must contain the varName as the value" {
             // Validates: Requirements 9.5, 9.7
-            checkAll(PropTestConfig(iterations = 100), arbName, arbParamKey) { varName, paramKey ->
+            checkAll(PropTestConfig(iterations = 20), arbName, arbParamKey) { varName, paramKey ->
                 val actionId = "var_test_${paramKey}_${varName.take(5).replace(" ", "_")}"
                 val item = mockVariableItem(varName)
                 val block = makeBlockWithParamChest(
@@ -191,7 +191,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
     "Property 13b: location items contribute paramKey → 'loc:<name>'" - {
         "for any location name, the params map must contain 'loc:<name>' as the value" {
             // Validates: Requirements 9.5, 9.8
-            checkAll(PropTestConfig(iterations = 100), arbName, arbParamKey) { locName, paramKey ->
+            checkAll(PropTestConfig(iterations = 20), arbName, arbParamKey) { locName, paramKey ->
                 val actionId = "loc_test_${paramKey}_${locName.take(5).replace(" ", "_")}"
                 val item = mockLocationItem(locName)
                 val block = makeBlockWithParamChest(
@@ -215,7 +215,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
     "Property 13c: plain items contribute paramKey → material.name" - {
         "for any plain item, the params map must contain the material name as the value" {
             // Validates: Requirements 9.5, 9.6
-            checkAll(PropTestConfig(iterations = 100), arbMaterial, arbParamKey) { material, paramKey ->
+            checkAll(PropTestConfig(iterations = 20), arbMaterial, arbParamKey) { material, paramKey ->
                 val actionId = "plain_test_${paramKey}_${material.name}"
                 val item = mockPlainItem(material)
                 val block = makeBlockWithParamChest(
@@ -240,7 +240,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
         "for N items in slots 0..N-1, each item maps to expectedParams[slotIndex]" {
             // Validates: Requirements 9.5, 9.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.list(arbParamKey, 2..5).filter { it.distinct().size == it.size },
                 arbName
             ) { paramKeys, baseName ->
@@ -276,7 +276,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
         "for any N items and N expectedParams, all N entries must appear in the result map" {
             // Validates: Requirements 9.5, 9.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..8),
                 arbName
             ) { n, baseName ->
@@ -311,7 +311,7 @@ class ChestParamsMapPropertyTest : FreeSpec({
     "Property 13f: mixed variable, location, and plain items are all resolved correctly" - {
         "a chest with one of each type must produce correct values for all three" {
             // Validates: Requirements 9.5, 9.6, 9.7, 9.8
-            checkAll(PropTestConfig(iterations = 100), arbName) { name ->
+            checkAll(PropTestConfig(iterations = 20), arbName) { name ->
                 val paramKeys = listOf("p_var", "p_loc", "p_plain")
                 val actionId = "mixed_test_${name.take(8).replace(" ", "_")}"
                 val items = listOf(

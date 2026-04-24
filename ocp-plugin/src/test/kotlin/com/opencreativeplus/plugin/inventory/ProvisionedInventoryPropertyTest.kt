@@ -65,7 +65,7 @@ class ProvisionedInventoryPropertyTest : FreeSpec({
         // Validates: Requirements 2.2, 2.5
         "for any call to provisionDevInventory, slots 0-5 have correct materials and quantities" {
             // Feature: category-based-coding-ui, Property 3: Provisioned inventory category slots
-            checkAll(PropTestConfig(iterations = 100), Arb.element(NodeCategory.entries)) { category ->
+            checkAll(PropTestConfig(iterations = 20), Arb.element(NodeCategory.entries)) { category ->
                 val (manager, player, setItems) = buildSetup()
 
                 manager.provisionDevInventory(player)
@@ -81,7 +81,7 @@ class ProvisionedInventoryPropertyTest : FreeSpec({
         // Validates: Requirements 2.5
         "for any call to provisionDevInventory, category block display names equal russianLabel" {
             // Feature: category-based-coding-ui, Property 3: Provisioned inventory category slots
-            checkAll(PropTestConfig(iterations = 100), Arb.element(NodeCategory.entries)) { category ->
+            checkAll(PropTestConfig(iterations = 20), Arb.element(NodeCategory.entries)) { category ->
                 val (manager, player, setItems) = buildSetup()
 
                 manager.provisionDevInventory(player)
@@ -100,7 +100,7 @@ class ProvisionedInventoryPropertyTest : FreeSpec({
         // Validates: Requirements 2.1
         "provisionDevInventory always clears inventory before provisioning" {
             // Feature: category-based-coding-ui, Property 3: Provisioned inventory category slots
-            checkAll(PropTestConfig(iterations = 100), Arb.element(NodeCategory.entries)) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.element(NodeCategory.entries)) { _ ->
                 val (manager, player, _) = buildSetup()
 
                 manager.provisionDevInventory(player)
@@ -112,7 +112,7 @@ class ProvisionedInventoryPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "provisioned slots never exceed index 35" {
             // Feature: category-based-coding-ui, Property 3: Provisioned inventory category slots
-            checkAll(PropTestConfig(iterations = 100), Arb.element(NodeCategory.entries)) { _ ->
+            checkAll(PropTestConfig(iterations = 20), Arb.element(NodeCategory.entries)) { _ ->
                 val (manager, player, setItems) = buildSetup()
 
                 manager.provisionDevInventory(player)

@@ -14,9 +14,11 @@ import com.opencreativeplus.plugin.node.array.CreateListNode
 import com.opencreativeplus.plugin.node.array.FilterListNode
 import com.opencreativeplus.plugin.node.array.GetListElementNode
 import com.opencreativeplus.plugin.node.array.GetListSizeNode
+import com.opencreativeplus.plugin.node.condition.AndConditionNode
 import com.opencreativeplus.plugin.node.condition.EqualsCondition
 import com.opencreativeplus.plugin.node.condition.GreaterThanCondition
 import com.opencreativeplus.plugin.node.condition.LessThanCondition
+import com.opencreativeplus.plugin.node.condition.OrConditionNode
 import com.opencreativeplus.plugin.node.event.OnJoinEvent
 import com.opencreativeplus.plugin.node.event.OnDamageEvent
 import com.opencreativeplus.plugin.node.event.OnInteractEvent
@@ -154,6 +156,24 @@ object BuiltInNodeRegistry {
         }
         registry.registerCondition(Material.DAYLIGHT_DETECTOR, "less_than") { params ->
             LessThanCondition(params["left"], params["right"])
+        }
+        // Boolean logic nodes — children resolved from condition_children param (chest-above)
+        // Requirements: 6.1, 7.1
+        registry.registerCondition(Material.LIME_STAINED_GLASS, "and_condition") { params ->
+            @Suppress("UNCHECKED_CAST")
+            val childIds = params["condition_children"] as? List<String> ?: emptyList()
+            val children = childIds.mapNotNull { id ->
+                registry.getConditionFactoryById(id)?.invoke(emptyMap())
+            }
+            AndConditionNode(children)
+        }
+        registry.registerCondition(Material.ORANGE_STAINED_GLASS, "or_condition") { params ->
+            @Suppress("UNCHECKED_CAST")
+            val childIds = params["condition_children"] as? List<String> ?: emptyList()
+            val children = childIds.mapNotNull { id ->
+                registry.getConditionFactoryById(id)?.invoke(emptyMap())
+            }
+            OrConditionNode(children)
         }
     }
 

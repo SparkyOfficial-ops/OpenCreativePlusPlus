@@ -311,7 +311,10 @@ class BlockScanner(
      * 3. If absent → resolve nodeId via Material-based NodeRegistry lookup.
      * 4. If action_id present but not registered → log WARNING and return null (skip block).
      *
-     * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 7.1
+     * For `and_condition` / `or_condition` nodes, child condition nodeIds are read from
+     * the chest placed directly above the node block (Requirements 6.6, 7.6).
+     *
+     * Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 6.6, 7.1, 7.6
      */
     internal fun buildScannedNode(block: Block): ScannedNode? {
         val pdcActionId = readActionId(block)
@@ -331,7 +334,10 @@ class BlockScanner(
             }
 
             val descriptor = categoryRegistry?.getDescriptorById(pdcActionId)
-            val params = extractParameters(block, descriptor)
+            val params = extractParameters(block, descriptor).toMutableMap()
+            if (pdcActionId == "and_condition" || pdcActionId == "or_condition") {
+                params["condition_children"] = readConditionChildren(block)
+            }
             ScannedNode(
                 blockType = block.type,
                 location  = block.location,
@@ -345,7 +351,10 @@ class BlockScanner(
                 ?: nodeRegistry.getValueNodeId(block.type)
 
             val descriptor = materialNodeId?.let { categoryRegistry?.getDescriptorById(it) }
-            val params = extractParameters(block, descriptor)
+            val params = extractParameters(block, descriptor).toMutableMap()
+            if (materialNodeId == "and_condition" || materialNodeId == "or_condition") {
+                params["condition_children"] = readConditionChildren(block)
+            }
             ScannedNode(
                 blockType  = block.type,
                 location   = block.location,
@@ -353,6 +362,30 @@ class BlockScanner(
                 nodeId     = materialNodeId
             )
         }
+    }
+
+    /**
+     * Reads child condition nodeIds from the chest placed directly above [block].
+     *
+     * Each item in the chest must have `ocp:action_id` in its PDC to be recognised
+     * as a child condition reference. Items without this key are skipped.
+     *
+     * Returns a list of nodeId strings in chest-slot order.
+     *
+     * Requirements: 6.6, 7.6
+     */
+    internal fun readConditionChildren(block: Block): List<String> {
+        val above = block.getRelative(BlockFace.UP)
+        val aboveState = above.state as? Chest ?: return emptyList()
+        val children = mutableListOf<String>()
+        for (item in aboveState.inventory.contents) {
+            if (item == null) continue
+            val nodeId = item.itemMeta?.persistentDataContainer
+                ?.get(KEY_ACTION_ID, PersistentDataType.STRING)
+                ?: continue
+            children.add(nodeId)
+        }
+        return children
     }
 
     /**

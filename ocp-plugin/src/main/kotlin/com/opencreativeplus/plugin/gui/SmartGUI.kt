@@ -1,6 +1,6 @@
 package com.opencreativeplus.plugin.gui
 
-import com.opencreativeplus.core.input.ChatInputManager
+import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.core.serialization.ParamSerializer
 import com.opencreativeplus.api.registry.NodeRegistry
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +30,7 @@ class SmartGUI(
     private val player: Player,
     private val block: Block,
     private val nodeRegistry: NodeRegistry,
-    private val chatInputManager: ChatInputManager,
+    private val signInputManager: SignInputManager,
     private val paramSerializer: ParamSerializer,
     private val scope: CoroutineScope,
     private val plotId: UUID,
@@ -178,12 +178,13 @@ class SmartGUI(
     }
 
     /**
-     * Suspend: close inventory, await chat input, save, reopen.
+     * Suspend: close inventory, await sign input, save, reopen.
      * s: 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
      */
     suspend fun editParam(paramName: String, paramType: ParamType) {
         player.closeInventory()
-        val value = chatInputManager.awaitChatInput(player, "Enter value for $paramName (or 'cancel'):")
+        val currentValue = currentParams[paramName]?.first?.toString() ?: ""
+        val value = signInputManager.awaitSignInput(player, currentValue)
         if (value != null) {
             currentParams[paramName] = value to paramType
             paramSerializer.save(block, paramName, value)

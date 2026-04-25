@@ -1,7 +1,7 @@
 package com.opencreativeplus.plugin.gui
 
 import com.opencreativeplus.core.execution.VariableManager
-import com.opencreativeplus.core.input.ChatInputManager
+import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.core.serialization.ParamSerializer
 import com.opencreativeplus.api.registry.NodeRegistry
 import io.mockk.*
@@ -28,7 +28,7 @@ class SmartGUITest {
     private lateinit var player: Player
     private lateinit var block: Block
     private lateinit var nodeRegistry: NodeRegistry
-    private lateinit var chatInputManager: ChatInputManager
+    private lateinit var signInputManager: SignInputManager
     private lateinit var paramSerializer: ParamSerializer
     private lateinit var variableManager: VariableManager
     private lateinit var inventory: Inventory
@@ -41,7 +41,7 @@ class SmartGUITest {
         player = mockk(relaxed = true)
         block = mockk(relaxed = true)
         nodeRegistry = mockk(relaxed = true)
-        chatInputManager = mockk(relaxed = true)
+        signInputManager = mockk(relaxed = true)
         paramSerializer = mockk(relaxed = true)
         variableManager = mockk(relaxed = true)
         inventory = mockk(relaxed = true)
@@ -161,7 +161,7 @@ class SmartGUITest {
         val gui = makeGui()
         gui.currentParams["msg"] = "old" to ParamType.STRING
 
-        coEvery { chatInputManager.awaitChatInput(player, any()) } returns "newValue"
+        coEvery { signInputManager.awaitSignInput(player, any()) } returns "newValue"
 
         gui.editParam("msg", ParamType.STRING)
 
@@ -175,7 +175,7 @@ class SmartGUITest {
         val gui = makeGui()
         gui.currentParams["msg"] = "old" to ParamType.STRING
 
-        coEvery { chatInputManager.awaitChatInput(player, any()) } returns null
+        coEvery { signInputManager.awaitSignInput(player, any()) } returns null
 
         gui.editParam("msg", ParamType.STRING)
 
@@ -208,7 +208,7 @@ class SmartGUITest {
         player = player,
         block = block,
         nodeRegistry = nodeRegistry,
-        chatInputManager = chatInputManager,
+        signInputManager = signInputManager,
         paramSerializer = paramSerializer,
         scope = scope,
         plotId = plotId,

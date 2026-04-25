@@ -11,6 +11,7 @@ allprojects {
         mavenCentral()
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://jitpack.io")
+        maven("https://repo.dmulloy2.net/repository/public/")
     }
 }
 

@@ -15,6 +15,7 @@ import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
 import org.bukkit.Bukkit
@@ -23,6 +24,9 @@ import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryView
 import org.bukkit.inventory.ItemFactory
 import org.bukkit.inventory.meta.ItemMeta
+import org.bukkit.plugin.Plugin
+import org.bukkit.scheduler.BukkitScheduler
+import org.bukkit.scheduler.BukkitTask
 import java.util.UUID
 
 /**
@@ -57,6 +61,27 @@ class VariableSuggestionMenuPropertyTest : FreeSpec({
     )
 
     fun mockPlayer(): Player = mockk<Player>(relaxed = true)
+
+    fun mockBukkit(runTaskImmediately: Boolean = true): Pair<Player, Inventory> {
+        val itemMeta = mockk<ItemMeta>(relaxed = true)
+        val itemFactory = mockk<ItemFactory>(relaxed = true)
+        every { itemFactory.getItemMeta(any()) } returns itemMeta
+        mockkStatic(Bukkit::class)
+        every { Bukkit.getItemFactory() } returns itemFactory
+        val stubbedTask = mockk<BukkitTask>(relaxed = true)
+        val scheduler = mockk<BukkitScheduler>(relaxed = true)
+        every { Bukkit.getScheduler() } returns scheduler
+        val runnableSlot = slot<Runnable>()
+        every { scheduler.runTask(any<Plugin>(), capture(runnableSlot)) } answers {
+            stubbedTask.also { if (runTaskImmediately) runnableSlot.captured.run() }
+        }
+        every { scheduler.runTaskLater(any<Plugin>(), capture(runnableSlot), any()) } answers {
+            stubbedTask.also { if (runTaskImmediately) runnableSlot.captured.run() }
+        }
+        val player = mockk<Player>(relaxed = true)
+        every { player.openInventory(any<Inventory>()) } returns mockk<InventoryView>(relaxed = true)
+        return player to mockk(relaxed = true)
+    }
 
     afterEach { unmockkAll() }
 

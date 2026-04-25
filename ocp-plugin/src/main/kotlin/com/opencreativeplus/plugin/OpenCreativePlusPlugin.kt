@@ -7,7 +7,7 @@ import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.core.execution.CoroutineConfiguration
 import com.opencreativeplus.core.execution.ExecutionEngine
 import com.opencreativeplus.core.execution.VariableManager
-import com.opencreativeplus.core.input.ChatInputManager
+import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.core.serialization.ParamSerializer
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
@@ -44,11 +44,10 @@ import com.opencreativeplus.plugin.watchdog.TpsMonitorTask
 import com.opencreativeplus.plugin.world.WorldManager
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
-import io.papermc.paper.event.player.AsyncChatEvent
+import com.comphenix.protocol.ProtocolLibrary
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer
 import org.bukkit.NamespacedKey
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
@@ -77,7 +76,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
     private lateinit var tpsMonitorTask: TpsMonitorTask
     private lateinit var categoryRegistry: CategoryRegistry
     private lateinit var hologramReporter: HologramReporter
-    lateinit var chatInputManager: ChatInputManager
+    lateinit var signInputManager: SignInputManager
         private set
     lateinit var paramSerializer: ParamSerializer
         private set
@@ -209,23 +208,16 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
         )
 
-        // ── ChatInputManager + ParamSerializer ────────────────────────────────
-        chatInputManager = ChatInputManager()
+        // ── SignInputManager + ParamSerializer ────────────────────────────────
+        val protocolManager = ProtocolLibrary.getProtocolManager()
+        signInputManager = SignInputManager(this, protocolManager)
         paramSerializer = ParamSerializer { name -> NamespacedKey(this, name) }
 
-        // Chat input listener: intercepts AsyncChatEvent and PlayerQuitEvent
+        // PlayerQuitEvent listener: cleans up sign input sessions
         server.pluginManager.registerEvents(object : Listener {
             @EventHandler
-            fun onChat(event: AsyncChatEvent) {
-                val text = PlainTextComponentSerializer.plainText().serialize(event.message())
-                if (chatInputManager.onChatMessage(event.player.uniqueId, text)) {
-                    event.isCancelled = true
-                }
-            }
-
-            @EventHandler
             fun onQuit(event: PlayerQuitEvent) {
-                chatInputManager.onPlayerDisconnect(event.player.uniqueId)
+                signInputManager.onPlayerQuit(event.player.uniqueId)
             }
         }, this)
 
@@ -235,7 +227,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                 nodeRegistry = nodeRegistry,
                 modeManager = modeManager,
                 plotManager = plotManager,
-                chatInputManager = chatInputManager,
+                signInputManager = signInputManager,
                 paramSerializer = paramSerializer,
                 variableManager = variableManager,
                 scope = scope,
@@ -301,7 +293,7 @@ class ActionNodeInteractListener(
     private val nodeRegistry: NodeRegistry,
     private val modeManager: ModeManagerImpl,
     private val plotManager: PlotManagerImpl,
-    private val chatInputManager: ChatInputManager,
+    private val signInputManager: SignInputManager,
     private val paramSerializer: ParamSerializer,
     private val variableManager: VariableManager,
     private val scope: CoroutineScope,
@@ -324,7 +316,7 @@ class ActionNodeInteractListener(
                 player = player,
                 block = block,
                 nodeRegistry = nodeRegistry,
-                chatInputManager = chatInputManager,
+                signInputManager = signInputManager,
                 paramSerializer = paramSerializer,
                 scope = scope,
                 plotId = plot.id,

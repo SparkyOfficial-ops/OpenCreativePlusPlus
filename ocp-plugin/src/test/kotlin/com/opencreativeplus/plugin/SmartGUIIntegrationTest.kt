@@ -2,16 +2,14 @@ package com.opencreativeplus.plugin
 
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.core.execution.VariableManager
-import com.opencreativeplus.core.input.ChatInputCancelledException
-import com.opencreativeplus.core.input.ChatInputManager
 import com.opencreativeplus.core.serialization.ParamSerializer
 import com.opencreativeplus.plugin.gui.ParamType
 import com.opencreativeplus.plugin.gui.SmartGUI
+import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import io.mockk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import org.bukkit.NamespacedKey
 import org.bukkit.World
@@ -32,11 +30,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * End-to-end integration test: SmartGUI → ChatInput → ParamSerializer → BlockScanner PDC round-trip.
+ * End-to-end integration test: SmartGUI → SignInput → ParamSerializer → BlockScanner PDC round-trip.
  *
  * Validates the full pipeline:
  *   1. SmartGUI opens and renders parameters (s 1.1, 1.2)
- *   2. Player clicks Edit → ChatInputManager intercepts chat → value saved via ParamSerializer (s 1.3–1.8)
+ *   2. Player clicks Edit → SignInputManager intercepts sign input → value saved via ParamSerializer (s 1.3–1.8)
  *   3. ParamSerializer writes to block PDC (s 1.9, 20.1)
  *   4. BlockScanner reads PDC and returns the saved value (s 20.2, 20.3, 20.4, 20.5)
  *
@@ -168,13 +166,13 @@ class SmartGUIIntegrationTest {
         ParamSerializer { name -> NamespacedKey("ocp", name) }
 
     private fun makeGui(
-        chatInputManager: ChatInputManager,
+        signInputManager: SignInputManager,
         paramSerializer: ParamSerializer
     ): SmartGUI = SmartGUI(
         player = player,
         block = block,
         nodeRegistry = nodeRegistry,
-        chatInputManager = chatInputManager,
+        signInputManager = signInputManager,
         paramSerializer = paramSerializer,
         scope = scope,
         plotId = plotId,
@@ -200,11 +198,11 @@ class SmartGUIIntegrationTest {
      */
     @Test
     fun `editParam saves value via ParamSerializer and BlockScanner reads it back`() = runTest {
-        val chatInputManager = mockk<ChatInputManager>()
-        coEvery { chatInputManager.awaitChatInput(player, any()) } returns "HelloWorld"
+        val signInputManager = mockk<SignInputManager>()
+        coEvery { signInputManager.awaitSignInput(player, any()) } returns "HelloWorld"
 
         val paramSerializer = makeParamSerializer()
-        val gui = makeGui(chatInputManager, paramSerializer)
+        val gui = makeGui(signInputManager, paramSerializer)
         gui.registerParam("message", ParamType.STRING, "")
 
         // Act: simulate player editing the "message" param
@@ -259,9 +257,9 @@ class SmartGUIIntegrationTest {
      */
     @Test
     fun `SmartGUI save persists all params and BlockScanner reads them all back`() {
-        val chatInputManager = mockk<ChatInputManager>(relaxed = true)
+        val signInputManager = mockk<SignInputManager>(relaxed = true)
         val paramSerializer = makeParamSerializer()
-        val gui = makeGui(chatInputManager, paramSerializer)
+        val gui = makeGui(signInputManager, paramSerializer)
 
         // Populate params directly (bypasses Bukkit inventory rendering)
         gui.currentParams["name"] = "Alice" to ParamType.STRING
@@ -306,22 +304,22 @@ class SmartGUIIntegrationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Test 4: Chat session cancel — no save, GUI reopens (s 1.7)
+    // Test 4: Sign input cancel — no save, GUI reopens (s 1.5)
     // -------------------------------------------------------------------------
 
     /**
-     * When the player types "cancel" during a Chat_Input_Session,
-     * awaitChatInput returns null, nothing is saved, and the GUI reopens.
+     * When the player cancels the sign input (awaitSignInput returns null),
+     * nothing is saved, and the GUI reopens.
      *
-     * s: 1.7
+     * s: 1.5
      */
     @Test
     fun `editParam with cancel does not save and reopens GUI`() = runTest {
-        val chatInputManager = mockk<ChatInputManager>()
-        coEvery { chatInputManager.awaitChatInput(player, any()) } returns null
+        val signInputManager = mockk<SignInputManager>()
+        coEvery { signInputManager.awaitSignInput(player, any()) } returns null
 
         val paramSerializer = makeParamSerializer()
-        val gui = makeGui(chatInputManager, paramSerializer)
+        val gui = makeGui(signInputManager, paramSerializer)
         gui.currentParams["msg"] = "original" to ParamType.STRING
 
         gui.editParam("msg", ParamType.STRING)
@@ -329,59 +327,12 @@ class SmartGUIIntegrationTest {
         // PDC should not have been written
         assertTrue(pdcStore.isEmpty(), "PDC must not be written when player cancels")
 
-        // GUI reopens (save slot is set)
+        // GUI still reopens (save slot is set)
         verify { inventory.setItem(53, any()) }
     }
 
     // -------------------------------------------------------------------------
-    // Test 5: Player disconnect during session (s 1.8)
-    // -------------------------------------------------------------------------
-
-    /**
-     * ChatInputManager.onPlayerDisconnect is a no-op when no session is active.
-     *
-     * s: 1.8
-     */
-    @Test
-    fun `onPlayerDisconnect with no active session does not throw`() {
-        val chatInputManager = ChatInputManager()
-        val playerId = player.uniqueId
-        // Must not throw
-        chatInputManager.onPlayerDisconnect(playerId)
-        assertTrue(pdcStore.isEmpty(), "No PDC write should occur when no session is active")
-    }
-
-    /**
-     * ChatInputManager.onPlayerDisconnect throws ChatInputCancelledException
-     * to the waiting coroutine when a session is active.
-     *
-     * s: 1.8, 3.5
-     */
-    @Test
-    fun `onPlayerDisconnect with active session completes deferred exceptionally`() = runTest {
-        val chatInputManager = ChatInputManager()
-        val playerId = UUID.randomUUID()
-        val mockPlayer = mockk<Player>(relaxed = true)
-        every { mockPlayer.uniqueId } returns playerId
-
-        var caughtException: ChatInputCancelledException? = null
-        val job = launch(Dispatchers.Unconfined) {
-            try {
-                chatInputManager.awaitChatInput(mockPlayer, "Enter value:")
-            } catch (e: ChatInputCancelledException) {
-                caughtException = e
-            }
-        }
-
-        chatInputManager.onPlayerDisconnect(playerId)
-        job.join()
-
-        assertEquals(playerId, caughtException?.playerId,
-            "ChatInputCancelledException must be thrown with the correct playerId on disconnect")
-    }
-
-    // -------------------------------------------------------------------------
-    // Test 6: Multiple params — full pipeline (s 1.1–1.9, 20.1–20.5)
+    // Test 5: Multiple params — full pipeline (s 1.1–1.9, 20.1–20.5)
     // -------------------------------------------------------------------------
 
     /**
@@ -392,9 +343,9 @@ class SmartGUIIntegrationTest {
      */
     @Test
     fun `multiple params of different types survive full round-trip`() {
-        val chatInputManager = mockk<ChatInputManager>(relaxed = true)
+        val signInputManager = mockk<SignInputManager>(relaxed = true)
         val paramSerializer = makeParamSerializer()
-        val gui = makeGui(chatInputManager, paramSerializer)
+        val gui = makeGui(signInputManager, paramSerializer)
 
         gui.currentParams["title"] = "Boss Fight" to ParamType.STRING
         gui.currentParams["radius"] = 15 to ParamType.INT
@@ -411,7 +362,7 @@ class SmartGUIIntegrationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Test 7: ParamSerializer.load reads back what save wrote (s 20.5)
+    // Test 6: ParamSerializer.load reads back what save wrote (s 20.5)
     // -------------------------------------------------------------------------
 
     /**
@@ -434,7 +385,7 @@ class SmartGUIIntegrationTest {
     }
 
     // -------------------------------------------------------------------------
-    // Test 8: registerParam loads existing PDC value (s 1.2, 20.2)
+    // Test 7: registerParam loads existing PDC value (s 1.2, 20.2)
     // -------------------------------------------------------------------------
 
     /**
@@ -449,8 +400,8 @@ class SmartGUIIntegrationTest {
         // Pre-populate PDC with a saved value
         paramSerializer.save(block, "weapon", "sword")
 
-        val chatInputManager = mockk<ChatInputManager>(relaxed = true)
-        val gui = makeGui(chatInputManager, paramSerializer)
+        val signInputManager = mockk<SignInputManager>(relaxed = true)
+        val gui = makeGui(signInputManager, paramSerializer)
 
         // Register with a different default — should load "sword" from PDC
         gui.registerParam("weapon", ParamType.STRING, "default_weapon")

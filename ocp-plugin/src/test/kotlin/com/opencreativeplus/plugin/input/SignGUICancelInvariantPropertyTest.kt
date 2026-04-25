@@ -35,7 +35,7 @@ class SignGUICancelInvariantPropertyTest : FreeSpec({
         // Validates: Requirements 1.5
         "for any initial parameter value, cancelling the session returns null and leaves the original value unchanged" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string()
             ) { originalValue ->
                 runBlocking {

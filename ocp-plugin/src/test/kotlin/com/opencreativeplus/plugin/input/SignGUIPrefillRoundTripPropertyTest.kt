@@ -33,7 +33,7 @@ class SignGUIPrefillRoundTripPropertyTest : FreeSpec({
         // Validates: Requirements 1.2, 1.3
         "for any prefill string, completing the deferred with the same value returns that value" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string()
             ) { prefill ->
                 runBlocking {

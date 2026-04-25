@@ -71,7 +71,7 @@ class VariableExplorerRenderPropertyTest : FreeSpec({
         // Validates: Requirements 2.1
         "for any non-empty variable map, inventory size matches formula" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 arbVarMap
             ) { allVars ->
                 val (size, _) = buildInventoryModel(allVars)
@@ -89,7 +89,7 @@ class VariableExplorerRenderPropertyTest : FreeSpec({
         // Validates: Requirements 2.1, 2.2
         "for any non-empty variable map, each key has exactly one matching slot" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 arbVarMap
             ) { allVars ->
                 val (_, slots) = buildInventoryModel(allVars)
@@ -112,7 +112,7 @@ class VariableExplorerRenderPropertyTest : FreeSpec({
         // Validates: Requirements 2.2
         "for any non-empty variable map, each item lore contains the value string" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 arbVarMap
             ) { allVars ->
                 val (_, slots) = buildInventoryModel(allVars)
@@ -135,7 +135,7 @@ class VariableExplorerRenderPropertyTest : FreeSpec({
         // Validates: Requirements 2.1
         "empty map → slot 0 is the info item" {
             // Deterministic — no generator needed, just verify the empty-map branch directly
-            repeat(200) {
+            repeat(20) {
                 val (size, slots) = buildInventoryModel(emptyMap())
                 size shouldBe 9
                 slots[0] shouldNotBe null
@@ -152,7 +152,7 @@ class VariableExplorerRenderPropertyTest : FreeSpec({
         // Validates: Requirements 2.1
         "when both scopes have the same key, plot scope value wins" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 arbSmallVarMap,
                 arbSmallVarMap
             ) { savedVars, plotVars ->

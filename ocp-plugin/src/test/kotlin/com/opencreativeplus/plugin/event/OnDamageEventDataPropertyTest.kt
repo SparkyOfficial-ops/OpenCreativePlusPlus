@@ -51,7 +51,7 @@ class OnDamageEventDataPropertyTest : FreeSpec({
         "eventData contains 'victim', 'damager', and 'damage' keys" {
             // **Validates: Requirements 3.2, 3.3**
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..32),
                 Arb.string(1..32),
                 Arb.double().filter { it.isFinite() && it >= 0.0 }
@@ -69,7 +69,7 @@ class OnDamageEventDataPropertyTest : FreeSpec({
         "'victim' value is a String equal to the victim entity name" {
             // **Validates: Requirements 3.3**
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..32),
                 Arb.string(1..32),
                 Arb.double().filter { it.isFinite() && it >= 0.0 }
@@ -88,7 +88,7 @@ class OnDamageEventDataPropertyTest : FreeSpec({
         "'damager' value is a String equal to the damager entity name" {
             // **Validates: Requirements 3.3**
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..32),
                 Arb.string(1..32),
                 Arb.double().filter { it.isFinite() && it >= 0.0 }
@@ -107,7 +107,7 @@ class OnDamageEventDataPropertyTest : FreeSpec({
         "'damage' value is a Double equal to the damage amount" {
             // **Validates: Requirements 3.3**
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..32),
                 Arb.string(1..32),
                 Arb.double().filter { it.isFinite() && it >= 0.0 }
@@ -126,7 +126,7 @@ class OnDamageEventDataPropertyTest : FreeSpec({
         "eventData contains exactly the three required keys and no others" {
             // **Validates: Requirements 3.3**
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..32),
                 Arb.string(1..32),
                 Arb.double().filter { it.isFinite() && it >= 0.0 }

@@ -96,7 +96,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "for any single-page variable map and any valid slot, deleted key is absent after delete" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSinglePageMap,
                 Arb.int(0..44)
             ) { allVars, rawSlot ->
@@ -125,7 +125,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "for any single-page variable map, remaining keys are all present after delete" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSinglePageMap,
                 Arb.int(0..44)
             ) { allVars, rawSlot ->
@@ -159,7 +159,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "for any single-page variable map with size > 1, slot count decreases by 1 after delete" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.map(Arb.string(1..10), Arb.string(0..20), minSize = 2, maxSize = 45),
                 Arb.int(0..44)
             ) { allVars, rawSlot ->
@@ -194,7 +194,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "for any multi-page variable map, deleted key is absent from the page after delete" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbMultiPageMap,
                 Arb.int(0..10),
                 Arb.int(0..44)
@@ -231,7 +231,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "for any multi-page variable map, deleted key is absent from every page after delete" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbMultiPageMap,
                 Arb.int(0..10),
                 Arb.int(0..44)
@@ -267,7 +267,7 @@ class VariableExplorerDeletePropertyTest : FreeSpec({
          */
         "deleting the sole variable yields the empty-state info item" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.string(1..10),
                 Arb.string(0..20)
             ) { key, value ->

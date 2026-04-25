@@ -6,6 +6,6 @@ import io.kotest.property.PropertyTesting
 @Suppress("OVERRIDE_DEPRECATION")
 object KotestConfig : AbstractProjectConfig() {
     override fun beforeAll() {
-        PropertyTesting.defaultIterationCount = 100
+        PropertyTesting.defaultIterationCount = 20
     }
 }

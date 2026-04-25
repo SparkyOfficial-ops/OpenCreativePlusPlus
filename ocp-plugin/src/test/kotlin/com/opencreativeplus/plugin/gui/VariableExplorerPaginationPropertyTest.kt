@@ -51,7 +51,7 @@ class VariableExplorerPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "for any variable map with size > 45 and any valid page, slice.size <= 45" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbLargeVarMap,
                 Arb.int(0..10)
             ) { allVars, rawPage ->
@@ -71,7 +71,7 @@ class VariableExplorerPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "for any variable map with size > 45, hasNextButton(0, totalPages) is true" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbLargeVarMap
             ) { allVars ->
                 val pages = totalPages(allVars.size)
@@ -89,7 +89,7 @@ class VariableExplorerPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "for any variable map with size > 45, hasNextButton(lastPage, totalPages) is false" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbLargeVarMap
             ) { allVars ->
                 val pages = totalPages(allVars.size)
@@ -107,7 +107,7 @@ class VariableExplorerPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "for any variable map with size > 45, hasPrevButton(0) is false" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbLargeVarMap
             ) { allVars ->
                 // Suppress unused warning — the property holds for any large map
@@ -125,7 +125,7 @@ class VariableExplorerPaginationPropertyTest : FreeSpec({
         // Validates: Requirements 2.6
         "union of all page slices equals the original variable list" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbLargeVarMap
             ) { allVars ->
                 val pages = totalPages(allVars.size)

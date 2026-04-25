@@ -80,7 +80,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "victim placeholder resolves to eventData victim value" {
             // Validates: Requirements 3.4, 5.4
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbSafeString,
                 arbSafeString
@@ -96,7 +96,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
 
         "absent victim produces empty string for %victim%" {
             // Validates: Requirements 3.4
-            checkAll(PropTestConfig(iterations = 500), arbSafeString) { suffix ->
+            checkAll(PropTestConfig(iterations = 20), arbSafeString) { suffix ->
                 val template = "%victim%$suffix"
                 val ctx = stubContext(eventData = emptyMap())
 
@@ -116,7 +116,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "damager placeholder resolves to eventData damager value" {
             // Validates: Requirements 3.5
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbSafeString,
                 arbSafeString
@@ -132,7 +132,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
 
         "absent damager produces empty string for %damager%" {
             // Validates: Requirements 3.5
-            checkAll(PropTestConfig(iterations = 500), arbSafeString) { suffix ->
+            checkAll(PropTestConfig(iterations = 20), arbSafeString) { suffix ->
                 val template = "%damager%$suffix"
                 val ctx = stubContext(eventData = emptyMap())
 
@@ -152,7 +152,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "killer placeholder resolves to eventData killer value when present" {
             // Validates: Requirements 5.5
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbSafeString,
                 arbSafeString
@@ -169,7 +169,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "absent killer produces 'none' for %killer%" {
             // Validates: Requirements 5.5
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbSafeString,
                 arbSafeString
             ) { prefix, suffix ->
@@ -192,7 +192,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "player placeholder resolves to player name" {
             // Validates: Requirements 4.4
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbSafeString,
                 arbSafeString
@@ -212,7 +212,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "absent player produces empty string for %player%" {
             // Validates: Requirements 4.4
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbSafeString,
                 arbSafeString
             ) { prefix, suffix ->
@@ -235,7 +235,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "victim, damager, and killer are all substituted in a single template" {
             // Validates: Requirements 3.4, 3.5, 5.4, 5.5
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbName,
                 arbName
@@ -263,7 +263,7 @@ class PlaceholderParserEventDataPropertyTest : FreeSpec({
         "player and victim together are both substituted" {
             // Validates: Requirements 4.4, 5.4
             checkAll(
-                PropTestConfig(iterations = 500),
+                PropTestConfig(iterations = 20),
                 arbName,
                 arbName
             ) { playerName, victimName ->

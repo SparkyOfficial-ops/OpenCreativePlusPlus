@@ -96,16 +96,18 @@ class SignInputManager(
         sessions[player.uniqueId] = session
 
         // Place a temporary sign block at the computed location (client-side only)
-        placeTemporarySign(player, location, prefill)
+        runCatching { placeTemporarySign(player, location, prefill) }
+            .onFailure { plugin.logger.warning("SignInputManager: failed to place temporary sign: ${it.message}") }
 
         // Send OPEN_SIGN_EDITOR packet to open the sign editor UI
-        sendOpenSignEditor(player, location)
+        runCatching { sendOpenSignEditor(player, location) }
+            .onFailure { plugin.logger.warning("SignInputManager: failed to send open sign editor: ${it.message}") }
 
         return try {
             deferred.await()
         } finally {
             sessions.remove(player.uniqueId)
-            removeTemporaryBlock(location, player)
+            runCatching { removeTemporaryBlock(location, player) }
         }
     }
 

@@ -51,31 +51,12 @@ class VariableSuggestionMenuPropertyTest : FreeSpec({
         player = player,
         plotId = plotId,
         variableManager = variableManager,
-        onSelect = {}
+        onSelect = {},
+        inventoryFactory = { _ -> mockk(relaxed = true) },
+        itemFactory = { _, _, _ -> mockk(relaxed = true) }
     )
 
-    /**
-     * Set up all Bukkit statics needed by render():
-     *  - Bukkit.createInventory → mock Inventory
-     *  - Bukkit.getItemFactory  → mock ItemFactory that returns a mock ItemMeta
-     */
-    fun mockBukkit(): Pair<Player, Inventory> {
-        val itemMeta = mockk<ItemMeta>(relaxed = true)
-        val itemFactory = mockk<ItemFactory>(relaxed = true)
-        every { itemFactory.getItemMeta(any()) } returns itemMeta
-        every { itemFactory.isApplicable(any(), any<org.bukkit.inventory.ItemStack>()) } returns true
-
-        val inv = mockk<Inventory>(relaxed = true)
-
-        mockkStatic(Bukkit::class)
-        @Suppress("DEPRECATION")
-        every { Bukkit.createInventory(null, 54, any<String>()) } returns inv
-        every { Bukkit.getItemFactory() } returns itemFactory
-
-        val player = mockk<Player>(relaxed = true)
-        every { player.openInventory(any<Inventory>()) } returns mockk<InventoryView>(relaxed = true)
-        return player to inv
-    }
+    fun mockPlayer(): Player = mockk<Player>(relaxed = true)
 
     afterEach { unmockkAll() }
 

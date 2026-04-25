@@ -14,15 +14,9 @@ import io.kotest.property.arbitrary.int
 import io.kotest.property.checkAll
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.unmockkAll
 import kotlinx.coroutines.runBlocking
-import org.bukkit.Bukkit
 import org.bukkit.entity.Player
-import org.bukkit.inventory.Inventory
-import org.bukkit.inventory.InventoryView
-import org.bukkit.inventory.ItemFactory
-import org.bukkit.inventory.meta.ItemMeta
 import java.util.UUID
 
 /**
@@ -43,22 +37,9 @@ class VariableSelectionPropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    fun mockBukkit(): Pair<Player, Inventory> {
-        val itemMeta = mockk<ItemMeta>(relaxed = true)
-        val itemFactory = mockk<ItemFactory>(relaxed = true)
-        every { itemFactory.getItemMeta(any()) } returns itemMeta
-        every { itemFactory.isApplicable(any(), any<org.bukkit.inventory.ItemStack>()) } returns true
-
-        val inv = mockk<Inventory>(relaxed = true)
-
-        mockkStatic(Bukkit::class)
-        @Suppress("DEPRECATION")
-        every { Bukkit.createInventory(null, 54, any<String>()) } returns inv
-        every { Bukkit.getItemFactory() } returns itemFactory
-
+    fun mockPlayer(): Player {
         val player = mockk<Player>(relaxed = true)
-        every { player.openInventory(any<Inventory>()) } returns mockk<InventoryView>(relaxed = true)
-        return player to inv
+        return player
     }
 
     fun makeMenu(
@@ -70,7 +51,9 @@ class VariableSelectionPropertyTest : FreeSpec({
         player = player,
         plotId = plotId,
         variableManager = variableManager,
-        onSelect = onSelect
+        onSelect = onSelect,
+        inventoryFactory = { _ -> mockk(relaxed = true) },
+        itemFactory = { _, _, _ -> mockk(relaxed = true) }
     )
 
     afterEach { unmockkAll() }
@@ -88,7 +71,7 @@ class VariableSelectionPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 100),
                 Arb.map(Arb.string(1..20), Arb.string(1..20), minSize = 1, maxSize = 44)
             ) { varMap ->
-                val (player, _) = mockBukkit()
+                val player = mockPlayer()
                 val plotId = UUID.randomUUID()
                 val scope = VariableScopeImpl().also { s -> varMap.forEach { (k, v) -> s.set(k, v) } }
                 val vm = mockk<VariableManager>()
@@ -120,7 +103,7 @@ class VariableSelectionPropertyTest : FreeSpec({
                 Arb.map(Arb.string(1..20), Arb.string(1..20), minSize = 1, maxSize = 44),
                 Arb.int(0..43)
             ) { varMap, rawSlot ->
-                val (player, _) = mockBukkit()
+                val player = mockPlayer()
                 val plotId = UUID.randomUUID()
                 val scope = VariableScopeImpl().also { s -> varMap.forEach { (k, v) -> s.set(k, v) } }
                 val vm = mockk<VariableManager>()
@@ -150,7 +133,7 @@ class VariableSelectionPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 100),
                 Arb.map(Arb.string(1..20), Arb.string(1..20), minSize = 1, maxSize = 10)
             ) { varMap ->
-                val (player, _) = mockBukkit()
+                val player = mockPlayer()
                 val plotId = UUID.randomUUID()
                 val scope = VariableScopeImpl().also { s -> varMap.forEach { (k, v) -> s.set(k, v) } }
                 val vm = mockk<VariableManager>()
@@ -184,7 +167,7 @@ class VariableSelectionPropertyTest : FreeSpec({
                 Arb.map(Arb.string(1..20), Arb.string(1..20), minSize = 46, maxSize = 90),
                 Arb.int(0..44)
             ) { varMap, rawSlot ->
-                val (player, _) = mockBukkit()
+                val player = mockPlayer()
                 val plotId = UUID.randomUUID()
                 val scope = VariableScopeImpl().also { s -> varMap.forEach { (k, v) -> s.set(k, v) } }
                 val vm = mockk<VariableManager>()
@@ -219,7 +202,7 @@ class VariableSelectionPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 100),
                 Arb.map(Arb.string(1..20), Arb.string(1..20), minSize = 1, maxSize = 44)
             ) { varMap ->
-                val (player, _) = mockBukkit()
+                val player = mockPlayer()
                 val plotId = UUID.randomUUID()
                 val scope = VariableScopeImpl().also { s -> varMap.forEach { (k, v) -> s.set(k, v) } }
                 val vm = mockk<VariableManager>()

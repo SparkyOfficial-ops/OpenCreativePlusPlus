@@ -59,7 +59,7 @@ class ChatSessionPropertyTest : FreeSpec({
          */
         "any non-cancel message is intercepted while session is active" {
             checkAll(PropTestConfig(iterations = 20), arbNonCancelString) { message ->
-                val manager = ChatInputManager()
+                val manager = ChatInputManager(timeoutMs = 5_000L)
                 val player = mockPlayer()
                 var intercepted = false
 
@@ -185,7 +185,7 @@ class ChatSessionPropertyTest : FreeSpec({
          */
         "the value returned by awaitChatInput equals the intercepted message" {
             checkAll(PropTestConfig(iterations = 20), arbNonCancelString) { message ->
-                val manager = ChatInputManager()
+                val manager = ChatInputManager(timeoutMs = 5_000L)
                 val player = mockPlayer()
                 var capturedValue: String? = null
 

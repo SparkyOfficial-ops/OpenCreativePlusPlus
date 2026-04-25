@@ -21,7 +21,9 @@ import org.bukkit.entity.Player
  *
  * s: 1.4, 1.5, 1.6, 1.7, 1.8, 3.1, 3.2, 3.3, 3.4, 3.5
  */
-class ChatInputManager {
+class ChatInputManager(
+    private val timeoutMs: Long = TIMEOUT_MS
+) {
 
     companion object {
         const val TIMEOUT_MS = 60_000L
@@ -48,7 +50,7 @@ class ChatInputManager {
         sessions[player.uniqueId] = deferred
         player.sendMessage(prompt)
         return try {
-            val result = withTimeoutOrNull(TIMEOUT_MS) { deferred.await() }
+            val result = withTimeoutOrNull(timeoutMs) { deferred.await() }
             if (result == null && !deferred.isCompleted) {
                 // Timed out — deferred was not completed by onChatMessage/onPlayerDisconnect
                 player.sendMessage("§c[OCP] Время ввода истекло.")

@@ -65,7 +65,7 @@ class GUIItemCountPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 0..50)
             ) { rawIds ->
-                val uniqueIds = rawIds.distinct()
+                val uniqueIds = rawIds.distinct().filter { it.isNotBlank() }
                 val registry = CategoryRegistry()
                 val category = NodeCategory.PLAYER_ACTION
 

@@ -1,8 +1,10 @@
 package com.opencreativeplus.plugin.command
 
 import com.opencreativeplus.api.plot.PlotMode
+import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
+import com.opencreativeplus.plugin.gui.VariableExplorerGUI
 import com.opencreativeplus.plugin.node.dialogue.DialogueManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
@@ -15,6 +17,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerQuitEvent
+import org.bukkit.plugin.Plugin
 import java.util.UUID
 
 /**
@@ -27,7 +30,9 @@ class PlotCommands(
     private val modeManager: ModeManagerImpl,
     private val tpsMonitor: TPSMonitor,
     private val scope: CoroutineScope,
-    private val traceManager: TraceManager? = null
+    private val traceManager: TraceManager? = null,
+    private val variableManager: VariableManager? = null,
+    private val plugin: Plugin? = null
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -107,7 +112,23 @@ class PlotCommands(
                     player.sendMessage("§a[OCP] ${targetName} removed from trusted players.")
                 }
             }
-            else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust>")
+            // Req 11.1, 11.4: open Variable Explorer GUI for the player's current plot
+            "vars" -> scope.launch {
+                val plot = plotManager.getPlayerPlot(player.uniqueId)
+                if (plot == null || !plotManager.canEdit(player, plot)) {
+                    player.sendMessage("§c[OCP] You must be on your own plot to use /plot vars.")
+                    return@launch
+                }
+                val vm = variableManager
+                val pl = plugin
+                if (vm == null || pl == null) {
+                    player.sendMessage("§c[OCP] Variable Explorer is not available.")
+                    return@launch
+                }
+                val gui = VariableExplorerGUI(plot.id, vm, pl, scope)
+                org.bukkit.Bukkit.getScheduler().runTask(pl, Runnable { gui.open(player) })
+            }
+            else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust|vars>")
         }
     }
 

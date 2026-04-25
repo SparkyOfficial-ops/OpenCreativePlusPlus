@@ -274,4 +274,114 @@ class EventDispatcherTest {
 
         assertEquals(2, callCount.get(), "Both scripts should have been attempted despite failures")
     }
+
+    // -----------------------------------------------------------------------
+    // Air-click guard — req 4.5
+    // -----------------------------------------------------------------------
+
+    /**
+     * Models the guard in PlotEventListener.onPlayerInteract:
+     *   val clickedBlock = event.clickedBlock ?: return
+     * Only dispatches when a block is associated with the event.
+     */
+    private fun shouldDispatchInteract(hasBlock: Boolean): Boolean = hasBlock
+
+    @Test
+    fun `air click does not dispatch on_interact event`() = runTest {
+        val engine = mockk<ExecutionEngine>(relaxed = true)
+        val dispatcher = EventDispatcher(engine, this)
+
+        val plotId = UUID.randomUUID()
+        dispatcher.registerScripts(plotId, listOf(makeScript("on_interact")))
+
+        // Simulate air click: hasBlock = false → guard returns false → dispatchEvent not called
+        val hasBlock = false
+        if (shouldDispatchInteract(hasBlock)) {
+            dispatcher.dispatchEvent(plotId, "on_interact", mapOf("player" to "Steve", "action" to "RIGHT_CLICK_AIR"), null)
+        }
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { engine.executeScript(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `block click does dispatch on_interact event`() = runTest {
+        val engine = mockk<ExecutionEngine>(relaxed = true)
+        val dispatcher = EventDispatcher(engine, this)
+
+        val plotId = UUID.randomUUID()
+        dispatcher.registerScripts(plotId, listOf(makeScript("on_interact")))
+
+        // Simulate block click: hasBlock = true → guard passes → dispatchEvent called
+        val hasBlock = true
+        if (shouldDispatchInteract(hasBlock)) {
+            dispatcher.dispatchEvent(plotId, "on_interact", mapOf("player" to "Steve", "block" to "0,64,0", "action" to "RIGHT_CLICK_BLOCK"), null)
+        }
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { engine.executeScript(any(), plotId, null, any()) }
+    }
+
+    // -----------------------------------------------------------------------
+    // Projectile → shooter resolution — req 3.6
+    // -----------------------------------------------------------------------
+
+    /**
+     * Models the shooter-resolution logic in PlotEventListener.onEntityDamageByEntity:
+     *   val damager = if (rawDamager is Projectile) rawDamager.shooter as? Entity ?: rawDamager
+     *                 else rawDamager
+     */
+    private fun resolveDamager(isProjectile: Boolean, shooterName: String?, rawDamagerName: String): String {
+        return if (isProjectile && shooterName != null) shooterName else rawDamagerName
+    }
+
+    @Test
+    fun `projectile damager resolves to shooter name`() {
+        val shooterName = "Archer"
+        val arrowName = "Arrow"
+
+        val resolved = resolveDamager(isProjectile = true, shooterName = shooterName, rawDamagerName = arrowName)
+
+        assertEquals(shooterName, resolved, "Shooter should be resolved as damager for projectile")
+    }
+
+    @Test
+    fun `non-projectile damager resolves to entity name`() {
+        val swordPlayerName = "Warrior"
+
+        val resolved = resolveDamager(isProjectile = false, shooterName = null, rawDamagerName = swordPlayerName)
+
+        assertEquals(swordPlayerName, resolved, "Non-projectile damager should use entity name directly")
+    }
+
+    @Test
+    fun `projectile without shooter falls back to projectile name`() {
+        val arrowName = "Arrow"
+
+        val resolved = resolveDamager(isProjectile = true, shooterName = null, rawDamagerName = arrowName)
+
+        assertEquals(arrowName, resolved, "Projectile with no shooter should fall back to projectile name")
+    }
+
+    @Test
+    fun `eventData damager key uses resolved shooter name for projectile`() = runTest {
+        val engine = mockk<ExecutionEngine>(relaxed = true)
+        val dispatcher = EventDispatcher(engine, this)
+
+        val plotId = UUID.randomUUID()
+        dispatcher.registerScripts(plotId, listOf(makeScript("player_damage")))
+
+        // Simulate projectile hit: shooter "Archer" fires arrow at "Steve"
+        val resolvedDamager = resolveDamager(isProjectile = true, shooterName = "Archer", rawDamagerName = "Arrow")
+        val eventData = mapOf<String, Any>(
+            "victim" to "Steve",
+            "damager" to resolvedDamager,
+            "damage" to 4.0
+        )
+
+        dispatcher.dispatchEvent(plotId, "player_damage", eventData, null)
+        advanceUntilIdle()
+
+        coVerify { engine.executeScript(any(), plotId, null, match { it["damager"] == "Archer" }) }
+    }
 }

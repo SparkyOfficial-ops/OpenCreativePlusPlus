@@ -70,7 +70,7 @@ class HologramReplacePropertyTest : StringSpec({
             store.reportError(loc, msg2)
 
             val truncated = if (msg2.length > 40) msg2.take(40) else msg2
-            store.getMessage(loc) shouldBe "c$truncated"
+            store.getMessage(loc) shouldBe "§c$truncated"
         }
     }
 
@@ -97,7 +97,7 @@ class HologramReplacePropertyTest : StringSpec({
     }
 
     // -----------------------------------------------------------------------
-    // Property 19d: N calls on the same block  exactly 1 hologram, N-1 cancellations
+    // Property 19d: N calls on the same block → exactly 1 hologram, N-1 cancellations
     // -----------------------------------------------------------------------
 
     "Property 19d: N consecutive calls on the same block leave exactly 1 hologram and N-1 cancellations" {
@@ -123,7 +123,7 @@ class HologramReplacePropertyTest : StringSpec({
     // Property 19e: errors on distinct blocks do not interfere with each other
     // -----------------------------------------------------------------------
 
-    "Property 19e: errors on distinct blocks are independent  no cross-cancellation" {
+    "Property 19e: errors on distinct blocks are independent — no cross-cancellation" {
         checkAll(
             PropTestConfig(iterations = 200),
             Arb.string(1, 20),
@@ -170,10 +170,10 @@ private class FakeHologramStore19 {
 
     fun reportError(location: Location, message: String) {
         val key = locationKey(location)
-        // Cancel and remove existing entry  mirrors Req 12.4
+        // Cancel and remove existing entry — mirrors Req 12.4
         active.remove(key)?.task?.cancel()
         val truncated = if (message.length > 40) message.take(40) else message
-        val text = "c$truncated"
+        val text = "§c$truncated"
         val task = FakeTask19(cancelledCount)
         scheduledCount.incrementAndGet()
         active[key] = Entry(text, task)

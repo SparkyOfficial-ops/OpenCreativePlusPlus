@@ -4,6 +4,7 @@ import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
+import com.opencreativeplus.plugin.gui.PlotTopGUI
 import com.opencreativeplus.plugin.gui.VariableExplorerGUI
 import com.opencreativeplus.plugin.node.dialogue.DialogueManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
@@ -32,7 +33,8 @@ class PlotCommands(
     private val scope: CoroutineScope,
     private val traceManager: TraceManager? = null,
     private val variableManager: VariableManager? = null,
-    private val plugin: Plugin? = null
+    private val plugin: Plugin? = null,
+    private val plotTopGUI: PlotTopGUI? = null
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -128,7 +130,16 @@ class PlotCommands(
                 val gui = VariableExplorerGUI(plot.id, vm, pl, scope)
                 org.bukkit.Bukkit.getScheduler().runTask(pl, Runnable { gui.open(player) })
             }
-            else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust|vars>")
+            // Req 8.1: open Plot Top GUI
+            "top" -> {
+                val gui = plotTopGUI
+                if (gui == null) {
+                    player.sendMessage("§c[OCP] Plot Top is not available.")
+                    return
+                }
+                gui.open(player)
+            }
+            else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust|vars|top>")
         }
     }
 

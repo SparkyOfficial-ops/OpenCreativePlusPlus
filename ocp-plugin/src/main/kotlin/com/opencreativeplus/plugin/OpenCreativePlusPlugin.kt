@@ -25,6 +25,7 @@ import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.event.PlotEventListener
 import com.opencreativeplus.plugin.gui.PlotBrowserGUI
 import com.opencreativeplus.plugin.gui.PlotConfigGUI
+import com.opencreativeplus.plugin.gui.PlotTopGUI
 import com.opencreativeplus.plugin.gui.SmartGUI
 import com.opencreativeplus.plugin.gui.smartGuiMakeItem
 import com.opencreativeplus.plugin.inventory.InventoryManager
@@ -199,6 +200,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
 
+        val plotTopGUI = PlotTopGUI(plotPersistence, plotManager, scope)
+        server.pluginManager.registerEvents(plotTopGUI, this)
+
         // Category-based coding UI listeners
         val parameterPlacer = ParameterPlacer(this)
         server.pluginManager.registerEvents(
@@ -236,7 +240,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
 
         // ── Commands ──────────────────────────────────────────────────────────
-        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager)
+        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI)
         listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
             getCommand(cmd)?.setExecutor(plotCommands)
         }

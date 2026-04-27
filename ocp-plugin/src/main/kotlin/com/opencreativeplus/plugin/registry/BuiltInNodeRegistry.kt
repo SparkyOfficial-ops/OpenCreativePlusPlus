@@ -55,6 +55,9 @@ import com.opencreativeplus.plugin.node.world.GetBlockNode
 import com.opencreativeplus.plugin.node.world.SetWeatherNode
 import com.opencreativeplus.plugin.node.world.SetTimeNode
 import com.opencreativeplus.plugin.node.world.CreateExplosionNode
+import com.opencreativeplus.plugin.node.worldedit.FillRegionNode
+import com.opencreativeplus.plugin.node.worldedit.CopyRegionNode
+import com.opencreativeplus.plugin.node.worldedit.PasteRegionNode
 import com.opencreativeplus.plugin.node.ui.SendTitleNode
 import com.opencreativeplus.plugin.node.ui.SendActionBarNode
 import com.opencreativeplus.plugin.node.ui.PlayAnimationNode
@@ -94,6 +97,7 @@ object BuiltInNodeRegistry {
         registerPlayerStatNodes(registry)
         registerInventoryNodes(registry)
         registerWorldNodes(registry)
+        registerWorldEditNodes(registry)
         registerUINodes(registry)
         registerScoreboardNodes(registry)
         registerDialogueNodes(registry)
@@ -260,6 +264,13 @@ object BuiltInNodeRegistry {
         registry.registerAction(Material.LIGHTNING_ROD, "set_weather") { params -> SetWeatherNode(params) }
         registry.registerAction(Material.SUNFLOWER, "set_time") { params -> SetTimeNode(params) }
         registry.registerAction(Material.TNT, "create_explosion") { params -> CreateExplosionNode(params) }
+    }
+
+    private fun registerWorldEditNodes(registry: NodeRegistryImpl) {
+        // WorldEdit-style bulk operations — Requirements: 9.1, 10.1, 10.2
+        registry.registerAction(Material.SPONGE, "fill_region") { params -> FillRegionNode(params) }
+        registry.registerAction(Material.WET_SPONGE, "copy_region") { params -> CopyRegionNode(params) }
+        registry.registerAction(Material.STRUCTURE_BLOCK, "paste_region") { params -> PasteRegionNode(params) }
     }
 
     private fun registerUINodes(registry: NodeRegistryImpl) {

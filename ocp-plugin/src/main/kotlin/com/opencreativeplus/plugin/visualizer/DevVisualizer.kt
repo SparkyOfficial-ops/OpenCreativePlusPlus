@@ -1,8 +1,9 @@
 package com.opencreativeplus.plugin.visualizer
 
-import com.opencreativeplus.core.watchdog.TPSMonitor
+import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.scanner.CodeLine
+import org.bukkit.Color
 import org.bukkit.Particle
 import org.bukkit.World
 import org.bukkit.entity.Player
@@ -16,13 +17,14 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Renders particle lines between consecutive code blocks for players in DEV mode.
+ * Renders REDSTONE_DUST particle lines between consecutive code blocks for players in DEV mode
+ * who have Trace Mode active.
  *
- * Requirements: 9.1, 9.2, 9.3, 9.4
+ * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5, 11.6
  */
 class DevVisualizer(
     private val plugin: Plugin,
-    private val tpsMonitor: TPSMonitor,
+    private val traceManager: TraceManager,
     private val blockScannerFactory: (World) -> BlockScanner
 ) : Listener {
 
@@ -35,10 +37,32 @@ class DevVisualizer(
     /** playerId → last known codeLines (for rescan reference) */
     private val playerCodeLines = ConcurrentHashMap<UUID, List<CodeLine>>()
 
+    /** Players whose current code line is actively executing (red particles) */
+    private val executingPlayers = ConcurrentHashMap.newKeySet<UUID>()
+
+    private val dustExecuting = Particle.DustOptions(Color.RED, 1.0f)
+    private val dustIdle = Particle.DustOptions(Color.fromRGB(128, 128, 128), 1.0f)
+
+    /**
+     * Mark a player's code line as executing — renders red particles.
+     * Req 11.3
+     */
+    fun markExecuting(playerId: UUID) {
+        executingPlayers.add(playerId)
+    }
+
+    /**
+     * Mark a player's code line as idle — renders gray particles.
+     * Req 11.4
+     */
+    fun markIdle(playerId: UUID) {
+        executingPlayers.remove(playerId)
+    }
+
     /**
      * Start rendering particles for [player] based on [codeLines].
      * Cancels any existing task before starting a new one.
-     * Req 9.1
+     * Req 11.1
      */
     fun startFor(player: Player, codeLines: List<CodeLine>) {
         stopFor(player)
@@ -55,34 +79,34 @@ class DevVisualizer(
 
     /**
      * Stop rendering particles for [player].
-     * Req 9.2
+     * Req 11.5
      */
     fun stopFor(player: Player) {
         tasks.remove(player.uniqueId)?.cancel()
         rescanTasks.remove(player.uniqueId)?.cancel()
         playerCodeLines.remove(player.uniqueId)
+        executingPlayers.remove(player.uniqueId)
     }
-
-    /**
-     * Returns particle density based on current TPS.
-     * Normal: 5 particles/block, TPS < 15: 2 particles/block.
-     * Req 9.4
-     */
-    internal fun particleDensity(): Int = if (tpsMonitor.getCurrentTPS() < 15.0) 2 else 5
 
     /**
      * Render particle lines between consecutive node locations in each CodeLine.
+     * Only renders for players with active Trace Mode.
+     * Req 11.6
      */
     private fun renderParticles(player: Player, codeLines: List<CodeLine>) {
-        val density = particleDensity()
+        if (!traceManager.isTracing(player.uniqueId)) return
+        val isExecuting = executingPlayers.contains(player.uniqueId)
         for (codeLine in codeLines) {
-            renderCodeLine(player, codeLine, density)
+            renderCodeLine(player, codeLine, isExecuting)
         }
     }
 
-    private fun renderCodeLine(player: Player, codeLine: CodeLine, density: Int) {
+    @Suppress("DEPRECATION")
+    private fun renderCodeLine(player: Player, codeLine: CodeLine, isExecuting: Boolean) {
         val nodes = codeLine.nodes
         if (nodes.size < 2) return
+
+        val dustOptions = if (isExecuting) dustExecuting else dustIdle
 
         for (i in 0 until nodes.size - 1) {
             val from = nodes[i].location
@@ -94,25 +118,25 @@ class DevVisualizer(
             val distance = from.distance(to)
             if (distance == 0.0) continue
 
-            val steps = (distance * density).toInt().coerceAtLeast(1)
+            // Fixed density of 2 points per block = 0.5-block intervals (Req 11.2)
+            val steps = (distance * 2).toInt().coerceAtLeast(1)
             for (step in 0..steps) {
                 val t = step.toDouble() / steps
                 val px = from.x + dx * t
                 val py = from.y + dy * t
                 val pz = from.z + dz * t
-                player.spawnParticle(Particle.END_ROD, px, py + 1.0, pz, 1, 0.0, 0.0, 0.0, 0.0)
+                player.spawnParticle(Particle.REDSTONE, px, py + 1.0, pz, 1, 0.0, 0.0, 0.0, 0.0, dustOptions)
             }
         }
 
         // Recurse into children
         for (child in codeLine.children) {
-            renderCodeLine(player, child, density)
+            renderCodeLine(player, child, isExecuting)
         }
     }
 
     /**
      * When a player in DEV mode places a block, schedule a rescan after 1 second (20 ticks).
-     * Req 9.3
      */
     @EventHandler
     fun onBlockPlace(event: BlockPlaceEvent) {
@@ -124,7 +148,6 @@ class DevVisualizer(
 
     /**
      * When a player in DEV mode breaks a block, schedule a rescan after 1 second (20 ticks).
-     * Req 9.3
      */
     @EventHandler
     fun onBlockBreak(event: BlockBreakEvent) {

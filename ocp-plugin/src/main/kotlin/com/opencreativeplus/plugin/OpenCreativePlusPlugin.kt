@@ -161,7 +161,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         val devVisualizer = DevVisualizer(
             plugin = this,
-            tpsMonitor = tpsMonitor,
+            traceManager = traceManager,
             blockScannerFactory = { world -> BlockScanner(world, nodeRegistry) }
         )
         server.pluginManager.registerEvents(devVisualizer, this)

@@ -10,6 +10,7 @@ import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.inventory.InventoryManager
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.visualizer.DevVisualizer
+import com.opencreativeplus.plugin.visualizer.HologramReporter
 import com.opencreativeplus.plugin.world.WorldManager
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
@@ -42,7 +43,8 @@ class ModeManagerImpl(
     private val executionEngine: ExecutionEngine,
     private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
         ?: error("OpenCreativePlus plugin not found"),
-    private val devVisualizer: DevVisualizer? = null
+    private val devVisualizer: DevVisualizer? = null,
+    private val hologramReporter: HologramReporter? = null
 ) : ModeManager {
 
     /** "$playerId:$plotId" → current PlotMode */
@@ -106,6 +108,8 @@ class ModeManagerImpl(
             PlotMode.DEV -> {
                 // Stop particle rendering for this player (req 9.2)
                 devVisualizer?.stopFor(player)
+                // Hide error holograms when leaving dev mode (Req 12.7)
+                hologramReporter?.hideFromPlayer(player)
             }
             PlotMode.BUILD -> {
                 // Disable flight that was granted in BUILD mode
@@ -176,6 +180,8 @@ class ModeManagerImpl(
         val scanner = blockScannerFactory(plot)
         val codeLines = scanner.scanCodingZone()
         devVisualizer?.startFor(player, codeLines)
+        // Show active error holograms to the player entering dev mode (Req 12.6)
+        hologramReporter?.showToPlayer(player)
     }
 
     /**

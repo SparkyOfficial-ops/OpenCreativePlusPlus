@@ -177,7 +177,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
             executionEngine = executionEngine,
-            devVisualizer = devVisualizer
+            devVisualizer = devVisualizer,
+            hologramReporter = hologramReporter
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)

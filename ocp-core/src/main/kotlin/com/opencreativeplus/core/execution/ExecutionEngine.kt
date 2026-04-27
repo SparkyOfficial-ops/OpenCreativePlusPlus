@@ -122,7 +122,13 @@ class ExecutionEngine(
             } catch (e: Exception) {
                 // Isolate the failure to this script only — log and continue (req 38.1)
                 logger.warning("[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}")
-                errorReporter?.invoke(script.sourceLocation, e.message ?: "Unknown error")
+                if (errorReporter != null) {
+                    // Hologram will be shown — suppress chat message to avoid spam (Req 12.5)
+                    errorReporter.invoke(script.sourceLocation, e.message ?: "Unknown error")
+                } else {
+                    // No hologram reporter configured — fall back to chat notification
+                    player?.sendMessage("§c[OCP] Script error: ${e.message ?: "Unknown error"}")
+                }
             } finally {
                 // Trace hook: execution complete summary (s: 14.7)
                 player?.let { p ->

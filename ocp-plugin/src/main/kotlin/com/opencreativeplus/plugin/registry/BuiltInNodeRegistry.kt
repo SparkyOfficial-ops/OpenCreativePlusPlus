@@ -76,6 +76,7 @@ import com.opencreativeplus.plugin.node.value.GreaterThanValue
 import com.opencreativeplus.plugin.node.value.LessThanValue
 import com.opencreativeplus.plugin.node.value.MultiplyValue
 import com.opencreativeplus.plugin.node.value.SubtractValue
+import com.opencreativeplus.plugin.node.selection.SelectionNode
 import org.bukkit.Material
 
 /**
@@ -101,6 +102,7 @@ object BuiltInNodeRegistry {
         registerUINodes(registry)
         registerScoreboardNodes(registry)
         registerDialogueNodes(registry)
+        registerSelectionNodes(registry)
     }
 
     /**
@@ -289,6 +291,13 @@ object BuiltInNodeRegistry {
 
     private fun registerDialogueNodes(registry: NodeRegistryImpl) {
         registry.registerAction(Material.WRITTEN_BOOK, "send_dialogue") { params -> SendDialogueNode(params) }
+    }
+
+    private fun registerSelectionNodes(registry: NodeRegistryImpl) {
+        // Requirements: 1.3, 1.4, 1.5, 1.6, 1.7
+        registry.registerAction(Material.PURPUR_BLOCK, "select_targets") { params ->
+            SelectionNode.fromParams(params)
+        }
     }
 
     /**

@@ -12,6 +12,7 @@ import com.opencreativeplus.core.watchdog.Watchdog
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.*
+import org.bukkit.entity.Player
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -74,6 +75,12 @@ class StartupShutdownIntegrationTest {
 
     private fun script(vararg actions: IAction): CompiledScript =
         CompiledScript(event = mockEvent(), actions = actions.toList(), sourceLocation = "test@0,0,0")
+
+    private fun mockPlayer(): Player {
+        val p = mockk<Player>(relaxed = true)
+        every { p.uniqueId } returns UUID.randomUUID()
+        return p
+    }
 
     // =========================================================================
     // Group 1: Initialization order
@@ -178,7 +185,7 @@ class StartupShutdownIntegrationTest {
                     }
                 }
             }
-            engine.executeScript(script(action), plotId, null, emptyMap())
+            engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
         delay(100) // let all 3 coroutines start
@@ -218,7 +225,7 @@ class StartupShutdownIntegrationTest {
             }
         }
 
-        engine.executeScript(script(action), plotId, null, emptyMap())
+        engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
 
         // Wait for the action to start and set the variable
         delay(100)
@@ -262,7 +269,7 @@ class StartupShutdownIntegrationTest {
                 plot2Completed.set(true)
             }
         }
-        engine.executeScript(script(shortAction), plotId2, null, emptyMap())
+        engine.executeScript(script(shortAction), plotId2, mockPlayer(), emptyMap())
 
         delay(50) // let both start
 

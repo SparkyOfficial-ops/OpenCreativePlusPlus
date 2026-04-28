@@ -8,6 +8,7 @@ import com.opencreativeplus.core.watchdog.Watchdog
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.*
+import org.bukkit.entity.Player
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import java.util.UUID
@@ -66,6 +67,12 @@ class ErrorIsolationIntegrationTest {
         return e
     }
 
+    private fun mockPlayer(): Player {
+        val p = mockk<Player>(relaxed = true)
+        every { p.uniqueId } returns UUID.randomUUID()
+        return p
+    }
+
     private fun script(vararg actions: IAction): CompiledScript =
         CompiledScript(event = mockEvent(), actions = actions.toList(), sourceLocation = "test@0,0,0")
 
@@ -112,8 +119,8 @@ class ErrorIsolationIntegrationTest {
         val successScript = script(completingAction(log, "success", delayMs = 50))
 
         // When: both scripts are launched on the same plot
-        engine.executeScript(failingScript, plotId, null, emptyMap())
-        engine.executeScript(successScript, plotId, null, emptyMap())
+        engine.executeScript(failingScript, plotId, mockPlayer(), emptyMap())
+        engine.executeScript(successScript, plotId, mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -130,8 +137,8 @@ class ErrorIsolationIntegrationTest {
         val log = CopyOnWriteArrayList<String>()
 
         // When
-        engine.executeScript(script(throwingAction("plot A error")), plotA, null, emptyMap())
-        engine.executeScript(script(completingAction(log, "plotB_done", delayMs = 50)), plotB, null, emptyMap())
+        engine.executeScript(script(throwingAction("plot A error")), plotA, mockPlayer(), emptyMap())
+        engine.executeScript(script(completingAction(log, "plotB_done", delayMs = 50)), plotB, mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -158,8 +165,8 @@ class ErrorIsolationIntegrationTest {
         )
 
         // When
-        engine.executeScript(partialScript, plotId, null, emptyMap())
-        engine.executeScript(fullScript, plotId, null, emptyMap())
+        engine.executeScript(partialScript, plotId, mockPlayer(), emptyMap())
+        engine.executeScript(fullScript, plotId, mockPlayer(), emptyMap())
 
         delay(400)
 
@@ -178,7 +185,7 @@ class ErrorIsolationIntegrationTest {
         val completedCount = AtomicInteger(0)
         val scriptCount = 5
 
-        engine.executeScript(script(throwingAction("one bad script")), plotId, null, emptyMap())
+        engine.executeScript(script(throwingAction("one bad script")), plotId, mockPlayer(), emptyMap())
 
         repeat(scriptCount - 1) { i ->
             val action = object : IAction {
@@ -189,7 +196,7 @@ class ErrorIsolationIntegrationTest {
                     completedCount.incrementAndGet()
                 }
             }
-            engine.executeScript(script(action), plotId, null, emptyMap())
+            engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
         delay(500)
@@ -204,9 +211,9 @@ class ErrorIsolationIntegrationTest {
         val plots = List(3) { UUID.randomUUID() }
         val log = CopyOnWriteArrayList<String>()
 
-        engine.executeScript(script(throwingAction("plot 0 failure")), plots[0], null, emptyMap())
-        engine.executeScript(script(completingAction(log, "plot1_done", delayMs = 30)), plots[1], null, emptyMap())
-        engine.executeScript(script(completingAction(log, "plot2_done", delayMs = 30)), plots[2], null, emptyMap())
+        engine.executeScript(script(throwingAction("plot 0 failure")), plots[0], mockPlayer(), emptyMap())
+        engine.executeScript(script(completingAction(log, "plot1_done", delayMs = 30)), plots[1], mockPlayer(), emptyMap())
+        engine.executeScript(script(completingAction(log, "plot2_done", delayMs = 30)), plots[2], mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -244,8 +251,8 @@ class ErrorIsolationIntegrationTest {
             }
         }
 
-        engine.executeScript(script(failingAction), plotId, null, emptyMap())
-        engine.executeScript(script(successAction), plotId, null, emptyMap())
+        engine.executeScript(script(failingAction), plotId, mockPlayer(), emptyMap())
+        engine.executeScript(script(successAction), plotId, mockPlayer(), emptyMap())
 
         delay(400)
 
@@ -286,8 +293,8 @@ class ErrorIsolationIntegrationTest {
             }
         }
 
-        engine.executeScript(script(writerThenThrow), plotId, null, emptyMap())
-        engine.executeScript(script(reader), plotId, null, emptyMap())
+        engine.executeScript(script(writerThenThrow), plotId, mockPlayer(), emptyMap())
+        engine.executeScript(script(reader), plotId, mockPlayer(), emptyMap())
 
         delay(400)
 
@@ -318,7 +325,7 @@ class ErrorIsolationIntegrationTest {
                 plotBCompleted.set(true)
             }
         }
-        engine.executeScript(script(plotBAction), plotB, null, emptyMap())
+        engine.executeScript(script(plotBAction), plotB, mockPlayer(), emptyMap())
 
         delay(50) // let both coroutines start
 
@@ -355,7 +362,7 @@ class ErrorIsolationIntegrationTest {
         val successCompleted = AtomicBoolean(false)
 
         repeat(3) {
-            engine.executeScript(script(throwingAction("rapid failure $it")), plotId, null, emptyMap())
+            engine.executeScript(script(throwingAction("rapid failure $it")), plotId, mockPlayer(), emptyMap())
         }
 
         val successAction = object : IAction {
@@ -366,7 +373,7 @@ class ErrorIsolationIntegrationTest {
                 successCompleted.set(true)
             }
         }
-        engine.executeScript(script(successAction), plotId, null, emptyMap())
+        engine.executeScript(script(successAction), plotId, mockPlayer(), emptyMap())
 
         delay(400)
 

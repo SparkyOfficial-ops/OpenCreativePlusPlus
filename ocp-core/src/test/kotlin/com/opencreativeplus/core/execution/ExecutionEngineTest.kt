@@ -163,9 +163,10 @@ class ExecutionEngineTest {
             }
         }
         val plotId = UUID.randomUUID()
+        val player = mockPlayer()
 
         // When: script executes
-        engine.executeScript(script(action), plotId, null, emptyMap())
+        engine.executeScript(script(action), plotId, player, emptyMap())
 
         // Give the coroutine time to start and record "before_wait"
         delay(20)
@@ -182,6 +183,7 @@ class ExecutionEngineTest {
         // Given: three actions that record their labels
         val log = CopyOnWriteArrayList<String>()
         val plotId = UUID.randomUUID()
+        val player = mockPlayer()
 
         // When
         engine.executeScript(
@@ -190,7 +192,7 @@ class ExecutionEngineTest {
                 recordingAction(log, "second"),
                 recordingAction(log, "third")
             ),
-            plotId, null, emptyMap()
+            plotId, player, emptyMap()
         )
 
         // Allow coroutine to complete
@@ -204,6 +206,7 @@ class ExecutionEngineTest {
     fun `local scope is cleared after script execution completes`() = runBlocking {
         // Given: an action that writes to local scope
         val plotId = UUID.randomUUID()
+        val player = mockPlayer()
         var capturedScope: VariableScope? = null
         val action = object : IAction {
             override val nodeId = "scope_writer"
@@ -215,7 +218,7 @@ class ExecutionEngineTest {
         }
 
         // When
-        engine.executeScript(script(action), plotId, null, emptyMap())
+        engine.executeScript(script(action), plotId, player, emptyMap())
         delay(100)
 
         // Then: local scope was cleared after execution
@@ -251,8 +254,8 @@ class ExecutionEngineTest {
         }
 
         // When: both scripts are launched
-        engine.executeScript(script(action1), plotId, null, emptyMap())
-        engine.executeScript(script(action2), plotId, null, emptyMap())
+        engine.executeScript(script(action1), plotId, mockPlayer(), emptyMap())
+        engine.executeScript(script(action2), plotId, mockPlayer(), emptyMap())
 
         // Give both coroutines time to start
         delay(200)
@@ -274,8 +277,8 @@ class ExecutionEngineTest {
         val log = CopyOnWriteArrayList<String>()
 
         // When
-        engine.executeScript(script(recordingAction(log, "plot1")), plotId1, null, emptyMap())
-        engine.executeScript(script(recordingAction(log, "plot2")), plotId2, null, emptyMap())
+        engine.executeScript(script(recordingAction(log, "plot1")), plotId1, mockPlayer(), emptyMap())
+        engine.executeScript(script(recordingAction(log, "plot2")), plotId2, mockPlayer(), emptyMap())
 
         delay(100)
 
@@ -300,7 +303,7 @@ class ExecutionEngineTest {
                     completedCount.incrementAndGet()
                 }
             }
-            engine.executeScript(script(action), plotId, null, emptyMap())
+            engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
         // Allow all coroutines to finish
@@ -398,7 +401,7 @@ class ExecutionEngineTest {
                     }
                 }
             }
-            engine.executeScript(script(action), plotId, null, emptyMap())
+            engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
         delay(50) // let all coroutines start
@@ -451,8 +454,8 @@ class ExecutionEngineTest {
         val successScript = script(successAction)
 
         // When: both scripts are launched
-        engine.executeScript(failingScript, plotId, null, emptyMap())
-        engine.executeScript(successScript, plotId, null, emptyMap())
+        engine.executeScript(failingScript, plotId, mockPlayer(), emptyMap())
+        engine.executeScript(successScript, plotId, mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -466,7 +469,7 @@ class ExecutionEngineTest {
         val plotId = UUID.randomUUID()
 
         // When / Then: executeScript itself should not throw
-        engine.executeScript(script(throwingAction()), plotId, null, emptyMap())
+        engine.executeScript(script(throwingAction()), plotId, mockPlayer(), emptyMap())
         delay(100) // let the coroutine run and fail
         // If we reach here without exception, the test passes
     }
@@ -485,7 +488,7 @@ class ExecutionEngineTest {
             }
         }
 
-        engine.executeScript(script(action), plotId, null, emptyMap())
+        engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         delay(100)
 
         // Then: local scope was cleared in the finally block
@@ -525,8 +528,8 @@ class ExecutionEngineTest {
             }
         }
 
-        strictEngine.executeScript(script(overLimitAction), plotId, null, emptyMap())
-        strictEngine.executeScript(script(normalAction), plotId, null, emptyMap())
+        strictEngine.executeScript(script(overLimitAction), plotId, mockPlayer(), emptyMap())
+        strictEngine.executeScript(script(normalAction), plotId, mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -549,8 +552,8 @@ class ExecutionEngineTest {
             }
         }
 
-        engine.executeScript(script(throwingAction()), plotId1, null, emptyMap())
-        engine.executeScript(script(plot2Action), plotId2, null, emptyMap())
+        engine.executeScript(script(throwingAction()), plotId1, mockPlayer(), emptyMap())
+        engine.executeScript(script(plot2Action), plotId2, mockPlayer(), emptyMap())
 
         delay(300)
 
@@ -606,7 +609,7 @@ class ExecutionEngineTest {
         }
 
         // When: script with two actions — first saturates the counter, second triggers the check
-        engineWithPlotManager.executeScript(script(pushOverLimitAction, triggerCheckAction), plotId, null, emptyMap())
+        engineWithPlotManager.executeScript(script(pushOverLimitAction, triggerCheckAction), plotId, mockPlayer(), emptyMap())
         delay(300)
 
         // Then: owner received the watchdog notification message
@@ -652,7 +655,7 @@ class ExecutionEngineTest {
         }
 
         // When
-        engineWithPlotManager.executeScript(script(normalAction), plotId, null, emptyMap())
+        engineWithPlotManager.executeScript(script(normalAction), plotId, mockPlayer(), emptyMap())
         delay(200)
 
         // Then: owner never received any message

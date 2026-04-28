@@ -105,7 +105,15 @@ class ExecutionEngine(
                         }
                         // If condition is false, child branch is skipped (Req 8.3)
                     } else {
-                        action.execute(context)
+                        // Req 1.8: iterate over every target in context.targets and apply action to each.
+                        // Req 1.9: if targets is empty, the loop does not execute — silent skip, no exception.
+                        val targets = context.targets.toList()
+                        if (targets.isNotEmpty()) {
+                            for (target in targets) {
+                                action.execute(context)
+                            }
+                        }
+                        // If targets is empty — silent skip (Req 1.9)
                     }
                     context.operationCount.incrementAndGet()
                 }

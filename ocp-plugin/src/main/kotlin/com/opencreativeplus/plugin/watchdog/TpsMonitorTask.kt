@@ -24,7 +24,8 @@ class TpsMonitorTask(
     private val plugin: JavaPlugin,
     private val tpsMonitor: TPSMonitor,
     private val watchdog: Watchdog,
-    private val logger: Logger = plugin.logger
+    private val logger: Logger = plugin.logger,
+    private val bytecodeCompiler: com.opencreativeplus.plugin.compiler.BytecodeCompiler? = null
 ) {
 
     /** Plots that are currently executing scripts (updated externally). */
@@ -39,6 +40,7 @@ class TpsMonitorTask(
             override fun run() {
                 tpsMonitor.tick()
                 checkLowTps()
+                bytecodeCompiler?.onTick(activePlots)
             }
         }
         taskId = task.runTaskTimer(plugin, 0L, 1L).taskId

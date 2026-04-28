@@ -4,6 +4,7 @@ import com.opencreativeplus.api.plot.ModeManager
 import com.opencreativeplus.api.plot.Plot
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.execution.ExecutionEngine
+import com.opencreativeplus.plugin.compiler.BytecodeCompiler
 import com.opencreativeplus.plugin.compiler.ASTCompiler
 import com.opencreativeplus.plugin.compiler.CompilationResult
 import com.opencreativeplus.plugin.event.EventDispatcher
@@ -44,7 +45,8 @@ class ModeManagerImpl(
     private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
         ?: error("OpenCreativePlus plugin not found"),
     private val devVisualizer: DevVisualizer? = null,
-    private val hologramReporter: HologramReporter? = null
+    private val hologramReporter: HologramReporter? = null,
+    private val bytecodeCompiler: BytecodeCompiler? = null
 ) : ModeManager {
 
     /** "$playerId:$plotId" → current PlotMode */
@@ -104,6 +106,8 @@ class ModeManagerImpl(
                 executionEngine.cancelAllExecutions(plot.id)
                 // Unregister scripts so no stale handlers remain
                 eventDispatcher.unregisterScripts(plot.id)
+                // Req 13.4: invalidate compiled cache when switching to dev mode
+                bytecodeCompiler?.invalidate(plot.id)
             }
             PlotMode.DEV -> {
                 // Stop particle rendering for this player (req 9.2)
@@ -205,6 +209,9 @@ class ModeManagerImpl(
 
         // Register compiled scripts with the event dispatcher (req 16.1, 16.2)
         eventDispatcher.registerScripts(plot.id, result.scripts)
+
+        // Req 13.5: schedule pre-compilation on auxiliary thread when entering play mode
+        bytecodeCompiler?.scheduleCompile(plot.id)
 
         // Teleport to main world and set survival mode
         val mainWorld = worldManager.getLoadedWorlds(plot.id)?.first

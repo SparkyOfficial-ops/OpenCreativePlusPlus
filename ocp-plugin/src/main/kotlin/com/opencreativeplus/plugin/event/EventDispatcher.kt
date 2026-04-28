@@ -41,6 +41,13 @@ class EventDispatcher(
     }
 
     /**
+     * Return all compiled scripts registered for [plotId], across all event types.
+     */
+    fun getCompiledScripts(plotId: UUID): List<CompiledScript> {
+        return scriptsByEvent[plotId]?.values?.flatten() ?: emptyList()
+    }
+
+    /**
      * Dispatch [eventType] to all matching scripts for [plotId].
      * Each script is launched in its own coroutine so failures are isolated (req 16.5).
      16.2, 16.3, 16.4, 28.1

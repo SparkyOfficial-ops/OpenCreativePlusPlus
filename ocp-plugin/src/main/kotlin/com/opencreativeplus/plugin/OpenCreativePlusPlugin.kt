@@ -21,6 +21,7 @@ import com.opencreativeplus.plugin.gui.NodeSelectionGUI
 import com.opencreativeplus.plugin.command.OcpDialogueCommand
 import com.opencreativeplus.plugin.command.PlotCommands
 import com.opencreativeplus.plugin.compiler.ASTCompiler
+import com.opencreativeplus.plugin.compiler.BytecodeCompiler
 import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.event.PlotEventListener
 import com.opencreativeplus.plugin.gui.PlotBrowserGUI
@@ -77,6 +78,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
     private lateinit var tpsMonitorTask: TpsMonitorTask
     private lateinit var categoryRegistry: CategoryRegistry
     private lateinit var hologramReporter: HologramReporter
+    private lateinit var bytecodeCompiler: BytecodeCompiler
     lateinit var signInputManager: SignInputManager
         private set
     lateinit var paramSerializer: ParamSerializer
@@ -132,6 +134,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                         hologramReporter.reportError(loc, message)
                     }
                 }
+            },
+            compiledScriptProvider = { plotId ->
+                if (::bytecodeCompiler.isInitialized) bytecodeCompiler.getCompiled(plotId) else null
             }
         )
 
@@ -159,6 +164,14 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         eventDispatcher = EventDispatcher(executionEngine, coroutineConfig.executionScope)
 
+        bytecodeCompiler = BytecodeCompiler(
+            tpsMonitor = tpsMonitor,
+            scope = coroutineConfig.executionScope,
+            scriptProvider = { plotId ->
+                eventDispatcher.getCompiledScripts(plotId).firstOrNull()
+            },
+            logger = logger
+        )
         val devVisualizer = DevVisualizer(
             plugin = this,
             traceManager = traceManager,
@@ -178,7 +191,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             eventDispatcher = eventDispatcher,
             executionEngine = executionEngine,
             devVisualizer = devVisualizer,
-            hologramReporter = hologramReporter
+            hologramReporter = hologramReporter,
+            bytecodeCompiler = bytecodeCompiler
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)
@@ -189,7 +203,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         bufferedLogger = BufferedExecutionLogger(logsCollection, coroutineConfig.executionScope)
 
         // ── TPS task ──────────────────────────────────────────────────────────
-        tpsMonitorTask = TpsMonitorTask(this, tpsMonitor, watchdog)
+        tpsMonitorTask = TpsMonitorTask(this, tpsMonitor, watchdog, bytecodeCompiler = bytecodeCompiler)
         tpsMonitorTask.start()
 
         // ── Event listeners ───────────────────────────────────────────────────

@@ -31,7 +31,8 @@ class ExecutionEngine(
     private var traceManager: TraceManager? = null,
     private val plotManager: PlotManager? = null,
     private val logger: Logger = Logger.getLogger("ExecutionEngine"),
-    private val errorReporter: ((sourceLocation: String, message: String) -> Unit)? = null
+    private val errorReporter: ((sourceLocation: String, message: String) -> Unit)? = null,
+    private val compiledScriptProvider: ((UUID) -> CompiledScript?)? = null
 ) {
     /** plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
@@ -66,6 +67,9 @@ class ExecutionEngine(
         player: Player?,
         eventData: Map<String, Any>
     ) {
+        // Req 13.3: use pre-compiled form if available
+        val effectiveScript = compiledScriptProvider?.invoke(plotId) ?: script
+
         val context = ExecutionContextImpl(
             plotId = plotId,
             player = player,
@@ -80,7 +84,7 @@ class ExecutionEngine(
         val job = coroutineConfig.executionScope.launch {
             val startTime = System.currentTimeMillis()
             try {
-                for ((index, action) in script.actions.withIndex()) {
+                for ((index, action) in effectiveScript.actions.withIndex()) {
                     watchdog.checkExecution(context)
                     // Trace hook: notify before/at node execution (s: 14.2, 14.3)
                     traceManager?.onNodeExecute(null, action.displayName, emptyMap())
@@ -90,7 +94,7 @@ class ExecutionEngine(
                     val condition = action as? ICondition
                     if (condition != null) {
                         val conditionResult = condition.evaluate(context)
-                        val childBranch = script.conditionalBranches[index]
+                        val childBranch = effectiveScript.conditionalBranches[index]
                         if (conditionResult && childBranch != null) {
                             for (childAction in childBranch) {
                                 watchdog.checkExecution(context)
@@ -121,10 +125,10 @@ class ExecutionEngine(
                 }
             } catch (e: Exception) {
                 // Isolate the failure to this script only — log and continue (req 38.1)
-                logger.warning("[OCP] Script error on plot $plotId at ${script.sourceLocation}: ${e.message}")
+                logger.warning("[OCP] Script error on plot $plotId at ${effectiveScript.sourceLocation}: ${e.message}")
                 if (errorReporter != null) {
                     // Hologram will be shown — suppress chat message to avoid spam (Req 12.5)
-                    errorReporter.invoke(script.sourceLocation, e.message ?: "Unknown error")
+                    errorReporter.invoke(effectiveScript.sourceLocation, e.message ?: "Unknown error")
                 } else {
                     // No hologram reporter configured — fall back to chat notification
                     player?.sendMessage("§c[OCP] Script error: ${e.message ?: "Unknown error"}")

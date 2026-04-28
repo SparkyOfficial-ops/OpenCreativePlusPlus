@@ -24,5 +24,10 @@ data class CompiledScript(
      * Maps action index → child actions for conditional branches (Piston System, Req 8.3).
      * If a condition at index i evaluates to false, the child branch is skipped.
      */
-    val conditionalBranches: Map<Int, List<IAction>> = emptyMap()
+    val conditionalBranches: Map<Int, List<IAction>> = emptyMap(),
+    /**
+     * Statically-resolved placeholder strings at compile time (Req 13.2).
+     * Maps placeholder key → resolved value.
+     */
+    val resolvedPlaceholders: Map<String, String> = emptyMap()
 )

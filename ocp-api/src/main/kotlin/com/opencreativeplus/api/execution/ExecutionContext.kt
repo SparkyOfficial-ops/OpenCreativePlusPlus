@@ -1,5 +1,6 @@
 package com.opencreativeplus.api.execution
 
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -18,6 +19,12 @@ interface ExecutionContext {
      * The player associated with this execution (may be null for non-player events)
      */
     val player: Player?
+
+    /**
+     * Mutable list of target entities for this execution.
+     * Initialized with the primary player when present, otherwise empty.
+     */
+    val targets: MutableList<Entity>
     
     /**
      * Event data passed from the triggering Minecraft event

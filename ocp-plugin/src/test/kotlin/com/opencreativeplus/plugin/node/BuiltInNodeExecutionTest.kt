@@ -42,6 +42,7 @@ class FakeExecutionContext(override val player: Player? = null) : ExecutionConte
     override val savedScope: VariableScope = FakeVariableScope()
     override val operationCount: AtomicInteger = AtomicInteger(0)
     override val callStackSize: AtomicInteger = AtomicInteger(0)
+    override val targets: MutableList<org.bukkit.entity.Entity> = mutableListOf()
     override suspend fun <T> syncContext(block: () -> T): T = block()
 }
 

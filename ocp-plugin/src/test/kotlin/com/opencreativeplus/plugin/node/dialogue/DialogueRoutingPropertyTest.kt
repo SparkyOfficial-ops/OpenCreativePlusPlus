@@ -48,6 +48,7 @@ class DialogueRoutingPropertyTest : FreeSpec({
         override val savedScope: VariableScope = mapScope()
         override val operationCount: AtomicInteger = AtomicInteger(0)
         override val callStackSize: AtomicInteger = AtomicInteger(0)
+        override val targets: MutableList<org.bukkit.entity.Entity> = mutableListOf()
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 

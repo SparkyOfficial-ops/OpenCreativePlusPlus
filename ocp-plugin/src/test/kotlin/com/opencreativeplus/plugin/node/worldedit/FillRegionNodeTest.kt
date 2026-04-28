@@ -54,6 +54,7 @@ class FillRegionNodeTest {
         override val savedScope: VariableScope = FakeVariableScope()
         override val operationCount: AtomicInteger = AtomicInteger(0)
         override val callStackSize: AtomicInteger = AtomicInteger(0)
+        override val targets: MutableList<org.bukkit.entity.Entity> = mutableListOf()
 
         var syncContextCallCount = 0
 

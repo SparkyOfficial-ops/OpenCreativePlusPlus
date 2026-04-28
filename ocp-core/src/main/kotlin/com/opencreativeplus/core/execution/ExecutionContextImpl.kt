@@ -4,6 +4,7 @@ import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.execution.VariableScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -29,7 +30,8 @@ class ExecutionContextImpl(
     override val savedScope: VariableScope,
     override val operationCount: AtomicInteger,
     private val syncDispatcher: CoroutineDispatcher,
-    override val callStackSize: AtomicInteger = AtomicInteger(0)
+    override val callStackSize: AtomicInteger = AtomicInteger(0),
+    override val targets: MutableList<Entity> = if (player != null) mutableListOf(player) else mutableListOf()
 ) : ExecutionContext {
 
     /**

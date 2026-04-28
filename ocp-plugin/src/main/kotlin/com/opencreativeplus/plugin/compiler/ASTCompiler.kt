@@ -26,8 +26,11 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         val scripts = mutableListOf<CompiledScript>()
 
         for (codeLine in codeLines) {
-            // Skip empty lines (blue glass with no blocks placed yet)
-            if (codeLine.nodes.isEmpty()) continue
+            // Collect error for empty lines (no blocks placed yet)
+            if (codeLine.nodes.isEmpty()) {
+                errors.add(CompilationError(codeLine.startLocation, "Code line has no blocks"))
+                continue
+            }
             try {
                 scripts.add(compileCodeLine(codeLine))
             } catch (e: CompilationException) {

@@ -3,9 +3,7 @@ package com.opencreativeplus.plugin.compiler
 import com.opencreativeplus.core.execution.CompiledScript
 import com.opencreativeplus.core.watchdog.TPSMonitor
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -49,9 +47,9 @@ class BytecodeCompiler(
     /** Return the cached compiled script for [plotId], or null if not compiled. */
     fun getCompiled(plotId: UUID): CompiledScript? = cache[plotId]
 
-    /** Schedule pre-compilation of a single plot on an auxiliary thread. */
-    fun scheduleCompile(plotId: UUID) {
-        scope.launch { compilePlot(plotId) }
+    /** Schedule pre-compilation of a single plot on an auxiliary thread and await completion. */
+    suspend fun scheduleCompile(plotId: UUID) {
+        scope.launch { compilePlot(plotId) }.join()
     }
 
     private suspend fun compileAll(plotIds: Collection<UUID>) {
@@ -62,19 +60,17 @@ class BytecodeCompiler(
 
     private suspend fun compilePlot(plotId: UUID) {
         try {
-            val compiled = withContext(Dispatchers.Default) {
-                withTimeout(COMPILE_TIMEOUT_MS) {
-                    // Resolve static placeholders from the script provider
-                    val base = scriptProvider(plotId) ?: return@withTimeout null
-                    // Build resolved placeholders map from action display names
-                    val resolved = base.actions
-                        .flatMap { action ->
-                            STATIC_PLACEHOLDER_PATTERN.findAll(action.displayName)
-                                .map { it.value to it.value } // identity for now; real resolution would substitute known values
-                        }
-                        .toMap()
-                    base.copy(resolvedPlaceholders = resolved)
-                }
+            val compiled = withTimeout(COMPILE_TIMEOUT_MS) {
+                // Resolve static placeholders from the script provider
+                val base = scriptProvider(plotId) ?: return@withTimeout null
+                // Build resolved placeholders map from action display names
+                val resolved = base.actions
+                    .flatMap { action ->
+                        STATIC_PLACEHOLDER_PATTERN.findAll(action.displayName)
+                            .map { it.value to it.value } // identity for now; real resolution would substitute known values
+                    }
+                    .toMap()
+                base.copy(resolvedPlaceholders = resolved)
             }
             if (compiled != null) {
                 cache[plotId] = compiled

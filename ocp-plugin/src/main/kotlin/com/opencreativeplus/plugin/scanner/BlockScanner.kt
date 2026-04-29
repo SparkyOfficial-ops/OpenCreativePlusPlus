@@ -5,6 +5,7 @@ import com.opencreativeplus.api.model.ItemVariableType
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.opencreativeplus.plugin.registry.ActionDescriptor
 import com.opencreativeplus.plugin.registry.CategoryRegistry
+import com.opencreativeplus.plugin.scanner.DataContainer.Companion.plainDisplayName
 import org.bukkit.ChunkSnapshot
 import org.bukkit.Material
 import org.bukkit.NamespacedKey
@@ -14,6 +15,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Chest
 import org.bukkit.block.Sign
 import org.bukkit.block.TileState
+import org.bukkit.inventory.ItemStack
 import org.bukkit.persistence.PersistentDataType
 import java.util.logging.Logger
 
@@ -84,6 +86,21 @@ class BlockScanner(
         /** PDC keys for item variables (ItemVariableFactory). */
         private val KEY_ITEM_VAR_TYPE = NamespacedKey("ocp", "item_var_type")
         private val KEY_ITEM_VAR_NAME = NamespacedKey("ocp", "item_var_name")
+
+        /** PDC key for DataContainer variable name (Iron Ingot). Requirements: 3.3 */
+        private val KEY_DC_VAR_NAME   = NamespacedKey("ocp", "var_name")
+        /** PDC key for DataContainer location x. Requirements: 3.4 */
+        private val KEY_DC_LOC_X      = NamespacedKey("ocp", "loc_x")
+        /** PDC key for DataContainer location y. Requirements: 3.4 */
+        private val KEY_DC_LOC_Y      = NamespacedKey("ocp", "loc_y")
+        /** PDC key for DataContainer location z. Requirements: 3.4 */
+        private val KEY_DC_LOC_Z      = NamespacedKey("ocp", "loc_z")
+        /** PDC key for DataContainer world name. Requirements: 3.4 */
+        private val KEY_DC_LOC_WORLD  = NamespacedKey("ocp", "loc_world")
+        /** PDC key for DataContainer yaw. Requirements: 3.4 */
+        private val KEY_DC_LOC_YAW    = NamespacedKey("ocp", "loc_yaw")
+        /** PDC key for DataContainer pitch. Requirements: 3.4 */
+        private val KEY_DC_LOC_PITCH  = NamespacedKey("ocp", "loc_pitch")
     }
 
     // -----------------------------------------------------------------------
@@ -493,6 +510,80 @@ class BlockScanner(
     // -----------------------------------------------------------------------
     // Parameter extraction
     // -----------------------------------------------------------------------
+
+    /**
+     * Reads a [DataContainer] from a single [ItemStack] in a ParamChest slot.
+     *
+     * Mapping:
+     * - [Material.BOOK]        → [DataContainer.Text] (display name as string value)
+     * - [Material.MAGMA_CREAM] → [DataContainer.Number] (display name parsed as Double; ParseError if not numeric)
+     * - [Material.IRON_INGOT]  → [DataContainer.Variable] (PDC ocp:var_name as variable name)
+     * - [Material.COMPASS]     → [DataContainer.Location] (PDC ocp:loc_x/y/z/world/yaw/pitch)
+     * - null / other material  → null (argument absent or unrecognised)
+     *
+     * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7
+     *
+     * @param item  The item in the chest slot, or null for an empty slot.
+     * @param slot  The slot index (used in ParseError messages). Requirements: 3.5
+     * @param blockLocation The location of the code block (used in ParseError messages).
+     * @return The parsed [DataContainer], or null if the slot is empty or the material is unrecognised.
+     */
+    fun readDataContainer(item: ItemStack?, slot: Int, blockLocation: org.bukkit.Location? = null): DataContainer? {
+        if (item == null) return null  // Req 3.7: empty slot → null
+        val pdc = item.itemMeta?.persistentDataContainer
+        return when (item.type) {
+            Material.BOOK -> {
+                // Req 3.1: Book → Text (display name)
+                DataContainer.Text(item.plainDisplayName())
+            }
+            Material.MAGMA_CREAM -> {
+                // Req 3.2: Magma Cream → Number (display name parsed as Double)
+                val raw = item.plainDisplayName()
+                val number = raw.toDoubleOrNull()
+                if (number == null) {
+                    parseErrors.add(ParseError(
+                        "slot $slot: '${raw}' is not a valid number",
+                        blockLocation
+                    ))
+                    null
+                } else {
+                    DataContainer.Number(number)
+                }
+            }
+            Material.IRON_INGOT -> {
+                // Req 3.3: Iron Ingot → Variable (PDC ocp:var_name, fallback to display name)
+                val varName = pdc?.get(KEY_DC_VAR_NAME, PersistentDataType.STRING) ?: item.plainDisplayName()
+                DataContainer.Variable(varName)
+            }
+            Material.COMPASS -> {
+                // Req 3.4: Compass → Location (PDC coordinates)
+                val x     = pdc?.get(KEY_DC_LOC_X,     PersistentDataType.DOUBLE) ?: 0.0
+                val y     = pdc?.get(KEY_DC_LOC_Y,     PersistentDataType.DOUBLE) ?: 0.0
+                val z     = pdc?.get(KEY_DC_LOC_Z,     PersistentDataType.DOUBLE) ?: 0.0
+                val world = pdc?.get(KEY_DC_LOC_WORLD, PersistentDataType.STRING) ?: ""
+                val yaw   = (pdc?.get(KEY_DC_LOC_YAW,  PersistentDataType.DOUBLE) ?: 0.0).toFloat()
+                val pitch = (pdc?.get(KEY_DC_LOC_PITCH, PersistentDataType.DOUBLE) ?: 0.0).toFloat()
+                DataContainer.Location(x, y, z, world, yaw, pitch)
+            }
+            else -> null  // Req 3.7: unrecognised material → null
+        }
+    }
+
+    /**
+     * Reads all [DataContainer] arguments from the ParamChest located directly above [block].
+     *
+     * Slot index maps directly to argument index (Requirement 3.6).
+     * Empty slots produce null entries (Requirement 3.7).
+     *
+     * @return List of [DataContainer?] in slot order (null = absent argument).
+     * Requirements: 3.6, 3.7
+     */
+    fun readParamChestContainers(block: org.bukkit.block.Block): List<DataContainer?> {
+        val above = block.getRelative(org.bukkit.block.BlockFace.UP)
+        val chest = above.state as? org.bukkit.block.Chest ?: return emptyList()
+        val contents = chest.inventory.contents
+        return contents.mapIndexed { slot, item -> readDataContainer(item, slot, block.location) }
+    }
 
     /**
      * Extract parameters for [block].

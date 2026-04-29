@@ -104,4 +104,65 @@ class ParamSerializer(private val namespacedKey: (String) -> NamespacedKey) {
      * Example: `["a", "b", "c"]` → `"a|b|c"`.
      */
     private fun serializeList(list: List<*>): String = list.joinToString("|") { it.toString() }
+
+    /**
+     * Serializes a DataContainer-like map to a string for storage.
+     * Format: "dc_type:value_string"
+     * - Text:     "text:hello world"
+     * - Number:   "number:3.14"
+     * - Variable: "variable:myVar"
+     * - Location: "location:world,x,y,z,yaw,pitch"
+     *
+     * This allows DataContainer values to be stored as STRING params in the PDC.
+     * Requirements: 3.8
+     */
+    fun serializeDataContainerMap(dcMap: Map<String, Any>): String {
+        val type = dcMap["dc_type"] as? String ?: return ""
+        return when (type) {
+            "text"     -> "text:${dcMap["value"] ?: ""}"
+            "number"   -> "number:${dcMap["value"] ?: "0"}"
+            "variable" -> "variable:${dcMap["name"] ?: ""}"
+            "location" -> {
+                val x     = dcMap["x"] ?: "0"
+                val y     = dcMap["y"] ?: "0"
+                val z     = dcMap["z"] ?: "0"
+                val world = dcMap["world"] ?: ""
+                val yaw   = dcMap["yaw"] ?: "0"
+                val pitch = dcMap["pitch"] ?: "0"
+                "location:$world,$x,$y,$z,$yaw,$pitch"
+            }
+            else -> ""
+        }
+    }
+
+    /**
+     * Deserializes a DataContainer map from a string produced by [serializeDataContainerMap].
+     * Returns null if the string is blank or has an unrecognised type prefix.
+     * Requirements: 3.8
+     */
+    fun deserializeDataContainerMap(serialized: String): Map<String, Any>? {
+        if (serialized.isBlank()) return null
+        val colonIdx = serialized.indexOf(':')
+        if (colonIdx < 0) return null
+        val type = serialized.substring(0, colonIdx)
+        val payload = serialized.substring(colonIdx + 1)
+        return when (type) {
+            "text"     -> mapOf("dc_type" to "text", "value" to payload)
+            "number"   -> mapOf("dc_type" to "number", "value" to (payload.toDoubleOrNull() ?: 0.0))
+            "variable" -> mapOf("dc_type" to "variable", "name" to payload)
+            "location" -> {
+                val parts = payload.split(",")
+                mapOf(
+                    "dc_type" to "location",
+                    "world"   to (parts.getOrNull(0) ?: ""),
+                    "x"       to (parts.getOrNull(1)?.toDoubleOrNull() ?: 0.0),
+                    "y"       to (parts.getOrNull(2)?.toDoubleOrNull() ?: 0.0),
+                    "z"       to (parts.getOrNull(3)?.toDoubleOrNull() ?: 0.0),
+                    "yaw"     to (parts.getOrNull(4)?.toFloatOrNull() ?: 0f),
+                    "pitch"   to (parts.getOrNull(5)?.toFloatOrNull() ?: 0f)
+                )
+            }
+            else -> null
+        }
+    }
 }

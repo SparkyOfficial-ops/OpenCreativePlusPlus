@@ -41,5 +41,6 @@ tasks {
 
     test {
         enabled = true
+        jvmArgs("-Xmx1536m")
     }
 }

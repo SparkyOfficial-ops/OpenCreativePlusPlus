@@ -34,6 +34,12 @@ import java.util.logging.Logger
  * Parameter extraction (s 9.5–9.9):
  * - If block above has a chest with `ocp:param_chest`, reads chest inventory
  * - Maps items to expectedParams by slot index
+ *
+ * Piston System (Requirements 2.1–2.7):
+ * - STICKY_PISTON above glass = opening bracket of a conditional scope
+ * - PISTON above glass = closing bracket of a conditional scope
+ * - [scanChildBranch] implements depth-tracking up to 16 levels
+ * - Unclosed brackets accumulate as [ParseError] in [parseErrors]
  */
 class BlockScanner(
     private val world: World,
@@ -43,6 +49,9 @@ class BlockScanner(
     private val logger: Logger = Logger.getLogger(BlockScanner::class.java.name)
 ) {
 
+    /** Accumulated parse errors from the most recent scan. Cleared at the start of each [scanStrip]. */
+    val parseErrors: MutableList<ParseError> = mutableListOf()
+
     companion object {
         private val GLASS_STRIP_MATERIALS = setOf(
             Material.BLUE_STAINED_GLASS,
@@ -50,12 +59,21 @@ class BlockScanner(
             Material.GRAY_STAINED_GLASS
         )
 
-        /** Conditional node materials that trigger perpendicular branch scanning (Piston System, Req 8.2, 8.3). */
+        /** Conditional node materials that may be followed by a STICKY_PISTON scope (Piston System, Req 2.1–2.3). */
         private val CONDITIONAL_MATERIALS = setOf(
             Material.OAK_PLANKS,   // IF_PLAYER
             Material.OBSIDIAN,     // IF_VARIABLE
             Material.BRICK         // IF_ENTITY
         )
+
+        /** Opening bracket of a conditional scope (Req 2.1). */
+        private val OPENING_BRACKET = Material.STICKY_PISTON
+
+        /** Closing bracket of a conditional scope (Req 2.2). */
+        private val CLOSING_BRACKET = Material.PISTON
+
+        /** Maximum nesting depth for piston scopes (Req 2.7). */
+        const val MAX_PISTON_DEPTH = 16
 
         /** PDC key for the selected action id on a Category_Block. */
         private val KEY_ACTION_ID = NamespacedKey("ocp", "action_id")
@@ -73,7 +91,7 @@ class BlockScanner(
     // -----------------------------------------------------------------------
 
     /** Cardinal directions supported by the pathfinding scanner. */
-    private enum class Direction {
+    internal enum class Direction {
         NORTH, SOUTH, EAST, WEST;
 
         fun toBlockFace(): BlockFace = when (this) {
@@ -171,9 +189,14 @@ class BlockScanner(
      * Supports straight movement, turns, branching, and cycle detection via [visited] set.
      * Returns one [CodeLine] per independent path found.
      *
-     * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7
+     * When a conditional node is found above a glass block and the next glass block has
+     * STICKY_PISTON above it, [scanChildBranch] is called to collect the child scope
+     * (Requirements 2.1, 2.2, 2.3).
+     *
+     * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 10.6, 10.7, 2.1, 2.2, 2.3
      */
     internal fun scanStrip(startBlock: Block): List<CodeLine> {
+        parseErrors.clear()
         val visited = mutableSetOf<LocationKey>()
         val queue = ArrayDeque<TraversalState>()
         val results = mutableListOf<CodeLine>()
@@ -192,22 +215,6 @@ class BlockScanner(
                 val node = buildScannedNode(above)
                 if (node != null) {
                     nodeList.add(node)
-                    // Piston System: if this is a conditional node, scan perpendicular branch as child
-                    if (above.type in CONDITIONAL_MATERIALS) {
-                        val perpDir = dir.turnLeft()
-                        val perpBlock = block.getRelative(perpDir.toBlockFace())
-                        if (perpBlock.type in GLASS_STRIP_MATERIALS) {
-                            val child = scanChildBranch(perpBlock, perpDir, visited)
-                            state.children.add(child)
-                        } else {
-                            val perpDirRight = dir.turnRight()
-                            val perpBlockRight = block.getRelative(perpDirRight.toBlockFace())
-                            if (perpBlockRight.type in GLASS_STRIP_MATERIALS) {
-                                val child = scanChildBranch(perpBlockRight, perpDirRight, visited)
-                                state.children.add(child)
-                            }
-                        }
-                    }
                 }
             }
 
@@ -227,10 +234,34 @@ class BlockScanner(
                     results.add(CodeLine(startBlock.location, nodeList, state.children))
                 }
                 1 -> {
-                    // Continue along the single candidate
                     val (next, nextDir) = candidates[0]
-                    visited.add(LocationKey.of(next.location))
-                    queue.add(TraversalState(next, nextDir, nodeList, state.children))
+                    // Piston System (Req 2.1, 2.3): if the last collected node was a conditional
+                    // and the next glass block has STICKY_PISTON above it, scan the child scope.
+                    val nextAbove = next.getRelative(BlockFace.UP)
+                    val lastNode = nodeList.lastOrNull()
+                    if (lastNode != null &&
+                        lastNode.blockType in CONDITIONAL_MATERIALS &&
+                        nextAbove.type == OPENING_BRACKET
+                    ) {
+                        // Mark the opening bracket glass as visited and scan the child scope
+                        visited.add(LocationKey.of(next.location))
+                        val (childCodeLine, afterPiston) = scanChildBranch(next, nextDir, visited)
+                        state.children.add(childCodeLine)
+
+                        if (afterPiston != null) {
+                            // Continue scanning from the block after the closing PISTON
+                            val (afterBlock, afterDir) = afterPiston
+                            visited.add(LocationKey.of(afterBlock.location))
+                            queue.add(TraversalState(afterBlock, afterDir, nodeList, state.children))
+                        } else {
+                            // No block after closing piston — dead end
+                            results.add(CodeLine(startBlock.location, nodeList, state.children))
+                        }
+                    } else {
+                        // Continue along the single candidate normally
+                        visited.add(LocationKey.of(next.location))
+                        queue.add(TraversalState(next, nextDir, nodeList, state.children))
+                    }
                 }
                 else -> {
                     // Branch — current path is done; each candidate starts a new independent path
@@ -251,37 +282,48 @@ class BlockScanner(
     // -----------------------------------------------------------------------
 
     /**
-     * Scans a perpendicular branch as a child CodeLine until STICKY_PISTON or end-of-chain.
-     * Used by the Piston System (Requirement 8.2, 8.3).
+     * Scans a child scope delimited by STICKY_PISTON (opening) and PISTON (closing) brackets.
+     *
+     * Called when the scanner is positioned at the glass block that has STICKY_PISTON above it
+     * (the opening bracket). Implements depth tracking to support nesting up to [MAX_PISTON_DEPTH].
+     *
+     * Algorithm (Requirements 2.1, 2.2, 2.3, 2.6, 2.7):
+     * ```
+     * depth = 1  (we are already inside the opening bracket)
+     * while not end of strip:
+     *   advance to next glass block
+     *   if STICKY_PISTON above: depth++; if depth > MAX_PISTON_DEPTH → ParseError
+     *   if PISTON above: depth--; if depth == 0 → end of scope
+     *   else: collect node
+     * if depth > 0 at end → ParseError("Unclosed bracket at $location")
+     * ```
+     *
+     * @param openingBracketGlass The glass block whose above block is STICKY_PISTON (depth=1 start).
+     * @param direction           The current traversal direction.
+     * @param visited             Shared visited set to prevent revisiting blocks.
+     * @return A pair of (child CodeLine, next glass block + direction after closing PISTON).
+     *         The second element is null if the strip ends without a matching closing PISTON.
+     *
+     * Requirements: 2.1, 2.2, 2.3, 2.6, 2.7
      */
-    private fun scanChildBranch(
-        startBlock: Block,
+    internal fun scanChildBranch(
+        openingBracketGlass: Block,
         direction: Direction,
         visited: MutableSet<LocationKey>
-    ): CodeLine {
+    ): Pair<CodeLine, Pair<Block, Direction>?> {
         val childNodes = mutableListOf<ScannedNode>()
-        var current = startBlock
+        var depth = 1  // We are already inside the opening STICKY_PISTON bracket
+        var current = openingBracketGlass
         var dir = direction
 
+        // The opening bracket glass block is already marked visited by the caller.
+        // Now advance through the strip collecting nodes until depth reaches 0.
         while (true) {
-            // Mark visited
-            visited.add(LocationKey.of(current.location))
-
-            // Stop at STICKY_PISTON (branch-end marker)
-            if (current.type == Material.STICKY_PISTON) break
-
-            // Collect block above
-            val above = current.getRelative(BlockFace.UP)
-            if (above.type != Material.AIR) {
-                val node = buildScannedNode(above)
-                if (node != null) childNodes.add(node)
-            }
-
-            // Find next block: prefer straight ahead, then turns
-            val ahead = current.getRelative(dir.toBlockFace())
-            val leftDir = dir.turnLeft()
-            val rightDir = dir.turnRight()
-            val leftBlock = current.getRelative(leftDir.toBlockFace())
+            // Find the next glass block
+            val ahead      = current.getRelative(dir.toBlockFace())
+            val leftDir    = dir.turnLeft()
+            val rightDir   = dir.turnRight()
+            val leftBlock  = current.getRelative(leftDir.toBlockFace())
             val rightBlock = current.getRelative(rightDir.toBlockFace())
 
             val next = listOf(
@@ -289,17 +331,68 @@ class BlockScanner(
                 leftBlock to leftDir,
                 rightBlock to rightDir
             ).firstOrNull { (b, _) ->
-                (b.type in GLASS_STRIP_MATERIALS || b.type == Material.STICKY_PISTON) &&
-                LocationKey.of(b.location) !in visited
+                b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
             }
 
-            if (next == null) break
+            if (next == null) {
+                // End of strip without closing bracket
+                if (depth > 0) {
+                    parseErrors.add(ParseError(
+                        "Unclosed bracket at ${current.location.blockX},${current.location.blockY},${current.location.blockZ}",
+                        current.location
+                    ))
+                }
+                return CodeLine(openingBracketGlass.location, childNodes) to null
+            }
+
             val (nextBlock, nextDir) = next
+            visited.add(LocationKey.of(nextBlock.location))
             current = nextBlock
             dir = nextDir
-        }
 
-        return CodeLine(startBlock.location, childNodes)
+            val above = current.getRelative(BlockFace.UP)
+            when {
+                above.type == OPENING_BRACKET -> {
+                    // Nested opening bracket (Req 2.7)
+                    depth++
+                    if (depth > MAX_PISTON_DEPTH) {
+                        parseErrors.add(ParseError(
+                            "Piston nesting depth exceeded $MAX_PISTON_DEPTH at ${above.location.blockX},${above.location.blockY},${above.location.blockZ}",
+                            above.location
+                        ))
+                        // Continue scanning but don't go deeper — treat as a regular node
+                    }
+                }
+                above.type == CLOSING_BRACKET -> {
+                    // Closing bracket (Req 2.2)
+                    depth--
+                    if (depth == 0) {
+                        // End of this scope — find the block after the closing piston
+                        val afterAhead      = current.getRelative(dir.toBlockFace())
+                        val afterLeftDir    = dir.turnLeft()
+                        val afterRightDir   = dir.turnRight()
+                        val afterLeftBlock  = current.getRelative(afterLeftDir.toBlockFace())
+                        val afterRightBlock = current.getRelative(afterRightDir.toBlockFace())
+
+                        val afterNext = listOf(
+                            afterAhead to dir,
+                            afterLeftBlock to afterLeftDir,
+                            afterRightBlock to afterRightDir
+                        ).firstOrNull { (b, _) ->
+                            b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
+                        }
+
+                        return CodeLine(openingBracketGlass.location, childNodes) to afterNext
+                    }
+                    // depth > 0: closing bracket for a nested scope — don't collect as node
+                }
+                above.type != Material.AIR -> {
+                    // Regular node inside the scope
+                    val node = buildScannedNode(above)
+                    if (node != null) childNodes.add(node)
+                }
+            }
+        }
     }
 
     /**

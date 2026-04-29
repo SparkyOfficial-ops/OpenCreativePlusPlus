@@ -1,6 +1,7 @@
 package com.opencreativeplus.core.execution
 
 import com.opencreativeplus.api.node.ICondition
+import com.opencreativeplus.api.node.IFunctionCall
 import com.opencreativeplus.api.plot.PlotManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.Watchdog
@@ -32,7 +33,8 @@ class ExecutionEngine(
     private val plotManager: PlotManager? = null,
     private val logger: Logger = Logger.getLogger("ExecutionEngine"),
     private val errorReporter: ((sourceLocation: String, message: String) -> Unit)? = null,
-    private val compiledScriptProvider: ((UUID) -> CompiledScript?)? = null
+    private val compiledScriptProvider: ((UUID) -> CompiledScript?)? = null,
+    private val functionRegistry: FunctionRegistry? = null
 ) {
     /** plotId → active jobs for that plot */
     private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
@@ -104,6 +106,9 @@ class ExecutionEngine(
                             }
                         }
                         // If condition is false, child branch is skipped (Req 8.3)
+                    } else if (action is IFunctionCall) {
+                        // Function call handling (Req 5.3, 5.4, 5.5, 5.6)
+                        executeFunctionCall(action, context)
                     } else {
                         // Req 1.8: iterate over every target in context.targets and apply action to each.
                         // Req 1.9: if targets is empty, the loop does not execute — silent skip, no exception.
@@ -167,6 +172,93 @@ class ExecutionEngine(
             playerExecutions.getOrPut(key) { mutableListOf() }.add(job)
             job.invokeOnCompletion { playerExecutions[key]?.remove(job) }
         }
+    }
+
+    /**
+     * Execute a function call action.
+     *
+     * Looks up the function in [functionRegistry]; if not found — logs a warning and skips (Req 5.4).
+     * Creates a new [ExecutionContextImpl] with isolated [localScope] but inherited [targets] (Req 5.5).
+     * Checks [callStackSize] < 32; if exceeded — terminates chain + logs "stack overflow" (Req 5.6).
+     *
+     * Requirements: 5.3, 5.4, 5.5, 5.6
+     */
+    private suspend fun executeFunctionCall(
+        action: IFunctionCall,
+        context: ExecutionContextImpl
+    ) {
+        val registry = functionRegistry
+        if (registry == null) {
+            logger.warning("[OCP] ExecutionEngine: FunctionRegistry not configured — skipping call_function '${action.targetFunctionName}'")
+            return
+        }
+
+        // Req 5.4: if function not found — log warning and skip
+        val functionScript = registry.get(action.targetFunctionName)
+        if (functionScript == null) {
+            logger.warning("[OCP] ExecutionEngine: function '${action.targetFunctionName}' not found in registry — skipping")
+            return
+        }
+
+        // Req 5.6: check call stack depth
+        val depth = context.callStackSize.incrementAndGet()
+        try {
+            if (depth > MAX_CALL_STACK_SIZE) {
+                logger.warning("[OCP] ExecutionEngine: stack overflow — call stack exceeded $MAX_CALL_STACK_SIZE for function '${action.targetFunctionName}'")
+                return
+            }
+
+            // Req 5.5: create new context with isolated localScope but inherited targets
+            val functionContext = ExecutionContextImpl(
+                plotId = context.plotId,
+                player = context.player,
+                eventData = context.eventData,
+                localScope = variableManager.createLocalScope(),
+                plotScope = context.plotScope,
+                savedScope = context.savedScope,
+                operationCount = context.operationCount,
+                syncDispatcher = coroutineConfig.syncDispatcher,
+                callStackSize = context.callStackSize,
+                targets = context.targets
+            )
+
+            // Execute the function's actions
+            for ((index, funcAction) in functionScript.actions.withIndex()) {
+                watchdog.checkExecution(functionContext)
+                traceManager?.onNodeExecute(null, funcAction.displayName, emptyMap())
+
+                val funcCondition = funcAction as? ICondition
+                if (funcCondition != null) {
+                    val conditionResult = funcCondition.evaluate(functionContext)
+                    val childBranch = functionScript.conditionalBranches[index]
+                    if (conditionResult && childBranch != null) {
+                        for (childAction in childBranch) {
+                            watchdog.checkExecution(functionContext)
+                            childAction.execute(functionContext)
+                            functionContext.operationCount.incrementAndGet()
+                        }
+                    }
+                } else if (funcAction is IFunctionCall) {
+                    // Recursive function call — handled with the same stack depth tracking
+                    executeFunctionCall(funcAction, functionContext)
+                } else {
+                    val targets = functionContext.targets.toList()
+                    if (targets.isNotEmpty()) {
+                        for (target in targets) {
+                            funcAction.execute(functionContext)
+                        }
+                    }
+                }
+                functionContext.operationCount.incrementAndGet()
+            }
+        } finally {
+            context.callStackSize.decrementAndGet()
+        }
+    }
+
+    companion object {
+        /** Maximum call stack depth for function calls (Req 5.6). */
+        const val MAX_CALL_STACK_SIZE = 32
     }
 
     /**

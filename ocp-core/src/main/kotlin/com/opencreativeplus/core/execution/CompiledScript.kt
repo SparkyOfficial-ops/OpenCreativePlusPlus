@@ -13,6 +13,9 @@ import com.opencreativeplus.api.node.IEvent
  * [conditionalBranches] maps action index → child actions for the Piston System (Req 8.3).
  * When a condition at index i evaluates to false, the child branch at key i is skipped.
  *
+ * [isFunctionEntry] marks this script as a named function definition (Req 5.1, 5.2).
+ * [functionName] holds the function name read from the first ParamChest slot of the LAPIS_BLOCK.
+ *
  6.1, 6.2
  */
 data class CompiledScript(
@@ -29,5 +32,15 @@ data class CompiledScript(
      * Statically-resolved placeholder strings at compile time (Req 13.2).
      * Maps placeholder key → resolved value.
      */
-    val resolvedPlaceholders: Map<String, String> = emptyMap()
+    val resolvedPlaceholders: Map<String, String> = emptyMap(),
+    /**
+     * Whether this script is a named function definition entry point (Req 5.1, 5.2).
+     * Set to true when the first block of the code line is a LAPIS_BLOCK.
+     */
+    val isFunctionEntry: Boolean = false,
+    /**
+     * The name of the function, read from the first slot of the ParamChest above the LAPIS_BLOCK.
+     * Non-null only when [isFunctionEntry] is true (Req 5.2).
+     */
+    val functionName: String? = null
 )

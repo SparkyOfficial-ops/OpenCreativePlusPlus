@@ -104,6 +104,9 @@ class BlockScanner(
 
         /** Cycle entry point block (Req 4.1). */
         val CYCLE_ENTRY_MATERIAL = Material.EMERALD_BLOCK
+
+        /** Function definition entry point block (Req 5.1). */
+        val FUNCTION_ENTRY_MATERIAL = Material.LAPIS_BLOCK
     }
 
     /**
@@ -112,6 +115,31 @@ class BlockScanner(
      */
     fun findCycleEntries(codeLines: List<CodeLine>): List<CodeLine> =
         codeLines.filter { it.nodes.firstOrNull()?.blockType == CYCLE_ENTRY_MATERIAL }
+
+    /**
+     * Returns all CodeLines whose first node is a LAPIS_BLOCK (function definition entry points).
+     * Requirements: 5.1
+     */
+    fun findFunctionEntries(codeLines: List<CodeLine>): List<CodeLine> =
+        codeLines.filter { it.nodes.firstOrNull()?.blockType == FUNCTION_ENTRY_MATERIAL }
+
+    /**
+     * Reads the function name from the first slot of the ParamChest above [block].
+     *
+     * The function name is the plain display name of the item in slot 0 of the chest.
+     * Returns null if no chest is present, the chest is empty, or slot 0 is empty.
+     *
+     * Requirements: 5.2
+     *
+     * @param block The LAPIS_BLOCK whose ParamChest contains the function name.
+     * @return The function name string, or null if not found.
+     */
+    fun readFunctionName(block: org.bukkit.block.Block): String? {
+        val above = block.getRelative(org.bukkit.block.BlockFace.UP)
+        val chest = above.state as? org.bukkit.block.Chest ?: return null
+        val firstItem = chest.inventory.getItem(0) ?: return null
+        return firstItem.plainDisplayName().takeIf { it.isNotBlank() }
+    }
 
     // -----------------------------------------------------------------------
     // Traversal state for BFS pathfinding
@@ -458,6 +486,10 @@ class BlockScanner(
             if (pdcActionId == "and_condition" || pdcActionId == "or_condition") {
                 params["condition_children"] = readConditionChildren(block)
             }
+            // Req 5.2: if this is a LAPIS_BLOCK (function entry), read function name from ParamChest slot 0
+            if (block.type == FUNCTION_ENTRY_MATERIAL) {
+                readFunctionName(block)?.let { params["function_name"] = it }
+            }
             ScannedNode(
                 blockType = block.type,
                 location  = block.location,
@@ -474,6 +506,10 @@ class BlockScanner(
             val params = extractParameters(block, descriptor).toMutableMap()
             if (materialNodeId == "and_condition" || materialNodeId == "or_condition") {
                 params["condition_children"] = readConditionChildren(block)
+            }
+            // Req 5.2: if this is a LAPIS_BLOCK (function entry), read function name from ParamChest slot 0
+            if (block.type == FUNCTION_ENTRY_MATERIAL) {
+                readFunctionName(block)?.let { params["function_name"] = it }
             }
             ScannedNode(
                 blockType  = block.type,

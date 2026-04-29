@@ -85,6 +85,53 @@ class TraceManager(private val plugin: Plugin) {
     }
 
     /**
+     * Called when a node at [location] executes.
+     * Spawns REDSTONE_DUST particles at the block location for each tracing player only.
+     * Req 8.2, 8.5
+     */
+    fun onNodeExecute(location: Location) {
+        tracingPlayers.keys.forEach { playerId ->
+            val player = Bukkit.getPlayer(playerId) ?: return@forEach
+            val loc = location.clone().add(0.5, 1.2, 0.5)
+            @Suppress("DEPRECATION")
+            player.spawnParticle(
+                Particle.REDSTONE,
+                loc,
+                10,
+                Particle.DustOptions(Color.RED, 1.0f)
+            )
+        }
+    }
+
+    /**
+     * Spawns ELECTRIC_SPARK particles along the straight path from [from] to [to]
+     * at 0.5-block intervals, visible only to tracing players.
+     * Req 8.3, 8.5
+     */
+    fun highlightPath(from: Location, to: Location) {
+        if (from.world != to.world) return
+        val dx = to.x - from.x
+        val dy = to.y - from.y
+        val dz = to.z - from.z
+        val distance = from.distance(to)
+        if (distance == 0.0) return
+        val steps = (distance / 0.5).toInt().coerceAtLeast(1)
+        tracingPlayers.keys.forEach { playerId ->
+            val player = Bukkit.getPlayer(playerId) ?: return@forEach
+            for (i in 0..steps) {
+                val t = i.toDouble() / steps
+                val loc = Location(
+                    from.world,
+                    from.x + dx * t,
+                    from.y + dy * t + 0.5,
+                    from.z + dz * t
+                )
+                player.spawnParticle(Particle.ELECTRIC_SPARK, loc, 1)
+            }
+        }
+    }
+
+    /**
      * Called when a script execution completes. Sends a summary message to the tracing player.
      * Format: "§7[Trace] ops=X, time=Yms"
      * s: 14.7

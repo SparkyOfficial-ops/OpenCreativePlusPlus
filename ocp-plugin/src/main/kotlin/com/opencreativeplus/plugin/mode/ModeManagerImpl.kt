@@ -114,6 +114,8 @@ class ModeManagerImpl(
                 devVisualizer?.stopFor(player)
                 // Hide error holograms when leaving dev mode (Req 12.7)
                 hologramReporter?.hideFromPlayer(player)
+                // Hide all arg holograms when leaving dev mode (Req 9.4)
+                hologramReporter?.hideArgHolograms(player)
             }
             PlotMode.BUILD -> {
                 // Disable flight that was granted in BUILD mode

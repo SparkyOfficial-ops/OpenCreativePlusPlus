@@ -101,7 +101,17 @@ class BlockScanner(
         private val KEY_DC_LOC_YAW    = NamespacedKey("ocp", "loc_yaw")
         /** PDC key for DataContainer pitch. Requirements: 3.4 */
         private val KEY_DC_LOC_PITCH  = NamespacedKey("ocp", "loc_pitch")
+
+        /** Cycle entry point block (Req 4.1). */
+        val CYCLE_ENTRY_MATERIAL = Material.EMERALD_BLOCK
     }
+
+    /**
+     * Returns all CodeLines whose first node is an EMERALD_BLOCK (cycle entry points).
+     * Requirements: 4.1
+     */
+    fun findCycleEntries(codeLines: List<CodeLine>): List<CodeLine> =
+        codeLines.filter { it.nodes.firstOrNull()?.blockType == CYCLE_ENTRY_MATERIAL }
 
     // -----------------------------------------------------------------------
     // Traversal state for BFS pathfinding

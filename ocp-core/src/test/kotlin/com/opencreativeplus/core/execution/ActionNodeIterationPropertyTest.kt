@@ -58,6 +58,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
         override val operationCount: AtomicInteger = AtomicInteger(0)
         override val callStackSize: AtomicInteger = AtomicInteger(0)
         override val targets: MutableList<Entity> = targets
+        override var currentTarget: org.bukkit.entity.Entity? = null
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 

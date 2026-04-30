@@ -35,6 +35,14 @@ class ExecutionContextImpl(
 ) : ExecutionContext {
 
     /**
+     * The current target entity being processed in the targets iteration loop.
+     * Set by ExecutionEngine before each action.execute(context) call.
+     * Null outside of the iteration loop.
+     * Req 1.1, 1.2
+     */
+    override var currentTarget: Entity? = null
+
+    /**
      * Switches to [syncDispatcher] (the Bukkit main thread) for the duration
      * of [block], then resumes on the calling coroutine's dispatcher.
      */

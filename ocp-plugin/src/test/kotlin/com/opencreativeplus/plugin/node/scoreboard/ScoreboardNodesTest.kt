@@ -38,6 +38,7 @@ private class TrackingSyncContext(override val player: Player? = null) : Executi
     override val operationCount: AtomicInteger = AtomicInteger(0)
     override val callStackSize: AtomicInteger = AtomicInteger(0)
     override val targets: MutableList<org.bukkit.entity.Entity> = mutableListOf()
+    override var currentTarget: org.bukkit.entity.Entity? = null
 
     var syncContextCalled = false
 

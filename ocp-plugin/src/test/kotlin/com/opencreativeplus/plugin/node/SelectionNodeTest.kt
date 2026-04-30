@@ -42,6 +42,7 @@ private fun buildContext(
     override val operationCount: AtomicInteger = AtomicInteger(0)
     override val callStackSize: AtomicInteger = AtomicInteger(0)
     override val targets: MutableList<Entity> = initialTargets
+    override var currentTarget: Entity? = null
     override suspend fun <T> syncContext(block: () -> T): T = block()
 }
 

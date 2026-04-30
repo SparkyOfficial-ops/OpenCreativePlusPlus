@@ -56,7 +56,15 @@ interface ExecutionContext {
      * Stored in ExecutionContext (not ThreadLocal) so it survives coroutine thread switches.
      */
     val callStackSize: AtomicInteger
-    
+
+    /**
+     * The current target entity being processed in the targets iteration loop.
+     * Set by ExecutionEngine before each action.execute(context) call.
+     * Null outside of the iteration loop (e.g., when targets is empty).
+     * Req 1.1, 1.2
+     */
+    var currentTarget: Entity?
+
     /**
      * Execute a block of code on the Bukkit main thread.
      * Used for operations that require sync context (e.g., teleportation, world manipulation).

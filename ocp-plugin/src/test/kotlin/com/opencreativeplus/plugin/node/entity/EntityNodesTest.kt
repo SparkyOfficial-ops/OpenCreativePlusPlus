@@ -39,6 +39,7 @@ private class TrackingSyncContext(override val player: Player? = null) : Executi
     override val operationCount: AtomicInteger = AtomicInteger(0)
     override val callStackSize: AtomicInteger = AtomicInteger(0)
     override val targets: MutableList<Entity> = mutableListOf()
+    override var currentTarget: Entity? = null
 
     var syncContextCalled = false
 

@@ -110,11 +110,13 @@ class ExecutionEngine(
                         // Function call handling (Req 5.3, 5.4, 5.5, 5.6)
                         executeFunctionCall(action, context)
                     } else {
-                        // Req 1.8: iterate over every target in context.targets and apply action to each.
+                        // Req 1.1, 1.2: iterate over every target in context.targets, set currentTarget,
+                        // and apply action to each.
                         // Req 1.9: if targets is empty, the loop does not execute — silent skip, no exception.
                         val targets = context.targets.toList()
                         if (targets.isNotEmpty()) {
                             for (target in targets) {
+                                context.currentTarget = target
                                 action.execute(context)
                             }
                         }
@@ -245,6 +247,7 @@ class ExecutionEngine(
                     val targets = functionContext.targets.toList()
                     if (targets.isNotEmpty()) {
                         for (target in targets) {
+                            functionContext.currentTarget = target
                             funcAction.execute(functionContext)
                         }
                     }

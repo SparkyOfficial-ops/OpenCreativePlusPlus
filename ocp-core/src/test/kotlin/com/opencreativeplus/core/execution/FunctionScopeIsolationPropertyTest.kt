@@ -64,6 +64,7 @@ class FunctionScopeIsolationPropertyTest : FreeSpec({
         override val operationCount: AtomicInteger = AtomicInteger(0)
         override val callStackSize: AtomicInteger = AtomicInteger(0)
         override val targets: MutableList<Entity> = targets
+        override var currentTarget: Entity? = null
         override suspend fun <T> syncContext(block: () -> T): T = block()
     }
 
@@ -91,6 +92,7 @@ class FunctionScopeIsolationPropertyTest : FreeSpec({
             override val operationCount: AtomicInteger = callerContext.operationCount
             override val callStackSize: AtomicInteger = callerContext.callStackSize
             override val targets: MutableList<Entity> = callerContext.targets  // inherited
+            override var currentTarget: Entity? = null
             override suspend fun <T> syncContext(block: () -> T): T = block()
         }
         functionBody(functionContext)
@@ -280,6 +282,7 @@ class FunctionScopeIsolationPropertyTest : FreeSpec({
                     override val operationCount: AtomicInteger = AtomicInteger(0)
                     override val callStackSize: AtomicInteger = AtomicInteger(0)
                     override val targets: MutableList<Entity> = mutableListOf()
+                    override var currentTarget: Entity? = null
                     override suspend fun <T> syncContext(block: () -> T): T = block()
                 }
 

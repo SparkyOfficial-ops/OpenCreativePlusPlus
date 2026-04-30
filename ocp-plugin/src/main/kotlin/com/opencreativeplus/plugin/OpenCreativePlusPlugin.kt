@@ -307,7 +307,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
 
         // ── Commands ──────────────────────────────────────────────────────────
-        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI, coreWorldManager = coreWorldManager)
+        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI, coreWorldManager = coreWorldManager, signInputManager = signInputManager)
         listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
             getCommand(cmd)?.setExecutor(plotCommands)
         }

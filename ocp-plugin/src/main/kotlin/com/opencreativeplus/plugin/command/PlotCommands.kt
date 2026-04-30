@@ -4,13 +4,16 @@ import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.core.trace.TraceManager
 import com.opencreativeplus.core.watchdog.TPSMonitor
+import com.opencreativeplus.plugin.gui.ItemCreatorGUI
 import com.opencreativeplus.plugin.gui.PlotTopGUI
 import com.opencreativeplus.plugin.gui.VariableExplorerGUI
+import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.plugin.node.dialogue.DialogueManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.bukkit.Bukkit
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
@@ -35,7 +38,8 @@ class PlotCommands(
     private val variableManager: VariableManager? = null,
     private val plugin: Plugin? = null,
     private val plotTopGUI: PlotTopGUI? = null,
-    private val coreWorldManager: com.opencreativeplus.core.world.WorldManager? = null
+    private val coreWorldManager: com.opencreativeplus.core.world.WorldManager? = null,
+    private val signInputManager: SignInputManager? = null
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -153,7 +157,7 @@ class PlotCommands(
 
     /**
      * Handles /ocp subcommands.
-     * Currently supports: trace
+     * Currently supports: trace, items
      * s: 14.1
      */
     private fun handleOcp(player: Player, args: Array<out String>) {
@@ -171,7 +175,17 @@ class PlotCommands(
                 }
                 tm.toggle(player)
             }
-            else -> player.sendMessage("§7[OCP] Usage: /ocp <trace>")
+            "items" -> {
+                val sim = signInputManager
+                val pl = plugin
+                if (sim == null || pl == null) {
+                    player.sendMessage("§c[OCP] Item Creator is not available.")
+                    return
+                }
+                val gui = ItemCreatorGUI(pl, sim, scope)
+                Bukkit.getScheduler().runTask(pl, Runnable { gui.open(player) })
+            }
+            else -> player.sendMessage("§7[OCP] Usage: /ocp <trace|items>")
         }
     }
 }

@@ -5,6 +5,7 @@ import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.core.execution.PlaceholderParser
 import com.opencreativeplus.core.execution.PlaceholderParserImpl
 import com.opencreativeplus.core.execution.VariableManager
+import org.bukkit.entity.Player
 
 /**
  * Action node that sends a message to the player.
@@ -22,7 +23,7 @@ class SendMessageAction(
     override val displayName: String = "Send Message"
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.player ?: return
+        val player = context.currentTarget as? Player ?: return
         val rawMessage = params["message"]?.toString() ?: return
 
         // First resolve %placeholder% syntax, then legacy $varname syntax

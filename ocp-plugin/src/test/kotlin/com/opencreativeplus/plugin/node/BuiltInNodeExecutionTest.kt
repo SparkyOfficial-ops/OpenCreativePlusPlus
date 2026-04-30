@@ -177,6 +177,7 @@ class SendMessageActionTest {
     fun `execute sends message to player`() = runTest {
         val player = mockk<Player>(relaxed = true)
         val ctx = FakeExecutionContext(player = player)
+        ctx.currentTarget = player
         val action = SendMessageAction(mapOf("message" to "Hello, world!"))
 
         action.execute(ctx)
@@ -188,6 +189,7 @@ class SendMessageActionTest {
     fun `execute resolves variable references from local scope`() = runTest {
         val player = mockk<Player>(relaxed = true)
         val ctx = FakeExecutionContext(player = player)
+        ctx.currentTarget = player
         ctx.localScope.set("name", "Steve")
         val action = SendMessageAction(mapOf("message" to "Hello, \$name!"))
 
@@ -199,6 +201,7 @@ class SendMessageActionTest {
     @Test
     fun `execute does nothing when player is null`() = runTest {
         val ctx = FakeExecutionContext(player = null)
+        // currentTarget is null by default
         val action = SendMessageAction(mapOf("message" to "Hello"))
         action.execute(ctx) // should not throw
     }

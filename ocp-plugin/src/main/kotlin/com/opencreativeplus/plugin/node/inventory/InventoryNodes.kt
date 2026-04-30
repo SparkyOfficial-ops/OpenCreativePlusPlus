@@ -20,13 +20,12 @@ private val logger: Logger = Logger.getLogger("InventoryNodes")
 class GiveItemNode(params: Map<String, Any>) : IAction {
     override val nodeId = "give_item"
     override val displayName = "Give Item"
-    private val playerVar: String = params["player"] as? String ?: error("player param required")
     private val materialName: String = params["material"] as? String ?: "STONE"
     private val amount: Int = params["amount"] as? Int ?: 1
     private val displayName_: String? = params["name"] as? String
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.localScope.get(playerVar) as? Player ?: return
+        val player = context.currentTarget as? Player ?: return
         val material = try {
             Material.valueOf(materialName.uppercase())
         } catch (e: IllegalArgumentException) {

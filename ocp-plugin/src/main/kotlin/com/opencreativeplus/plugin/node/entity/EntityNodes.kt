@@ -31,51 +31,48 @@ class SpawnEntityNode(params: Map<String, Any>) : IAction {
 }
 
 /**
- * Removes a target entity from the world.
- * Params: "entity" (String var name holding an Entity)
+ * Removes the current target entity from the world.
  * s: 5.2
  */
+@Suppress("UNUSED_PARAMETER")
 class KillEntityNode(params: Map<String, Any>) : IAction {
     override val nodeId = "kill_entity"
     override val displayName = "Kill Entity"
-    private val entityVar: String = params["entity"] as? String ?: error("entity param required")
 
     override suspend fun execute(context: ExecutionContext) {
-        val entity = context.localScope.get(entityVar) as? Entity ?: return
+        val entity = context.currentTarget ?: return
         context.syncContext { entity.remove() }
     }
 }
 
 /**
- * Enables or disables AI for a LivingEntity.
- * Params: "entity" (String var name), "ai" (Boolean, default true)
+ * Enables or disables AI for the current target entity (LivingEntity).
+ * Params: "ai" (Boolean, default true)
  * s: 5.3, 5.8
  */
 class SetEntityAINode(params: Map<String, Any>) : IAction {
     override val nodeId = "set_entity_ai"
     override val displayName = "Set Entity AI"
-    private val entityVar: String = params["entity"] as? String ?: error("entity param required")
     private val aiEnabled: Boolean = params["ai"] as? Boolean ?: true
 
     override suspend fun execute(context: ExecutionContext) {
-        val entity = context.localScope.get(entityVar) as? LivingEntity ?: return
+        val entity = context.currentTarget as? LivingEntity ?: return
         context.syncContext { entity.setAI(aiEnabled) }
     }
 }
 
 /**
- * Sets the health of a LivingEntity, clamped to [0, maxHealth].
- * Params: "entity" (String var name), "health" (Double)
+ * Sets the health of the current target entity (LivingEntity), clamped to [0, maxHealth].
+ * Params: "health" (Double)
  * s: 5.4
  */
 class SetEntityHealthNode(params: Map<String, Any>) : IAction {
     override val nodeId = "set_entity_health"
     override val displayName = "Set Entity Health"
-    private val entityVar: String = params["entity"] as? String ?: error("entity param required")
     private val health: Double = params["health"] as? Double ?: 20.0
 
     override suspend fun execute(context: ExecutionContext) {
-        val entity = context.localScope.get(entityVar) as? LivingEntity ?: return
+        val entity = context.currentTarget as? LivingEntity ?: return
         context.syncContext {
             val maxHp = entity.getAttribute(Attribute.GENERIC_MAX_HEALTH)?.value ?: 20.0
             val clamped = health.coerceIn(0.0, maxHp)
@@ -85,18 +82,17 @@ class SetEntityHealthNode(params: Map<String, Any>) : IAction {
 }
 
 /**
- * Teleports a target entity to a location variable.
- * Params: "entity" (String var name), "location" (String var name)
+ * Teleports the current target entity to a location variable.
+ * Params: "location" (String var name)
  * s: 5.5
  */
 class MoveEntityToNode(params: Map<String, Any>) : IAction {
     override val nodeId = "move_entity_to"
     override val displayName = "Move Entity To"
-    private val entityVar: String = params["entity"] as? String ?: error("entity param required")
     private val locationVar: String = params["location"] as? String ?: error("location param required")
 
     override suspend fun execute(context: ExecutionContext) {
-        val entity = context.localScope.get(entityVar) as? Entity ?: return
+        val entity = context.currentTarget ?: return
         val loc = context.localScope.get(locationVar) as? Location ?: return
         context.syncContext { entity.teleport(loc) }
     }

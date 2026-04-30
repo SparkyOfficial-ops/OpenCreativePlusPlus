@@ -26,7 +26,9 @@ class SelectionNode(
         /** Selects the killer entity from eventData. Req 1.5 */
         KILLER,
         /** Selects the victim entity from eventData. Req 1.6 */
-        VICTIM
+        VICTIM,
+        /** Resets targets to context.player (or empty if player is null). Req 2.1 */
+        DEFAULT
     }
 
     override val nodeId = "select_targets"
@@ -66,6 +68,10 @@ class SelectionNode(
                 if (victim != null) {
                     context.targets.add(victim)
                 }
+            }
+            SelectionMode.DEFAULT -> {
+                // Req 2.2, 2.3: reset targets to context.player; if player is null, targets stays empty
+                context.player?.let { context.targets.add(it) }
             }
         }
     }

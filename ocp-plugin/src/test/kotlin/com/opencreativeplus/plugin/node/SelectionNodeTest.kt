@@ -223,4 +223,72 @@ class SelectionNodeTest {
 
         assertTrue(ctx.targets.isEmpty(), "previous targets should be cleared even when no entities are nearby")
     }
+
+    // -----------------------------------------------------------------------
+    // DEFAULT mode — Requirements 2.1, 2.2, 2.3, 2.4, 2.5
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun `DEFAULT mode sets context player as sole target`() {
+        val player = mockk<Player>(relaxed = true)
+        val ctx = buildContext(player = player)
+        val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
+
+        runBlocking { node.execute(ctx) }
+
+        assertEquals(1, ctx.targets.size, "targets should contain exactly one entity")
+        assertEquals(player, ctx.targets[0], "the target should be context.player")
+    }
+
+    @Test
+    fun `DEFAULT mode clears previous targets before adding player`() {
+        val player = mockk<Player>(relaxed = true)
+        val previousTarget1 = mockk<Entity>(relaxed = true)
+        val previousTarget2 = mockk<Entity>(relaxed = true)
+        val ctx = buildContext(
+            player = player,
+            initialTargets = mutableListOf(previousTarget1, previousTarget2)
+        )
+        val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
+
+        runBlocking { node.execute(ctx) }
+
+        assertEquals(1, ctx.targets.size, "previous targets should be cleared")
+        assertEquals(player, ctx.targets[0], "only context.player should remain")
+    }
+
+    @Test
+    fun `DEFAULT mode leaves targets empty when player is null`() {
+        val ctx = buildContext(player = null)
+        val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
+
+        runBlocking { node.execute(ctx) }
+
+        assertTrue(ctx.targets.isEmpty(), "targets should be empty when player is null — Req 2.3")
+    }
+
+    @Test
+    fun `DEFAULT mode leaves targets empty when player is null and previous targets existed`() {
+        val previousTarget = mockk<Entity>(relaxed = true)
+        val ctx = buildContext(player = null, initialTargets = mutableListOf(previousTarget))
+        val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
+
+        runBlocking { node.execute(ctx) }
+
+        assertTrue(ctx.targets.isEmpty(), "targets should be empty when player is null, even if previous targets existed")
+    }
+
+    @Test
+    fun `fromParams recognises DEFAULT string case-insensitively`() {
+        listOf("DEFAULT", "default", "Default", "dEfAuLt").forEach { modeStr ->
+            val node = SelectionNode.fromParams(mapOf("mode" to modeStr))
+            val player = mockk<Player>(relaxed = true)
+            val ctx = buildContext(player = player)
+
+            runBlocking { node.execute(ctx) }
+
+            assertEquals(1, ctx.targets.size, "fromParams('$modeStr') should produce DEFAULT mode")
+            assertEquals(player, ctx.targets[0])
+        }
+    }
 }

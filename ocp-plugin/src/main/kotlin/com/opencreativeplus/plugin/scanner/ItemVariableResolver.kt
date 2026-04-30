@@ -3,6 +3,7 @@ package com.opencreativeplus.plugin.scanner
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.model.ItemVariableRef
 import com.opencreativeplus.api.model.ItemVariableType
+import com.opencreativeplus.core.execution.PlaceholderParser
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.entity.Entity
@@ -11,15 +12,20 @@ import java.util.UUID
 import java.util.logging.Logger
 
 /**
- * Resolves [ItemVariableRef] instances to their actual Bukkit runtime objects.
+ * Resolves [ItemVariableRef] instances to their actual Bukkit runtime objects,
+ * and resolves [DataContainer] values to their runtime representations.
  *
  * Variable lookup order: localScope first, then plotScope.
  * If the variable is not found or the cast fails, logs a warning and returns null (null-safe fallback).
  *
- * s: 4.4, 4.5, 4.6
+ * When a [PlaceholderParser] is provided, [DataContainer.Text] values are passed through
+ * [PlaceholderParser.parse] before being returned (Requirements 5.1, 5.2).
+ *
+ * Requirements: 4.4, 4.5, 4.6, 5.1, 5.2
  */
 class ItemVariableResolver(
     private val executionContext: ExecutionContext,
+    private val placeholderParser: PlaceholderParser? = null,
     private val logger: Logger = Logger.getLogger("OCP-ItemVariableResolver")
 ) {
 
@@ -166,5 +172,25 @@ class ItemVariableResolver(
             ItemVariableType.NUMBER_REFERENCE   -> resolveNumber(ref.name)
             ItemVariableType.TEXT_REFERENCE     -> resolveText(ref.name)
         }
+    }
+
+    /**
+     * Resolves a [DataContainer] to its runtime value.
+     *
+     * - [DataContainer.Text]     → raw string, passed through [PlaceholderParser.parse] if available (Req 5.1, 5.2)
+     * - [DataContainer.Variable] → looks up the variable name in localScope then plotScope
+     * - [DataContainer.Number]   → returns the numeric value directly
+     * - [DataContainer.Location] → returns the [DataContainer.Location] instance directly
+     *
+     * Requirements: 5.1, 5.2
+     */
+    fun resolveDataContainer(dc: DataContainer): Any? = when (dc) {
+        is DataContainer.Text -> {
+            val raw = dc.value
+            placeholderParser?.parse(raw, executionContext) ?: raw
+        }
+        is DataContainer.Variable -> lookupVariable(dc.name)
+        is DataContainer.Number   -> dc.value
+        is DataContainer.Location -> dc
     }
 }

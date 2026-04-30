@@ -58,7 +58,7 @@ class ItemVariableResolverPropertyTest : FreeSpec({
         every { localScope.get(varName) } returns localValue
         every { plotScope.get(varName) } returns plotValue
 
-        return ItemVariableResolver(ctx, logger)
+        return ItemVariableResolver(ctx, logger = logger)
     }
 
     // -----------------------------------------------------------------------

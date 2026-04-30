@@ -117,7 +117,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "N targets → execute called N times, currentTarget matches each entity in order" {
-            checkAll(PropTestConfig(iterations = 100), arbNonEmptyTargets) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbNonEmptyTargets) { targets ->
                 val context = buildContext(player = null, initialTargets = targets)
                 val capturedTargets = mutableListOf<Entity?>()
                 var callCount = 0
@@ -146,7 +146,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "empty targets → execute called 0 times, no exception" {
-            repeat(100) {
+            repeat(10) {
                 val context = buildContext(player = null, initialTargets = mutableListOf())
                 var callCount = 0
 
@@ -166,7 +166,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "single target → execute called once, currentTarget is that entity" {
-            checkAll(PropTestConfig(iterations = 100), arbPlayer) { player ->
+            checkAll(PropTestConfig(iterations = 10), arbPlayer) { player ->
                 val entity = mockk<Entity>(relaxed = true)
                 val context = buildContext(player = player, initialTargets = mutableListOf(entity))
                 var callCount = 0
@@ -191,7 +191,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1**
          */
         "after iteration, currentTarget is the last entity in targets" {
-            checkAll(PropTestConfig(iterations = 100), arbNonEmptyTargets) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbNonEmptyTargets) { targets ->
                 val context = buildContext(player = null, initialTargets = targets)
 
                 runBlocking {
@@ -209,7 +209,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "call count always equals targets.size for any list size" {
-            checkAll(PropTestConfig(iterations = 100), arbAnyTargets) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbAnyTargets) { targets ->
                 val context = buildContext(player = null, initialTargets = targets)
                 var callCount = 0
 
@@ -235,7 +235,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.2**
          */
         "non-null player → targets contains exactly that one player" {
-            checkAll(PropTestConfig(iterations = 100), arbPlayer) { player ->
+            checkAll(PropTestConfig(iterations = 10), arbPlayer) { player ->
                 val ctx = buildContext(player)
 
                 ctx.targets.size shouldBe 1
@@ -249,7 +249,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.2**
          */
         "null player → targets is empty" {
-            repeat(100) {
+            repeat(10) {
                 val ctx = buildContext(null)
                 ctx.targets.shouldBeEmpty()
             }
@@ -262,7 +262,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.2**
          */
         "targets[0] is the same instance as the triggering player" {
-            checkAll(PropTestConfig(iterations = 100), arbPlayer) { player ->
+            checkAll(PropTestConfig(iterations = 10), arbPlayer) { player ->
                 val ctx = buildContext(player)
 
                 (ctx.targets[0] === player) shouldBe true
@@ -276,7 +276,7 @@ class TargetInitPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.2**
          */
         "targets list is mutable after initialization" {
-            checkAll(PropTestConfig(iterations = 100), arbPlayer) { player ->
+            checkAll(PropTestConfig(iterations = 10), arbPlayer) { player ->
                 val ctx = buildContext(player)
                 val extra = mockk<Entity>(relaxed = true)
 

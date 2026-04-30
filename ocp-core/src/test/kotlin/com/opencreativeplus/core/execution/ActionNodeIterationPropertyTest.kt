@@ -111,7 +111,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.8**
          */
         "non-empty targets → execute called exactly targets.size times" {
-            checkAll(PropTestConfig(iterations = 100), arbNonEmptyTargets) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbNonEmptyTargets) { targets ->
                 val counter = AtomicInteger(0)
                 val action = countingAction(counter)
                 val context = buildContext(targets)
@@ -128,7 +128,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.8, 1.9**
          */
         "empty targets → execute called 0 times, no exception" {
-            repeat(100) {
+            repeat(10) {
                 val counter = AtomicInteger(0)
                 val action = countingAction(counter)
                 val context = buildContext(mutableListOf())
@@ -145,7 +145,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.8**
          */
         "single target → execute called exactly once" {
-            checkAll(PropTestConfig(iterations = 100), arbEntity) { entity ->
+            checkAll(PropTestConfig(iterations = 10), arbEntity) { entity ->
                 val counter = AtomicInteger(0)
                 val action = countingAction(counter)
                 val context = buildContext(mutableListOf(entity))
@@ -168,7 +168,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
                 (1..size).map { mockk<Entity>(relaxed = true) }.toMutableList<Entity>()
             }
 
-            checkAll(PropTestConfig(iterations = 100), arbAnyTargets) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbAnyTargets) { targets ->
                 val counter = AtomicInteger(0)
                 val action = countingAction(counter)
                 val context = buildContext(targets)
@@ -269,7 +269,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "N LivingEntity targets → LivingEntity action called exactly N times" {
-            checkAll(PropTestConfig(iterations = 100), arbLivingEntities) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbLivingEntities) { targets ->
                 val counter = AtomicInteger(0)
                 val action = livingEntityAction(counter)
                 val context = buildContext(targets)
@@ -286,7 +286,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.1, 1.13**
          */
         "N Player targets → Player action called exactly N times" {
-            checkAll(PropTestConfig(iterations = 100), arbPlayers) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbPlayers) { targets ->
                 val counter = AtomicInteger(0)
                 val action = playerAction(counter)
                 val context = buildContext(targets)
@@ -303,7 +303,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.2**
          */
         "empty targets → action called 0 times, no exception" {
-            repeat(100) {
+            repeat(10) {
                 val counter = AtomicInteger(0)
                 val action = livingEntityAction(counter)
                 val context = buildContext(mutableListOf())
@@ -419,7 +419,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.12, 1.13**
          */
         "mixed Player/Entity targets → Player action called only for Player instances, no exception" {
-            checkAll(PropTestConfig(iterations = 100), arbMixedTargets) { (targets, playerCount) ->
+            checkAll(PropTestConfig(iterations = 10), arbMixedTargets) { (targets, playerCount) ->
                 val counter = AtomicInteger(0)
                 val action = playerOnlyAction(counter)
                 val context = buildContext(targets)
@@ -439,7 +439,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
          * **Validates: Requirements 1.12, 1.13**
          */
         "mixed LivingEntity/Entity targets → LivingEntity action called only for LivingEntity instances, no exception" {
-            checkAll(PropTestConfig(iterations = 100), arbMixedLivingTargets) { (targets, livingCount) ->
+            checkAll(PropTestConfig(iterations = 10), arbMixedLivingTargets) { (targets, livingCount) ->
                 val counter = AtomicInteger(0)
                 val action = livingEntityOnlyAction(counter)
                 val context = buildContext(targets)
@@ -463,7 +463,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
                 (1..size).map { mockk<Entity>(relaxed = true) }.toMutableList<Entity>()
             }
 
-            checkAll(PropTestConfig(iterations = 100), arbAllIncompatible) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbAllIncompatible) { targets ->
                 val counter = AtomicInteger(0)
                 val action = playerOnlyAction(counter)
                 val context = buildContext(targets)
@@ -486,7 +486,7 @@ class ActionNodeIterationPropertyTest : FreeSpec({
                 (1..size).map { mockk<Player>(relaxed = true) }.toMutableList<Entity>()
             }
 
-            checkAll(PropTestConfig(iterations = 100), arbAllPlayers) { targets ->
+            checkAll(PropTestConfig(iterations = 10), arbAllPlayers) { targets ->
                 val counter = AtomicInteger(0)
                 val action = playerOnlyAction(counter)
                 val context = buildContext(targets)

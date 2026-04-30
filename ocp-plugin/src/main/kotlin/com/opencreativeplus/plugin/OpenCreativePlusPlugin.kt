@@ -5,7 +5,9 @@ import com.opencreativeplus.core.database.DatabaseIndexManager
 import com.opencreativeplus.core.database.MongoConnectionManager
 import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.core.execution.CoroutineConfiguration
+import com.opencreativeplus.core.execution.CycleManager
 import com.opencreativeplus.core.execution.ExecutionEngine
+import com.opencreativeplus.core.execution.FunctionRegistry
 import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.core.serialization.ParamSerializer
@@ -14,6 +16,7 @@ import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
 import com.opencreativeplus.plugin.command.DialogueQuitListener
+import com.opencreativeplus.plugin.listener.ArgHologramListener
 import com.opencreativeplus.plugin.listener.PlotProtectionListener
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.scanner.ParameterPlacer
@@ -44,6 +47,8 @@ import com.opencreativeplus.plugin.visualizer.DevVisualizer
 import com.opencreativeplus.plugin.visualizer.HologramReporter
 import com.opencreativeplus.plugin.watchdog.TpsMonitorTask
 import com.opencreativeplus.plugin.world.WorldManager
+import com.opencreativeplus.core.world.WorldManager as CoreWorldManager
+import com.opencreativeplus.plugin.world.BukkitWorldOperations
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.comphenix.protocol.ProtocolLibrary
@@ -83,6 +88,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         private set
     lateinit var paramSerializer: ParamSerializer
         private set
+    private lateinit var cycleManager: CycleManager
+    private lateinit var functionRegistry: FunctionRegistry
+    private lateinit var coreWorldManager: CoreWorldManager
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -123,6 +131,11 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         // ── Core components ───────────────────────────────────────────────────
         val variableManager = VariableManager(database)
         hologramReporter = HologramReporter(this)
+
+        // ── Cycle & Function systems ──────────────────────────────────────────
+        cycleManager = CycleManager(plugin = this, scope = coroutineConfig.executionScope)
+        functionRegistry = FunctionRegistry()
+
         executionEngine = ExecutionEngine(
             watchdog = watchdog,
             variableManager = variableManager,
@@ -137,7 +150,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             },
             compiledScriptProvider = { plotId ->
                 if (::bytecodeCompiler.isInitialized) bytecodeCompiler.getCompiled(plotId) else null
-            }
+            },
+            functionRegistry = functionRegistry
         )
 
         // ── Trace Manager ─────────────────────────────────────────────────────
@@ -153,6 +167,14 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         val worldManager = WorldManager()
         val plotPersistence = PlotPersistence(database, connectionManager)
+        val worldOps = BukkitWorldOperations(this, worldManager)
+        coreWorldManager = CoreWorldManager(
+            plugin = this,
+            plotPersistence = plotPersistence,
+            worldOps = worldOps,
+            scope = coroutineConfig.executionScope,
+            logger = logger
+        )
         val inventoryManager = InventoryManager(
             database = database,
             connectionManager = connectionManager,
@@ -192,7 +214,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             executionEngine = executionEngine,
             devVisualizer = devVisualizer,
             hologramReporter = hologramReporter,
-            bytecodeCompiler = bytecodeCompiler
+            bytecodeCompiler = bytecodeCompiler,
+            cycleManager = cycleManager,
+            functionRegistry = functionRegistry
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)
@@ -212,6 +236,26 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             PlotEventListener(eventDispatcher, plotManager, modeManager, scope), this
         )
         server.pluginManager.registerEvents(PlotBrowserGUI(plotPersistence, plotManager, scope), this)
+
+        // Req 7.5, 7.6: track player join/leave for WorldManager auto-unload
+        server.pluginManager.registerEvents(object : Listener {
+            @EventHandler
+            fun onPlayerJoin(event: org.bukkit.event.player.PlayerJoinEvent) {
+                val player = event.player
+                scope.launch {
+                    val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+                    coreWorldManager.onPlayerJoin(plot.id, player.uniqueId)
+                }
+            }
+            @EventHandler
+            fun onPlayerQuit(event: PlayerQuitEvent) {
+                val player = event.player
+                scope.launch {
+                    val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+                    coreWorldManager.onPlayerLeave(plot.id, player.uniqueId)
+                }
+            }
+        }, this)
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
 
@@ -225,6 +269,14 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
         server.pluginManager.registerEvents(
             PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
+        )
+        // Req 9.3: update arg holograms when chest contents change
+        server.pluginManager.registerEvents(
+            ArgHologramListener(
+                plugin = this,
+                hologramReporter = hologramReporter,
+                blockScanner = { BlockScanner(server.worlds.first(), nodeRegistry) }
+            ), this
         )
 
         // ── SignInputManager + ParamSerializer ────────────────────────────────
@@ -255,7 +307,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
 
         // ── Commands ──────────────────────────────────────────────────────────
-        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI)
+        val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI, coreWorldManager = coreWorldManager)
         listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
             getCommand(cmd)?.setExecutor(plotCommands)
         }
@@ -283,6 +335,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         }
 
         hologramReporter.clearAll()
+        coreWorldManager.cancelAllTimers()
         connectionManager.close()
         logger.info("[OCP] OpenCreative++ disabled.")
     }

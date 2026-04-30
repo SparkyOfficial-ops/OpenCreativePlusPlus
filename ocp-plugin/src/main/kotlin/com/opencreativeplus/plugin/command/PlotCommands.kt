@@ -34,7 +34,8 @@ class PlotCommands(
     private val traceManager: TraceManager? = null,
     private val variableManager: VariableManager? = null,
     private val plugin: Plugin? = null,
-    private val plotTopGUI: PlotTopGUI? = null
+    private val plotTopGUI: PlotTopGUI? = null,
+    private val coreWorldManager: com.opencreativeplus.core.world.WorldManager? = null
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -79,8 +80,15 @@ class PlotCommands(
         val sub = args.firstOrNull()?.lowercase()
         when (sub) {
             "create" -> scope.launch {
+                val templateName = args.getOrNull(1) ?: "void"
                 val plot = plotManager.createPlot(player.uniqueId)
-                player.sendMessage("§a[OCP] Plot '${plot.name}' created!")
+                // Req 7.2: use core WorldManager for template-based creation if available
+                val wm = coreWorldManager
+                if (wm != null) {
+                    wm.createPlot(player, plot, templateName)
+                } else {
+                    player.sendMessage("§a[OCP] Plot '${plot.name}' created!")
+                }
             }
             "trust" -> {
                 val targetName = args.getOrNull(1)
@@ -139,7 +147,7 @@ class PlotCommands(
                 }
                 gui.open(player)
             }
-            else -> player.sendMessage("§7[OCP] Usage: /plot <create|trust|untrust|vars|top>")
+            else -> player.sendMessage("§7[OCP] Usage: /plot <create [template]|trust|untrust|vars|top>")
         }
     }
 

@@ -42,5 +42,11 @@ data class CompiledScript(
      * The name of the function, read from the first slot of the ParamChest above the LAPIS_BLOCK.
      * Non-null only when [isFunctionEntry] is true (Req 5.2).
      */
-    val functionName: String? = null
+    val functionName: String? = null,
+    /**
+     * Maps action index → else-branch actions for conditional nodes (Req 4.3).
+     * When a condition at index i evaluates to false and this map contains key i,
+     * the else-branch actions are executed instead of skipping.
+     */
+    val elseBranches: Map<Int, List<IAction>> = emptyMap()
 )

@@ -11,7 +11,8 @@ import org.bukkit.Material
 data class CodeLine(
     val startLocation: Location,
     val nodes: List<ScannedNode> = emptyList(),
-    val children: List<CodeLine> = emptyList()
+    val children: List<CodeLine> = emptyList(),
+    val elseActions: List<ScannedNode> = emptyList()
 )
 
 /**

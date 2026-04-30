@@ -98,14 +98,26 @@ class ExecutionEngine(
                         val conditionResult = condition.evaluate(context)
                         val childBranch = effectiveScript.conditionalBranches[index]
                         if (conditionResult && childBranch != null) {
+                            // Req 4.5: condition true → execute then-branch only
                             for (childAction in childBranch) {
                                 watchdog.checkExecution(context)
                                 traceManager?.onNodeExecute(null, childAction.displayName, emptyMap())
                                 childAction.execute(context)
                                 context.operationCount.incrementAndGet()
                             }
+                        } else if (!conditionResult) {
+                            // Req 4.4: condition false → execute else-branch if present
+                            val elseBranch = effectiveScript.elseBranches[index]
+                            if (elseBranch != null) {
+                                for (elseAction in elseBranch) {
+                                    watchdog.checkExecution(context)
+                                    traceManager?.onNodeExecute(null, elseAction.displayName, emptyMap())
+                                    elseAction.execute(context)
+                                    context.operationCount.incrementAndGet()
+                                }
+                            }
+                            // Req 4.6: no else-branch → behaviour identical to current (skip silently)
                         }
-                        // If condition is false, child branch is skipped (Req 8.3)
                     } else if (action is IFunctionCall) {
                         // Function call handling (Req 5.3, 5.4, 5.5, 5.6)
                         executeFunctionCall(action, context)
@@ -238,6 +250,15 @@ class ExecutionEngine(
                             watchdog.checkExecution(functionContext)
                             childAction.execute(functionContext)
                             functionContext.operationCount.incrementAndGet()
+                        }
+                    } else if (!conditionResult) {
+                        val elseBranch = functionScript.elseBranches[index]
+                        if (elseBranch != null) {
+                            for (elseAction in elseBranch) {
+                                watchdog.checkExecution(functionContext)
+                                elseAction.execute(functionContext)
+                                functionContext.operationCount.incrementAndGet()
+                            }
                         }
                     }
                 } else if (funcAction is IFunctionCall) {

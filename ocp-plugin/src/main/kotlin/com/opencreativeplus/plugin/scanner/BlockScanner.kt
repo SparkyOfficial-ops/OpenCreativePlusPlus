@@ -74,6 +74,9 @@ class BlockScanner(
         /** Closing bracket of a conditional scope (Req 2.2). */
         private val CLOSING_BRACKET = Material.PISTON
 
+        /** Else-branch marker block (Req 4.1). Follows a closing PISTON to introduce an else scope. */
+        private val ELSE_MARKER = Material.END_STONE
+
         /** Maximum nesting depth for piston scopes (Req 2.7). */
         const val MAX_PISTON_DEPTH = 16
 
@@ -437,6 +440,23 @@ class BlockScanner(
                             b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
                         }
 
+                        // Req 4.1: check if the next glass block has END_STONE above it (else-marker)
+                        if (afterNext != null) {
+                            val (afterBlock, afterDir) = afterNext
+                            val afterAbove = afterBlock.getRelative(BlockFace.UP)
+                            if (afterAbove.type == ELSE_MARKER) {
+                                // Mark the else-marker glass as visited and scan the else branch
+                                visited.add(LocationKey.of(afterBlock.location))
+                                val (elseNodes, continuationAfterElse) = scanElseBranch(afterBlock, afterDir, visited)
+                                val childLineWithElse = CodeLine(
+                                    openingBracketGlass.location,
+                                    childNodes,
+                                    elseActions = elseNodes
+                                )
+                                return childLineWithElse to continuationAfterElse
+                            }
+                        }
+
                         return CodeLine(openingBracketGlass.location, childNodes) to afterNext
                     }
                     // depth > 0: closing bracket for a nested scope — don't collect as node
@@ -445,6 +465,86 @@ class BlockScanner(
                     // Regular node inside the scope
                     val node = buildScannedNode(above)
                     if (node != null) childNodes.add(node)
+                }
+            }
+        }
+    }
+
+    /**
+     * Scans an else-branch scope that starts at [elseMarkerGlass] (the glass block whose
+     * above block is END_STONE) and ends at the next PISTON (closing bracket).
+     *
+     * Algorithm (Requirements 4.1, 4.2):
+     * - Advance through glass blocks collecting nodes
+     * - If PISTON above is found → end of else scope; return collected nodes + next block
+     * - If strip ends without PISTON → add ParseError and return collected nodes
+     *
+     * @param elseMarkerGlass The glass block directly under the END_STONE marker.
+     * @param direction       Current traversal direction.
+     * @param visited         Shared visited set.
+     * @return Pair of (collected else nodes, next glass block + direction after closing PISTON or null).
+     */
+    internal fun scanElseBranch(
+        elseMarkerGlass: Block,
+        direction: Direction,
+        visited: MutableSet<LocationKey>
+    ): Pair<List<ScannedNode>, Pair<Block, Direction>?> {
+        val elseNodes = mutableListOf<ScannedNode>()
+        var current = elseMarkerGlass
+        var dir = direction
+
+        while (true) {
+            val ahead      = current.getRelative(dir.toBlockFace())
+            val leftDir    = dir.turnLeft()
+            val rightDir   = dir.turnRight()
+            val leftBlock  = current.getRelative(leftDir.toBlockFace())
+            val rightBlock = current.getRelative(rightDir.toBlockFace())
+
+            val next = listOf(
+                ahead to dir,
+                leftBlock to leftDir,
+                rightBlock to rightDir
+            ).firstOrNull { (b, _) ->
+                b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
+            }
+
+            if (next == null) {
+                // End of strip without closing PISTON — Req 4.2: add ParseError
+                parseErrors.add(ParseError(
+                    "Else block (END_STONE) at ${current.location.blockX},${current.location.blockY},${current.location.blockZ} has no closing PISTON",
+                    current.location
+                ))
+                return elseNodes to null
+            }
+
+            val (nextBlock, nextDir) = next
+            visited.add(LocationKey.of(nextBlock.location))
+            current = nextBlock
+            dir = nextDir
+
+            val above = current.getRelative(BlockFace.UP)
+            when {
+                above.type == CLOSING_BRACKET -> {
+                    // End of else scope — find the block after the closing PISTON
+                    val afterAhead      = current.getRelative(dir.toBlockFace())
+                    val afterLeftDir    = dir.turnLeft()
+                    val afterRightDir   = dir.turnRight()
+                    val afterLeftBlock  = current.getRelative(afterLeftDir.toBlockFace())
+                    val afterRightBlock = current.getRelative(afterRightDir.toBlockFace())
+
+                    val afterNext = listOf(
+                        afterAhead to dir,
+                        afterLeftBlock to afterLeftDir,
+                        afterRightBlock to afterRightDir
+                    ).firstOrNull { (b, _) ->
+                        b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
+                    }
+
+                    return elseNodes to afterNext
+                }
+                above.type != Material.AIR -> {
+                    val node = buildScannedNode(above)
+                    if (node != null) elseNodes.add(node)
                 }
             }
         }

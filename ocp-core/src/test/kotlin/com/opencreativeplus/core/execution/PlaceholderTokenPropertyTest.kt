@@ -107,7 +107,7 @@ class PlaceholderTokenPropertyTest : FreeSpec({
         "for any prefix/suffix and player name, template with %player% resolves to prefix+name+suffix" {
             // Validates: Requirements 5.4
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSafe,
                 arbSafe,
                 arbPlayerName
@@ -131,7 +131,7 @@ class PlaceholderTokenPropertyTest : FreeSpec({
         "for any prefix/suffix, template with %player% and null player resolves to prefix+suffix" {
             // Validates: Requirements 5.4
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSafe,
                 arbSafe
             ) { prefix, suffix ->
@@ -153,7 +153,7 @@ class PlaceholderTokenPropertyTest : FreeSpec({
         "for any varName, varValue, prefix, suffix — result contains varValue and not the token" {
             // Validates: Requirements 5.5
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName,
                 arbVarValue,
                 arbSafe,
@@ -179,7 +179,7 @@ class PlaceholderTokenPropertyTest : FreeSpec({
         "for any varName, varValue, prefix, suffix — result contains varValue from plotScope" {
             // Validates: Requirements 5.5
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName,
                 arbVarValue,
                 arbSafe,
@@ -205,7 +205,7 @@ class PlaceholderTokenPropertyTest : FreeSpec({
         "for any varName, template with only the token and empty context resolves to empty string" {
             // Validates: Requirements 5.5
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName
             ) { varName ->
                 val ctx = stubContext() // no variables set

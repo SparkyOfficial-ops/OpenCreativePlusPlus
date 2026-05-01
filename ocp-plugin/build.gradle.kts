@@ -11,6 +11,7 @@ dependencies {
     compileOnly("net.dmulloy2:ProtocolLib:5.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.mongodb:mongodb-driver-kotlin-coroutine:4.11.0")
+    implementation("commons-io:commons-io:2.15.1")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")

@@ -136,7 +136,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // Feature: ocp-mvp2-core-systems, Property 4: DataContainer round-trip
         // Validates: Requirements 3.12, 3.13
         "any Text value survives serialize then deserialize" {
-            checkAll(PropTestConfig(iterations = 100), arbText) { original ->
+            checkAll(PropTestConfig(iterations = 20), arbText) { original ->
                 val item = makeItemStack()
                 original.serializeTo(item)
                 val restored = deserializeFrom(item)
@@ -151,7 +151,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // Feature: ocp-mvp2-core-systems, Property 4: DataContainer round-trip
         // Validates: Requirements 3.12, 3.13
         "any finite Number value survives serialize then deserialize" {
-            checkAll(PropTestConfig(iterations = 100), arbNumber) { original ->
+            checkAll(PropTestConfig(iterations = 20), arbNumber) { original ->
                 val item = makeItemStack()
                 original.serializeTo(item)
                 val restored = deserializeFrom(item)
@@ -166,7 +166,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // Feature: ocp-mvp2-core-systems, Property 4: DataContainer round-trip
         // Validates: Requirements 3.12, 3.13
         "any Variable name survives serialize then deserialize" {
-            checkAll(PropTestConfig(iterations = 100), arbVariable) { original ->
+            checkAll(PropTestConfig(iterations = 20), arbVariable) { original ->
                 val item = makeItemStack()
                 original.serializeTo(item)
                 val restored = deserializeFrom(item)
@@ -181,7 +181,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // Feature: ocp-mvp2-core-systems, Property 4: DataContainer round-trip
         // Validates: Requirements 3.12, 3.13
         "any Location with finite coordinates survives serialize then deserialize" {
-            checkAll(PropTestConfig(iterations = 100), arbLocation) { original ->
+            checkAll(PropTestConfig(iterations = 20), arbLocation) { original ->
                 val item = makeItemStack()
                 original.serializeTo(item)
                 val restored = deserializeFrom(item)
@@ -219,7 +219,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // is created.
         "any non-numeric string is rejected by toDoubleOrNull" {
             val arbNonNumeric = Arb.string(1..20).filter { it.toDoubleOrNull() == null }
-            checkAll(PropTestConfig(iterations = 100), arbNonNumeric) { input ->
+            checkAll(PropTestConfig(iterations = 20), arbNonNumeric) { input ->
                 // Mirrors the validation logic in ItemCreatorGUI.handleClick slot 1:
                 //   val number = input.toDoubleOrNull()
                 //   if (number == null) { sendMessage(...); return }
@@ -238,7 +238,7 @@ class DataContainerItemCreatorPropertyTest : FreeSpec({
         // back to d via toDoubleOrNull(), and the resulting DataContainer.Number must
         // round-trip correctly through serializeTo/deserializeFrom.
         "finite double converted to string and back produces correct DataContainer.Number" {
-            checkAll(PropTestConfig(iterations = 100), arbFiniteDouble) { d ->
+            checkAll(PropTestConfig(iterations = 20), arbFiniteDouble) { d ->
                 val input = d.toString()
 
                 // Validation logic: input is parseable

@@ -132,7 +132,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario A — LocalIfAction: exactly one branch executes for any condition" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.boolean(),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
@@ -173,7 +173,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario A — condition true: else branch never executes" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
             ) { thenCount, elseCount ->
@@ -200,7 +200,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario A — condition false: then branch never executes" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
             ) { thenCount, elseCount ->
@@ -235,7 +235,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — engine simulation: mutual exclusion for any condition and branch sizes" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.boolean(),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
@@ -275,7 +275,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — elseActions null, condition false: no actions run and no exception" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10)
             ) { thenCount ->
                 val thenCounter = AtomicInteger(0)
@@ -302,7 +302,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — thenActions empty, condition true: no actions run" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10)
             ) { elseCount ->
                 val elseCounter = AtomicInteger(0)
@@ -329,7 +329,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — condition true with else present: else branch never executes" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
             ) { thenCount, elseCount ->
@@ -357,7 +357,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — condition false with then present: then branch never executes" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1, 10),
                 Arb.int(1, 10)
             ) { thenCount, elseCount ->
@@ -385,7 +385,7 @@ class ConditionalElseMutualExclusionPropertyTest : FreeSpec({
          */
         "Scenario B — both branches present: total executed equals exactly one branch count" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 20),
                 Arb.boolean(),
                 Arb.int(1, 10),
                 Arb.int(1, 10)

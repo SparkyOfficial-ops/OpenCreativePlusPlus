@@ -2,16 +2,19 @@ package com.opencreativeplus.plugin.world
 
 import com.opencreativeplus.core.world.PlotTemplate
 import com.opencreativeplus.core.world.WorldOperations
+import org.apache.commons.io.FileUtils
 import org.bukkit.Bukkit
+import org.bukkit.WorldCreator
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
+import java.io.File
 import java.util.UUID
 
 /**
  * Bukkit implementation of [WorldOperations] for the core WorldManager.
- * Delegates template copying and world loading to the plugin's [WorldManager].
+ * Physically copies a template world directory and loads it via Bukkit.
  *
- * Requirements: 7.2, 7.3, 7.6, 7.7
+ * Requirements: 6.1–6.9
  */
 class BukkitWorldOperations(
     private val plugin: Plugin,
@@ -24,42 +27,51 @@ class BukkitWorldOperations(
         onSuccess: (worldName: String) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        // Delegate to the plugin WorldManager's async world creation.
-        // The template name is used as a hint; the plugin WorldManager creates
-        // a flat void world by default (template support can be extended later).
+        val templateDir = File(plugin.dataFolder, "templates/${template.templateName}")
+        val destDir = File(plugin.server.worldContainer, plotId.toString())
+        val worldName = plotId.toString()
+
+        // Req 6.3: idempotency — if destination already exists, just load the world
+        if (destDir.exists()) {
+            loadWorldOnMainThread(worldName, onSuccess, onError)
+            return
+        }
+
+        // Req 6.2: template not found
+        if (!templateDir.exists()) {
+            onError(Exception("Template '${template.templateName}' not found at ${templateDir.absolutePath}"))
+            return
+        }
+
+        // Req 6.4: async file copy
         plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
             try {
-                // Run world creation on the main thread (Bukkit requirement)
-                plugin.server.scheduler.runTask(plugin, Runnable {
-                    try {
-                        val worldName = plotId.toString()
-                        // Use existing world if already created, otherwise create it
-                        val existingWorld = Bukkit.getWorld(worldName)
-                        if (existingWorld != null) {
-                            onSuccess(worldName)
-                        } else {
-                            // Trigger async world creation via pluginWorldManager
-                            plugin.server.scheduler.runTaskAsynchronously(plugin, Runnable {
-                                // createPlotWorlds is a suspend function; we use a coroutine bridge
-                                // For simplicity, schedule on main thread
-                                plugin.server.scheduler.runTask(plugin, Runnable {
-                                    try {
-                                        val world = Bukkit.getWorld(worldName)
-                                        if (world != null) {
-                                            onSuccess(worldName)
-                                        } else {
-                                            onError(Exception("World $worldName could not be created"))
-                                        }
-                                    } catch (e: Exception) {
-                                        onError(e)
-                                    }
-                                })
-                            })
-                        }
-                    } catch (e: Exception) {
-                        onError(e)
-                    }
-                })
+                // Req 6.8: use FileUtils.copyDirectory from commons-io
+                FileUtils.copyDirectory(templateDir, destDir)
+                // Req 6.5: load world on main thread after copy
+                loadWorldOnMainThread(worldName, onSuccess, onError)
+            } catch (e: Exception) {
+                // Req 6.7: propagate exception via onError
+                onError(e)
+            }
+        })
+    }
+
+    /**
+     * Loads (or retrieves) a world by name on the main Bukkit thread.
+     * Req 6.5, 6.6, 6.9
+     */
+    private fun loadWorldOnMainThread(
+        worldName: String,
+        onSuccess: (String) -> Unit,
+        onError: (Exception) -> Unit
+    ) {
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            try {
+                val world = Bukkit.getWorld(worldName)
+                    ?: Bukkit.createWorld(WorldCreator(worldName))
+                    ?: throw Exception("Bukkit.createWorld returned null for '$worldName'")
+                onSuccess(world.name)
             } catch (e: Exception) {
                 onError(e)
             }

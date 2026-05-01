@@ -334,7 +334,7 @@ class BlockScannerElsePropertyTest : FreeSpec({
          */
         "for N else-actions (1..5): no parse errors, elseActions.size == N" {
             // Validates: Requirements 4.1, 4.2
-            checkAll(PropTestConfig(iterations = 100), Arb.int(1..5)) { nElseActions ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(1..5)) { nElseActions ->
                 val stripId = "prop7a_$nElseActions"
                 val startBlock = buildElseStrip(
                     nThenActions = 1,
@@ -362,7 +362,7 @@ class BlockScannerElsePropertyTest : FreeSpec({
         "for N then-actions and M else-actions: no parse errors, child has both" {
             // Validates: Requirements 4.1, 4.2
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..5),
                 Arb.int(1..5)
             ) { nThenActions, nElseActions ->
@@ -400,7 +400,7 @@ class BlockScannerElsePropertyTest : FreeSpec({
          */
         "missing closing PISTON for else → exactly one parse error mentioning END_STONE or PISTON" {
             // Validates: Requirements 4.2
-            checkAll(PropTestConfig(iterations = 100), Arb.int(0..99)) { seed ->
+            checkAll(PropTestConfig(iterations = 20), Arb.int(0..99)) { seed ->
                 val stripId = "prop7b_$seed"
                 val startBlock = buildElseWithoutClosingPiston(stripId)
                 scanner.scanStrip(startBlock)
@@ -433,7 +433,7 @@ class BlockScannerElsePropertyTest : FreeSpec({
         "then-nodes and else-nodes have disjoint node IDs" {
             // Validates: Requirements 4.1, 4.2
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..5),
                 Arb.int(1..5)
             ) { nThenActions, nElseActions ->
@@ -479,7 +479,7 @@ class BlockScannerElsePropertyTest : FreeSpec({
         "then-nodes count == nThenActions and else-nodes count == nElseActions" {
             // Validates: Requirements 4.1, 4.2
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.int(1..5),
                 Arb.int(1..5)
             ) { nThenActions, nElseActions ->

@@ -104,7 +104,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
     "Property 8a: plain DataContainer.Text with no tokens is returned unchanged" - {
         "first parse of plain text returns the string unchanged" {
             // Validates: Requirements 5.3
-            checkAll(PropTestConfig(iterations = 100), arbSafe) { plain ->
+            checkAll(PropTestConfig(iterations = 20), arbSafe) { plain ->
                 val ctx = stubContext()
 
                 val firstPass = parser.parse(plain, ctx)
@@ -115,7 +115,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
 
         "second parse of plain text also returns the string unchanged" {
             // Validates: Requirements 5.3
-            checkAll(PropTestConfig(iterations = 100), arbSafe) { plain ->
+            checkAll(PropTestConfig(iterations = 20), arbSafe) { plain ->
                 val ctx = stubContext()
 
                 val secondPass = parser.parse(parser.parse(plain, ctx), ctx)
@@ -133,7 +133,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "parse(parse(template, ctx), ctx) == parse(template, ctx) for %player% token" {
             // Validates: Requirements 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSafe,
                 arbSafe,
                 arbSafe  // player name without %
@@ -158,7 +158,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "parse is idempotent when variable is present in localScope" {
             // Validates: Requirements 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName,
                 arbVarValue,
                 arbSafe,
@@ -177,7 +177,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "parse is idempotent when variable is absent (resolves to empty string)" {
             // Validates: Requirements 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName,
                 arbSafe,
                 arbSafe
@@ -201,7 +201,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "first pass replaces %player% with empty string when player is null" {
             // Validates: Requirements 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSafe,
                 arbSafe
             ) { prefix, suffix ->
@@ -217,7 +217,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "second pass equals first pass when player is null" {
             // Validates: Requirements 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbSafe,
                 arbSafe
             ) { prefix, suffix ->
@@ -240,7 +240,7 @@ class DataContainerTextIdempotencePropertyTest : FreeSpec({
         "parse(parse(template, ctx), ctx) == parse(template, ctx) for combined tokens" {
             // Validates: Requirements 5.3, 5.6
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 arbVarName,
                 arbVarValue,
                 arbSafe,

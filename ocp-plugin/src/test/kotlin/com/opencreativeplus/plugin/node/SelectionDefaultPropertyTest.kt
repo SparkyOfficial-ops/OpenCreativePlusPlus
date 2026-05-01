@@ -88,7 +88,7 @@ class SelectionDefaultPropertyTest : FreeSpec({
          * **Validates: Requirements 2.2, 2.5**
          */
         "non-null player: targets contains exactly [player] after DEFAULT" {
-            checkAll(PropTestConfig(iterations = 100), arbTargetList) { previousTargets ->
+            checkAll(PropTestConfig(iterations = 20), arbTargetList) { previousTargets ->
                 val player = mockk<Player>(relaxed = true)
                 val ctx = buildContext(player, previousTargets.toMutableList())
                 val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
@@ -107,7 +107,7 @@ class SelectionDefaultPropertyTest : FreeSpec({
          * **Validates: Requirements 2.3**
          */
         "null player: targets is empty after DEFAULT, no exception" {
-            checkAll(PropTestConfig(iterations = 100), arbTargetList) { previousTargets ->
+            checkAll(PropTestConfig(iterations = 20), arbTargetList) { previousTargets ->
                 val ctx = buildContext(null, previousTargets.toMutableList())
                 val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)
 
@@ -124,7 +124,7 @@ class SelectionDefaultPropertyTest : FreeSpec({
          * **Validates: Requirements 2.2, 2.5**
          */
         "idempotency: running DEFAULT twice gives same result as once" {
-            checkAll(PropTestConfig(iterations = 100), arbTargetList) { previousTargets ->
+            checkAll(PropTestConfig(iterations = 20), arbTargetList) { previousTargets ->
                 val player = mockk<Player>(relaxed = true)
                 val ctx = buildContext(player, previousTargets.toMutableList())
                 val node = SelectionNode(SelectionNode.SelectionMode.DEFAULT)

@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     api(project(":ocp-api"))
+    implementation(kotlin("stdlib"))
     implementation(project(":ocp-core"))
     compileOnly("io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT")
     compileOnly("net.dmulloy2:ProtocolLib:5.4.0")

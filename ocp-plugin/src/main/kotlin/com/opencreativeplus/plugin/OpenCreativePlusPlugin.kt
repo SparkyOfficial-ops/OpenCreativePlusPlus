@@ -17,6 +17,7 @@ import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
 import com.opencreativeplus.plugin.command.DialogueQuitListener
 import com.opencreativeplus.plugin.listener.ArgHologramListener
+import com.opencreativeplus.plugin.listener.AutoDecorationListener
 import com.opencreativeplus.plugin.listener.PlotProtectionListener
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.scanner.ParameterPlacer
@@ -269,6 +270,16 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
         server.pluginManager.registerEvents(
             PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
+        )
+        // Auto-decoration: places a coloured glowing sign when a Category_Block lands on a strip
+        server.pluginManager.registerEvents(
+            AutoDecorationListener(
+                modeManager = modeManager,
+                categoryRegistry = categoryRegistry,
+                plotManager = plotManager,
+                scope = scope,
+                plugin = this
+            ), this
         )
         // Req 9.3: update arg holograms when chest contents change
         server.pluginManager.registerEvents(

@@ -5,7 +5,6 @@ import org.bukkit.Bukkit
 import org.bukkit.Difficulty
 import org.bukkit.World
 import org.bukkit.WorldCreator
-import org.bukkit.WorldType
 import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -27,6 +26,7 @@ class WorldManager(
 ) {
     /** plotId → (mainWorld, devWorld) */
     private val loadedWorlds = ConcurrentHashMap<UUID, Pair<World, World>>()
+
 
     /**
      * Create both worlds for a new plot.
@@ -105,9 +105,9 @@ class WorldManager(
         val creator = WorldCreator(name)
             .generateStructures(false)
         if (isDevWorld) {
-            // Flat void — no terrain, only our coding grid
-            creator.type(WorldType.FLAT)
-                .generatorSettings("{\"layers\":[{\"block\":\"minecraft:air\",\"height\":1}],\"structures\":{\"structures\":{}}}")
+            // Use VoidGenerator instead of the legacy JSON generatorSettings,
+            // which breaks on Paper 1.18+ ("No key layers in MapLike[{}]").
+            creator.generator(VoidGenerator())
         } else {
             creator.type(WorldType.FLAT)
         }
@@ -151,5 +151,22 @@ class WorldManager(
 
         // Spawn player above the first strip at level Y=15 (first level)
         world.setSpawnLocation(0, 16, 0)
+    }
+}
+
+/**
+ * Minimal void chunk generator — produces completely empty chunks.
+ * Replaces the legacy generatorSettings JSON that broke on Paper 1.18+
+ * ("No key layers in MapLike[{}]" / "Unknown biome" errors).
+ */
+class VoidGenerator : org.bukkit.generator.ChunkGenerator() {
+    override fun generateNoise(
+        worldInfo: org.bukkit.generator.WorldInfo,
+        random: java.util.Random,
+        chunkX: Int,
+        chunkZ: Int,
+        chunkData: ChunkData
+    ) {
+        // Leave chunk empty — no blocks placed
     }
 }

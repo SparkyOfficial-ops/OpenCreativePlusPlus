@@ -134,8 +134,8 @@ class ModeManagerImpl(
                 player.gameMode = GameMode.CREATIVE
             }
         }
-        // provisionDevInventory вызывается вне runOnMain — она сама управляет потоком
-        inventoryManager.provisionDevInventory(player)
+        // provisionDevInventory — синхронный метод, должен выполняться на main thread
+        runOnMain { inventoryManager.provisionDevInventory(player) }
         runOnMain {
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }

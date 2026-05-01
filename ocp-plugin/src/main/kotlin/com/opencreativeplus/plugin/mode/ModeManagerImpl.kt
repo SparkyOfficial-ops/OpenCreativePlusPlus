@@ -134,8 +134,9 @@ class ModeManagerImpl(
                 player.gameMode = GameMode.CREATIVE
             }
         }
+        // provisionDevInventory вызывается вне runOnMain — она сама управляет потоком
+        inventoryManager.provisionDevInventory(player)
         runOnMain {
-            inventoryManager.provisionDevInventory(player)
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }
         val scanner = blockScannerFactory(plot)

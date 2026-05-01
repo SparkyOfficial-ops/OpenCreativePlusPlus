@@ -42,6 +42,7 @@ import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.rating.RatingManager
 import com.opencreativeplus.plugin.rating.TagManager
 import com.opencreativeplus.plugin.registry.BuiltInNodeRegistry
+import com.opencreativeplus.plugin.registry.BuiltInDescriptors
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.visualizer.DevVisualizer
@@ -165,6 +166,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         OpenCreativePlusAPI.initialize(nodeRegistry)
 
         categoryRegistry = CategoryRegistry()
+        BuiltInDescriptors.register(categoryRegistry)
 
         val worldManager = WorldManager()
         val plotPersistence = PlotPersistence(database, connectionManager)

@@ -77,6 +77,8 @@ import com.opencreativeplus.plugin.node.value.LessThanValue
 import com.opencreativeplus.plugin.node.value.MultiplyValue
 import com.opencreativeplus.plugin.node.value.SubtractValue
 import com.opencreativeplus.plugin.node.selection.SelectionNode
+import com.opencreativeplus.plugin.node.random.RandomActionNode
+import com.opencreativeplus.plugin.node.random.WeightedAction
 import org.bukkit.Material
 
 /**
@@ -151,6 +153,22 @@ object BuiltInNodeRegistry {
     private fun registerActions(registry: NodeRegistryImpl) {
         registry.registerAction(Material.PAPER, "send_message") { params -> SendMessageAction(params) }
         // WaitAction requires a Plugin instance — registered via registerPluginActions()
+        registry.registerAction(Material.AMETHYST_SHARD, "random_action") { params ->
+            @Suppress("UNCHECKED_CAST")
+            val rawList = params["branches"] as? List<*> ?: emptyList<Any>()
+            val branches: List<WeightedAction> = rawList.mapNotNull { item ->
+                when (item) {
+                    is WeightedAction -> item
+                    is Map<*, *> -> {
+                        val action = item["action"] as? com.opencreativeplus.api.node.IAction ?: return@mapNotNull null
+                        val weight = (item["weight"] as? Double) ?: 1.0
+                        WeightedAction(action, weight)
+                    }
+                    else -> null
+                }
+            }
+            RandomActionNode(mapOf("branches" to branches))
+        }
     }
 
     private fun registerConditions(registry: NodeRegistryImpl) {

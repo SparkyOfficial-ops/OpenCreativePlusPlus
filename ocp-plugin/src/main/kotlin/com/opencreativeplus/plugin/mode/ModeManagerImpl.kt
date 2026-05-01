@@ -140,7 +140,7 @@ class ModeManagerImpl(
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }
         val scanner = blockScannerFactory(plot)
-        val codeLines = scanner.scanCodingZone()
+        val codeLines = scanner.scanCodingZoneAsync { runOnMain(it) }
         devVisualizer?.startFor(player, codeLines)
         hologramReporter?.showToPlayer(player)
         // Req 9.1: show arg holograms for all ParamChests when entering DEV mode
@@ -150,16 +150,19 @@ class ModeManagerImpl(
             if (devWorld != null) {
                 for (codeLine in codeLines) {
                     for (node in codeLine.nodes) {
-                        val nodeBlock = devWorld.getBlockAt(node.location)
-                        val chestBlock = nodeBlock.getRelative(org.bukkit.block.BlockFace.UP)
-                        val chest = chestBlock.state as? org.bukkit.block.Chest ?: continue
-                        val args = chest.inventory.contents
-                            .filterNotNull()
-                            .mapNotNull { item ->
-                                com.opencreativeplus.plugin.scanner.DataContainer.deserializeFrom(item)
-                            }
-                        if (args.isNotEmpty()) {
-                            hr.showArgHolograms(player, chestBlock.location, args)
+                        val args = runOnMain {
+                            val nodeBlock = devWorld.getBlockAt(node.location)
+                            val chestBlock = nodeBlock.getRelative(org.bukkit.block.BlockFace.UP)
+                            val chest = chestBlock.state as? org.bukkit.block.Chest
+                            chest?.inventory?.contents
+                                ?.filterNotNull()
+                                ?.mapNotNull { item ->
+                                    com.opencreativeplus.plugin.scanner.DataContainer.deserializeFrom(item)
+                                }
+                                ?.let { it to chestBlock.location }
+                        } ?: continue
+                        if (args.first.isNotEmpty()) {
+                            hr.showArgHolograms(player, args.second, args.first)
                         }
                     }
                 }
@@ -170,7 +173,7 @@ class ModeManagerImpl(
     private suspend fun applyPlayMode(player: Player, plot: Plot): Boolean {
         runOnMain { resetPlayerState(player) }
         val scanner = blockScannerFactory(plot)
-        val codeLines = scanner.scanCodingZone()
+        val codeLines = scanner.scanCodingZoneAsync { runOnMain(it) }
         val result: CompilationResult = astCompiler.compile(codeLines)
 
         if (result.errors.isNotEmpty()) {

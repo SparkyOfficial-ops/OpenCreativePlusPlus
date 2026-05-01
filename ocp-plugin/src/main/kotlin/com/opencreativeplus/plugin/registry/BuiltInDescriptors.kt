@@ -66,6 +66,7 @@ object BuiltInDescriptors {
         registry.register(ActionDescriptor("fill_region",      "Заполнить регион",   Material.SPONGE,         NodeCategory.GAME_ACTION, listOf("from", "to", "material")))
         registry.register(ActionDescriptor("copy_region",      "Скопировать регион", Material.WET_SPONGE,     NodeCategory.GAME_ACTION, listOf("from", "to")))
         registry.register(ActionDescriptor("paste_region",     "Вставить регион",    Material.STRUCTURE_BLOCK,NodeCategory.GAME_ACTION, listOf("location")))
+        registry.register(ActionDescriptor("random_action",    "Случайное действие", Material.AMETHYST_SHARD, NodeCategory.GAME_ACTION, listOf("branches")))
 
         // ── Выбор объекта (SELECT_OBJECT) ─────────────────────────────────────
         registry.register(ActionDescriptor("select_targets",      "Выбрать цели",         Material.PURPUR_BLOCK, NodeCategory.SELECT_OBJECT, listOf("selector")))

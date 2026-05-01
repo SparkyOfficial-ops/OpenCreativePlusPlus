@@ -188,6 +188,10 @@ class BlockScanner(
     /**
      * Scan the entire coding zone and return all discovered CodeLines.
      * Requirements: 4.1, 10.1
+     *
+     * Must be called from the Bukkit main thread (or via [scanCodingZoneAsync]) because
+     * internal methods access [Block.state] / TileEntity data which PaperMC guards against
+     * asynchronous access (throws IllegalStateException: Tile is null, asynchronous access?).
      */
     fun scanCodingZone(): List<CodeLine> {
         val codeLines = mutableListOf<CodeLine>()
@@ -196,6 +200,25 @@ class BlockScanner(
         }
         return codeLines
     }
+
+    /**
+     * Coroutine-safe variant of [scanCodingZone].
+     *
+     * Delegates the entire scan to the Bukkit main thread via [syncRunner] so that all
+     * [Block.state] / TileEntity / PDC reads happen synchronously, avoiding the
+     * "Tile is null, asynchronous access?" IllegalStateException thrown by PaperMC.
+     *
+     * Usage from a coroutine (e.g. ModeManagerImpl):
+     * ```kotlin
+     * val codeLines = scanner.scanCodingZoneAsync { block -> runOnMain(block) }
+     * ```
+     *
+     * @param syncRunner A suspend function that schedules its lambda on the main thread
+     *                   and suspends the coroutine until the result is ready.
+     *                   Matches the signature of ModeManagerImpl.runOnMain.
+     */
+    suspend fun scanCodingZoneAsync(syncRunner: suspend (() -> List<CodeLine>) -> List<CodeLine>): List<CodeLine> =
+        syncRunner { scanCodingZone() }
 
     /**
      * Scan a rectangular area of blocks using ChunkSnapshot batching.

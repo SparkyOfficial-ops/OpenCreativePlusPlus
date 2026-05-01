@@ -30,16 +30,28 @@ class CodingGridGenerator(
     }
 
     /**
-     * Schedules full grid generation on the main thread.
+     * Schedules full grid generation using batched ticking to avoid TPS spikes.
+     *
+     * Generates one level per tick (every 2 ticks) so the server stays responsive.
+     * Total generation time: LEVEL_COUNT * 2 ticks = 16 ticks (~0.8 s) instead of
+     * freezing the main thread for 20+ seconds.
+     *
      * Safe to call from any coroutine context.
      */
     fun generate(world: World) {
-        Bukkit.getScheduler().runTask(plugin, Runnable {
-            for (levelIndex in 0 until LEVEL_COUNT) {
-                val y = 15 + levelIndex * LEVEL_SPACING
+        object : org.bukkit.scheduler.BukkitRunnable() {
+            var currentLevel = 0
+
+            override fun run() {
+                if (currentLevel >= LEVEL_COUNT) {
+                    cancel()
+                    return
+                }
+                val y = 15 + currentLevel * LEVEL_SPACING
                 generateLevel(world, y)
+                currentLevel++
             }
-        })
+        }.runTaskTimer(plugin, 0L, 2L)
     }
 
     private fun generateLevel(world: World, y: Int) {

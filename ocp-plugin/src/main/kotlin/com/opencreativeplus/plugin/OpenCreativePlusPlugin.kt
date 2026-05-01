@@ -20,6 +20,7 @@ import com.opencreativeplus.plugin.listener.ArgHologramListener
 import com.opencreativeplus.plugin.listener.AutoDecorationListener
 import com.opencreativeplus.plugin.listener.PlotProtectionListener
 import com.opencreativeplus.plugin.registry.CategoryRegistry
+import com.opencreativeplus.plugin.registry.NodeCategory
 import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import com.opencreativeplus.plugin.gui.NodeSelectionGUI
 import com.opencreativeplus.plugin.command.OcpDialogueCommand
@@ -167,6 +168,13 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         categoryRegistry = CategoryRegistry()
         BuiltInDescriptors.register(categoryRegistry)
+
+        // Diagnostic: verify descriptors loaded correctly
+        val totalDescriptors = NodeCategory.entries.sumOf { categoryRegistry.getDescriptors(it).size }
+        logger.info("[OCP] CategoryRegistry loaded: $totalDescriptors descriptors across ${NodeCategory.entries.size} categories")
+        NodeCategory.entries.forEach { cat ->
+            logger.info("[OCP]   ${cat.name}: ${categoryRegistry.getDescriptors(cat).size} actions")
+        }
 
         val worldManager = WorldManager()
         val plotPersistence = PlotPersistence(database, connectionManager)

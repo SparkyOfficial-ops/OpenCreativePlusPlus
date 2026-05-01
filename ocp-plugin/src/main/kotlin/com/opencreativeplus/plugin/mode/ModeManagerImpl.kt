@@ -65,8 +65,11 @@ class ModeManagerImpl(
         val switched = onModeEnter(player, plot, mode)
         if (!switched) return
 
+        // Only restore saved inventory if one exists — don't overwrite provisioned DEV inventory
         val doc = inventoryManager.fetchInventoryDoc(player, plot.id, mode)
-        runOnMain { inventoryManager.applyInventoryDoc(player, doc) }
+        if (doc != null) {
+            runOnMain { inventoryManager.applyInventoryDoc(player, doc) }
+        }
 
         currentModes[modeKey(player.uniqueId, plot.id)] = mode
     }
@@ -176,9 +179,12 @@ class ModeManagerImpl(
         val codeLines = scanner.scanCodingZoneAsync { runOnMain(it) }
         val result: CompilationResult = astCompiler.compile(codeLines)
 
-        if (result.errors.isNotEmpty()) {
-            player.sendMessage("§c[OCP] Compilation failed with ${result.errors.size} error(s):")
-            result.errors.take(5).forEach { err ->
+        // Filter out "no blocks" errors — they are expected when the coding zone is empty
+        val realErrors = result.errors.filter { "no blocks" !in it.message.lowercase() }
+
+        if (realErrors.isNotEmpty()) {
+            player.sendMessage("§c[OCP] Compilation failed with ${realErrors.size} error(s):")
+            realErrors.take(5).forEach { err ->
                 player.sendMessage("§c  - ${err.location}: ${err.message}")
             }
             return false

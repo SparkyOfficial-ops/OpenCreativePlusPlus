@@ -5,7 +5,6 @@ import org.bukkit.Bukkit
 import org.bukkit.Difficulty
 import org.bukkit.World
 import org.bukkit.WorldCreator
-import org.bukkit.WorldType
 import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -105,13 +104,10 @@ class WorldManager(
     private fun createWorld(name: String, isDevWorld: Boolean): World {
         val creator = WorldCreator(name)
             .generateStructures(false)
-        if (isDevWorld) {
-            // Use VoidGenerator instead of the legacy JSON generatorSettings,
-            // which breaks on Paper 1.18+ ("No key layers in MapLike[{}]").
-            creator.generator(VoidGenerator())
-        } else {
-            creator.type(WorldType.FLAT)
-        }
+            .environment(World.Environment.NORMAL)
+        // Use VoidGenerator for both world types to avoid Paper 1.20+ errors:
+        // "No key layers in MapLike[{}]" when using WorldType.FLAT without explicit layer config.
+        creator.generator(VoidGenerator())
         return Bukkit.createWorld(creator)
             ?: error("Failed to create world: $name")
     }

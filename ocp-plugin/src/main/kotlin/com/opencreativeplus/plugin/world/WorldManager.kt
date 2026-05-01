@@ -5,6 +5,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Difficulty
 import org.bukkit.World
 import org.bukkit.WorldCreator
+import org.bukkit.WorldType
 import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap

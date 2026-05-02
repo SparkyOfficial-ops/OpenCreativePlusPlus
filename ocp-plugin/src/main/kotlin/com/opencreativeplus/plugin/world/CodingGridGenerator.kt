@@ -1,7 +1,6 @@
 package com.opencreativeplus.plugin.world
 
 import org.bukkit.Bukkit
-import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.plugin.Plugin
 
@@ -34,10 +33,14 @@ class CodingGridGenerator(
 
     /**
      * Schedules full grid generation using batched ticking to avoid TPS spikes.
-     * Generates one level per tick (every 2 ticks).
+     *
+     * Phase 1: Force-load all required chunks asynchronously (non-blocking).
+     * Phase 2: Once chunks are loaded, generate one level per 2 ticks.
+     *
+     * This prevents the "server has not responded" freeze caused by getBlockAt()
+     * forcing synchronous chunk loading on the main thread.
      */
     fun generate(world: World) {
-        // Set world border for the dev world
         world.worldBorder.apply {
             center = world.getBlockAt(STRIP_LENGTH / 2, 64, (STRIP_COUNT * STRIP_SPACING) / 2).location
             size = DEV_BORDER_SIZE
@@ -45,6 +48,38 @@ class CodingGridGenerator(
             warningTime = 0
         }
 
+        // Calculate which chunks we need
+        val totalWidth = STRIP_COUNT * STRIP_SPACING
+        val chunkXMin = (-2) shr 4
+        val chunkXMax = (STRIP_LENGTH + 2) shr 4
+        val chunkZMin = (-2) shr 4
+        val chunkZMax = (totalWidth + 2) shr 4
+
+        val chunksToLoad = mutableListOf<Pair<Int, Int>>()
+        for (cx in chunkXMin..chunkXMax) {
+            for (cz in chunkZMin..chunkZMax) {
+                chunksToLoad.add(cx to cz)
+            }
+        }
+
+        // Load all chunks first, then start generation
+        var loadedCount = 0
+        val totalChunks = chunksToLoad.size
+
+        for ((cx, cz) in chunksToLoad) {
+            world.getChunkAtAsync(cx, cz).thenRun {
+                loadedCount++
+                if (loadedCount >= totalChunks) {
+                    // All chunks loaded — start batched generation on main thread
+                    Bukkit.getScheduler().runTask(plugin, Runnable {
+                        startBatchedGeneration(world)
+                    })
+                }
+            }
+        }
+    }
+
+    private fun startBatchedGeneration(world: World) {
         object : org.bukkit.scheduler.BukkitRunnable() {
             var currentLevel = 0
 
@@ -63,10 +98,13 @@ class CodingGridGenerator(
     private fun generateLevel(world: World, y: Int) {
         val totalWidth = STRIP_COUNT * STRIP_SPACING  // total Z span of all strips
 
-        // Fill the entire floor with WHITE_STAINED_GLASS (between and under all strips)
+        // Fill the entire floor with WHITE_STAINED_GLASS (between and under all strips).
+        // applyPhysics=false prevents neighbor block updates that would try to load
+        // ungenerated chunks and freeze the server thread.
+        val whiteGlass = org.bukkit.Material.WHITE_STAINED_GLASS.createBlockData()
         for (x in -2..STRIP_LENGTH + 1) {
             for (z in -2..totalWidth + 1) {
-                world.getBlockAt(x, y - 1, z).type = Material.WHITE_STAINED_GLASS
+                world.getBlockAt(x, y - 1, z).setBlockData(whiteGlass, false)
             }
         }
 
@@ -78,13 +116,16 @@ class CodingGridGenerator(
     }
 
     private fun generateStrip(world: World, y: Int, z: Int) {
+        val blueGlass  = org.bukkit.Material.BLUE_STAINED_GLASS.createBlockData()
+        val whiteGlass = org.bukkit.Material.WHITE_STAINED_GLASS.createBlockData()
+        val grayGlass  = org.bukkit.Material.GRAY_STAINED_GLASS.createBlockData()
         for (x in 0 until STRIP_LENGTH) {
-            val material = when {
-                x == 0      -> Material.BLUE_STAINED_GLASS
-                x % 2 != 0  -> Material.WHITE_STAINED_GLASS
-                else        -> Material.GRAY_STAINED_GLASS
+            val data = when {
+                x == 0     -> blueGlass
+                x % 2 != 0 -> whiteGlass
+                else       -> grayGlass
             }
-            world.getBlockAt(x, y, z).type = material
+            world.getBlockAt(x, y, z).setBlockData(data, false)
         }
     }
 }

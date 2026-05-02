@@ -164,6 +164,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         val nodeRegistry = NodeRegistryImpl()
         BuiltInNodeRegistry.register(nodeRegistry)
         BuiltInNodeRegistry.registerPluginActions(nodeRegistry, this)
+        BuiltInNodeRegistry.registerVariableNodes(nodeRegistry, variableManager)
         OpenCreativePlusAPI.initialize(nodeRegistry)
 
         categoryRegistry = CategoryRegistry()
@@ -231,6 +232,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)
+
+        BuiltInNodeRegistry.registerGUINodes(nodeRegistry, this, modeManager, plotManager, eventDispatcher, coroutineConfig.executionScope)
 
         // ── Logging ───────────────────────────────────────────────────────────
         val executionLogger = ExecutionLogger(database, connectionManager)

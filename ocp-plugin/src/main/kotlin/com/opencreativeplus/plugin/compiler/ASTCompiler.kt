@@ -73,9 +73,12 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         val actions = mutableListOf<com.opencreativeplus.api.node.IAction>()
         for (i in 1 until codeLine.nodes.size) {
             val node = codeLine.nodes[i]
-            val actionFactory = nodeRegistry.getActionFactory(node.blockType)
+            // Prefer nodeId-based lookup (PDC action_id set via NodeSelectionGUI),
+            // fall back to material-based lookup for legacy nodes.
+            val actionFactory = node.nodeId?.let { nodeRegistry.getActionFactoryById(it) }
+                ?: nodeRegistry.getActionFactory(node.blockType)
                 ?: throw CompilationException(
-                    "Unknown action block: ${node.blockType} at ${locationString(node.location)}"
+                    "Unknown action block: ${node.blockType}${node.nodeId?.let { " (nodeId=$it)" } ?: ""} at ${locationString(node.location)}"
                 )
             try {
                 actions.add(actionFactory(node.parameters))
@@ -113,7 +116,9 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
     private fun compileChildActions(childCodeLine: CodeLine): List<com.opencreativeplus.api.node.IAction> {
         val childActions = mutableListOf<com.opencreativeplus.api.node.IAction>()
         for (node in childCodeLine.nodes) {
-            val actionFactory = nodeRegistry.getActionFactory(node.blockType) ?: continue
+            val actionFactory = node.nodeId?.let { nodeRegistry.getActionFactoryById(it) }
+                ?: nodeRegistry.getActionFactory(node.blockType)
+                ?: continue
             try {
                 childActions.add(actionFactory(node.parameters))
             } catch (e: Exception) {

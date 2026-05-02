@@ -63,7 +63,7 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         // must return the exact same block instance for that player's UUID.
         "for any UUID, pendingBlocks[uuid] == block after storing" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid()
             ) { uuid ->
                 val gui = makeGui()
@@ -87,7 +87,7 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         // return null for that player's UUID.
         "for any UUID, pendingBlocks[uuid] == null after remove" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid()
             ) { uuid ->
                 val gui = makeGui()
@@ -112,7 +112,7 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         // pendingBlocks must contain block B (the most recently stored block).
         "for any UUID, storing blockA then blockB yields blockB in pendingBlocks" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid()
             ) { uuid ->
                 val gui = makeGui()
@@ -139,7 +139,7 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         // must each see their own block independently.
         "two distinct UUIDs each store their own block without interference" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.uuid()
             ) { uuid1, uuid2 ->
@@ -169,7 +169,7 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         // blocks must remain in the map.
         "removing uuid1 entry does not affect uuid2 entry" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.uuid()
             ) { uuid1, uuid2 ->

@@ -104,23 +104,61 @@ class GetListElementNode(params: Map<String, Any>) : IValue<Any?> {
 }
 
 /**
- * Returns a new list containing only elements matching the predicate in params["predicate"].
- * If no predicate is provided, returns the original list unchanged.
+ * Parses a condition string of the form "<variable> <operator> <value>" into a predicate.
+ *
+ * Supported operators: ==, !=, >, <, >=, <=
+ * Numeric operators (>, <, >=, <=) perform numeric comparison when the element is a Number.
+ * == and != perform string comparison via toString().
+ * Returns null and logs a warning if the format is invalid (not exactly 3 tokens).
+ */
+object ConditionStringParser {
+    fun parse(condition: String): ((Any?) -> Boolean)? {
+        val tokens = condition.trim().split("\\s+".toRegex())
+        if (tokens.size != 3) {
+            println("[OCP] ConditionStringParser: invalid condition format '$condition' (expected 3 tokens, got ${tokens.size})")
+            return null
+        }
+        val (_, operator, value) = tokens
+        return { element -> compare(element, operator, value) }
+    }
+
+    private fun compare(element: Any?, operator: String, value: String): Boolean {
+        val numElement = (element as? Number)?.toDouble()
+        val numValue = value.toDoubleOrNull()
+        return when (operator) {
+            "==" -> element?.toString() == value
+            "!=" -> element?.toString() != value
+            ">"  -> numElement != null && numValue != null && numElement > numValue
+            "<"  -> numElement != null && numValue != null && numElement < numValue
+            ">=" -> numElement != null && numValue != null && numElement >= numValue
+            "<=" -> numElement != null && numValue != null && numElement <= numValue
+            else -> false
+        }
+    }
+}
+
+/**
+ * Returns a new list containing only elements matching the condition string in params["condition"].
+ * If the condition is absent/blank or has an invalid format, returns the original list unchanged.
  *
  * Params:
  *   - "list": String — name of the localScope variable holding the list
- *   - "predicate": ((Any?) -> Boolean)? — optional filter lambda
+ *   - "condition": String? — condition string in format "<variable> <operator> <value>"
  */
 class FilterListNode(params: Map<String, Any>) : IValue<List<Any?>> {
     override val nodeId = "filter_list"
     override val displayName = "Filter List"
 
     private val listVar: String = params["list"] as? String ?: error("list param required")
-    @Suppress("UNCHECKED_CAST")
-    private val predicate: ((Any?) -> Boolean)? = params["predicate"] as? ((Any?) -> Boolean)
+    private val conditionStr: String? = params["condition"] as? String
 
     override suspend fun compute(context: ExecutionContext): List<Any?> {
         val list = context.localScope.get(listVar) as? List<*> ?: return emptyList()
-        return if (predicate == null) list.toList() else list.filter { predicate.invoke(it) }
+        if (conditionStr.isNullOrBlank()) return list.toList()
+        val predicate = ConditionStringParser.parse(conditionStr) ?: run {
+            println("[OCP] FilterListNode: invalid condition format '$conditionStr'")
+            return list.toList()
+        }
+        return list.filter { predicate(it) }
     }
 }

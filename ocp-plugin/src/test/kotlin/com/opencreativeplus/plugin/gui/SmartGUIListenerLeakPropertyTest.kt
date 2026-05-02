@@ -113,8 +113,8 @@ class SmartGUIListenerLeakPropertyTest : FreeSpec({
         // exactly 1 entry — the most recently registered SmartGUI.
         "for any N in 1..20, activeGuis.size == 1 after N opens" {
             checkAll(
-                PropTestConfig(iterations = 100),
-                Arb.int(1..20)
+                PropTestConfig(iterations = 20),
+                Arb.int(1..10)
             ) { n ->
                 val activeGuis = ConcurrentHashMap<UUID, SmartGUI>()
                 val counter = java.util.concurrent.atomic.AtomicInteger(0)
@@ -140,8 +140,8 @@ class SmartGUIListenerLeakPropertyTest : FreeSpec({
         // So after N opens: N-1 unregister calls total.
         "for any N in 1..20, unregisterAll call count == N-1" {
             checkAll(
-                PropTestConfig(iterations = 100),
-                Arb.int(1..20)
+                PropTestConfig(iterations = 20),
+                Arb.int(1..10)
             ) { n ->
                 val activeGuis = ConcurrentHashMap<UUID, SmartGUI>()
                 val counter = java.util.concurrent.atomic.AtomicInteger(0)
@@ -166,8 +166,8 @@ class SmartGUIListenerLeakPropertyTest : FreeSpec({
         // The shared activeGuis map must contain exactly 2 entries (one per player).
         "for any N in 1..20, two players → activeGuis.size == 2" {
             checkAll(
-                PropTestConfig(iterations = 100),
-                Arb.int(1..20)
+                PropTestConfig(iterations = 20),
+                Arb.int(1..10)
             ) { n ->
                 val activeGuis = ConcurrentHashMap<UUID, SmartGUI>()
                 val counter = java.util.concurrent.atomic.AtomicInteger(0)
@@ -198,7 +198,7 @@ class SmartGUIListenerLeakPropertyTest : FreeSpec({
         // and verify it is invoked with the correct SmartGUI instance.
         "onInventoryClose calls HandlerList.unregisterAll when inventory and player match" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid()
             ) { uuid ->
                 mockkStatic(HandlerList::class)

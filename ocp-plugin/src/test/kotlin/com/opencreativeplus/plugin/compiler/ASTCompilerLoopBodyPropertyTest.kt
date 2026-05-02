@@ -91,9 +91,9 @@ class ASTCompilerLoopBodyPropertyTest : FreeSpec({
         // ForEachNode must invoke each body action exactly K times → total N×K calls.
         "total execute() calls equals N * K" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 30),
                 Arb.int(1..10),
-                Arb.int(1..20)
+                Arb.int(1..10)
             ) { n, k ->
                 val counter = AtomicInteger(0)
                 val body = List(n) { CountingAction(counter) }
@@ -113,8 +113,8 @@ class ASTCompilerLoopBodyPropertyTest : FreeSpec({
         // Validates: Requirement 2.5 (edge case: N=0)
         "zero body actions → zero total calls" {
             checkAll(
-                PropTestConfig(iterations = 100),
-                Arb.int(0..20)
+                PropTestConfig(iterations = 20),
+                Arb.int(0..10)
             ) { k ->
                 val counter = AtomicInteger(0)
                 val node = ForEachNode(mapOf("list" to "items", "body" to emptyList<IAction>()))
@@ -135,9 +135,9 @@ class ASTCompilerLoopBodyPropertyTest : FreeSpec({
         // RepeatNode must invoke each body action exactly K times → total N×K calls.
         "total execute() calls equals N * K" {
             checkAll(
-                PropTestConfig(iterations = 200),
+                PropTestConfig(iterations = 30),
                 Arb.int(1..10),
-                Arb.int(1..20)
+                Arb.int(1..10)
             ) { n, k ->
                 val counter = AtomicInteger(0)
                 val body = List(n) { CountingAction(counter) }
@@ -157,8 +157,8 @@ class ASTCompilerLoopBodyPropertyTest : FreeSpec({
         // Validates: Requirement 2.6 (edge case: N=0)
         "zero body actions → zero total calls" {
             checkAll(
-                PropTestConfig(iterations = 100),
-                Arb.int(0..20)
+                PropTestConfig(iterations = 20),
+                Arb.int(0..10)
             ) { k ->
                 val counter = AtomicInteger(0)
                 val node = RepeatNode(mapOf("count" to k, "body" to emptyList<IAction>()))

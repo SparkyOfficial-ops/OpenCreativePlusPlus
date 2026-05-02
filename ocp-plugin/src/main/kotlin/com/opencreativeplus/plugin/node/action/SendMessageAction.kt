@@ -15,7 +15,7 @@ import org.bukkit.entity.Player
  7.2, 7.5
  */
 class SendMessageAction(
-    private val params: Map<String, Any>,
+    internal val params: Map<String, Any>,
     private val placeholderParser: PlaceholderParser = PlaceholderParserImpl(),
     private val variableManager: VariableManager? = null
 ) : IAction {

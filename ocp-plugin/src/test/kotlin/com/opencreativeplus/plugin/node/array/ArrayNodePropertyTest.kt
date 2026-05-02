@@ -168,13 +168,13 @@ class ArrayNodePropertyTest : FreeSpec({
     // Property 13e: FilterList returns only matching elements (s 8.6)
     // -----------------------------------------------------------------------
 
-    "Property 13e: FilterListNode returns only elements matching predicate (s 8.6)" - {
+    "Property 13e: FilterListNode returns only elements matching condition string (s 8.6)" - {
         // Validates: Requirements 8.6
-        // For any list of integers, FilterListNode with predicate { it is Int && it > 0 }
+        // For any list of integers, FilterListNode with condition "x > 0"
         // returns only positive integers.
         // The result must be a subset of the original list.
-        // All elements in the result must satisfy the predicate.
-        val predicate: (Any?) -> Boolean = { it is Int && it > 0 }
+        // All elements in the result must satisfy the condition.
+        // Uses ConditionStringParser via params["condition"].
 
         "result is a subset of the original list" {
             checkAll(
@@ -182,35 +182,59 @@ class ArrayNodePropertyTest : FreeSpec({
                 Arb.list(Arb.int(-50..50), 0..30)
             ) { items ->
                 val ctx = contextWithLocalScope(mapOf("myList" to items))
-                val node = FilterListNode(mapOf("list" to "myList", "predicate" to predicate))
+                val node = FilterListNode(mapOf("list" to "myList", "condition" to "x > 0"))
                 val result = node.compute(ctx)
                 // Every element in result must appear in the original list
                 items shouldContainAll result
             }
         }
 
-        "all elements in result satisfy the predicate" {
+        "all elements in result satisfy the condition (> 0)" {
             checkAll(
                 PropTestConfig(iterations = 100),
                 Arb.list(Arb.int(-50..50), 0..30)
             ) { items ->
                 val ctx = contextWithLocalScope(mapOf("myList" to items))
-                val node = FilterListNode(mapOf("list" to "myList", "predicate" to predicate))
+                val node = FilterListNode(mapOf("list" to "myList", "condition" to "x > 0"))
                 val result = node.compute(ctx)
-                result.all { predicate(it) } shouldBe true
+                result.all { (it as? Number)?.toDouble()?.let { v -> v > 0.0 } == true } shouldBe true
             }
         }
 
-        "result contains all original elements that satisfy the predicate" {
+        "result contains all original elements that satisfy the condition" {
             checkAll(
                 PropTestConfig(iterations = 100),
                 Arb.list(Arb.int(-50..50), 0..30)
             ) { items ->
                 val ctx = contextWithLocalScope(mapOf("myList" to items))
-                val node = FilterListNode(mapOf("list" to "myList", "predicate" to predicate))
+                val node = FilterListNode(mapOf("list" to "myList", "condition" to "x > 0"))
                 val result = node.compute(ctx)
-                val expected = items.filter { predicate(it) }
+                val expected = items.filter { (it as? Number)?.toDouble()?.let { v -> v > 0.0 } == true }
                 result shouldBe expected
+            }
+        }
+
+        "no condition returns original list unchanged" {
+            checkAll(
+                PropTestConfig(iterations = 100),
+                Arb.list(Arb.int(-50..50), 0..30)
+            ) { items ->
+                val ctx = contextWithLocalScope(mapOf("myList" to items))
+                val node = FilterListNode(mapOf("list" to "myList"))
+                val result = node.compute(ctx)
+                result shouldBe items
+            }
+        }
+
+        "invalid condition format returns original list unchanged" {
+            checkAll(
+                PropTestConfig(iterations = 100),
+                Arb.list(Arb.int(-50..50), 0..30)
+            ) { items ->
+                val ctx = contextWithLocalScope(mapOf("myList" to items))
+                val node = FilterListNode(mapOf("list" to "myList", "condition" to "bad_condition"))
+                val result = node.compute(ctx)
+                result shouldBe items
             }
         }
     }

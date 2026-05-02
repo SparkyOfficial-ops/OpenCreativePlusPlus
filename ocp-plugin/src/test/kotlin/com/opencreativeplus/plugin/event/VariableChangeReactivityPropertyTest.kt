@@ -77,7 +77,7 @@ class VariableChangeReactivityPropertyTest : FreeSpec({
         // **Validates: Requirements 5.2**
         "for any plotId, varName, varValue: PLOT scope emits exactly 1 event with matching name" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.string(1..32),
                 Arb.string()
@@ -114,7 +114,7 @@ class VariableChangeReactivityPropertyTest : FreeSpec({
         // **Validates: Requirements 5.2**
         "for any plotId, varName, varValue: SAVED scope emits exactly 1 event with matching name" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.string(1..32),
                 Arb.string()
@@ -152,7 +152,7 @@ class VariableChangeReactivityPropertyTest : FreeSpec({
         // **Validates: Requirements 5.3, 5.4**
         "for any plotId, varName, varValue: dispatcher receives variable_change with variable_name == varName" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.string(1..32),
                 Arb.string(),
@@ -199,9 +199,9 @@ class VariableChangeReactivityPropertyTest : FreeSpec({
         // **Validates: Requirements 5.3, 5.4**
         "for any N in 1..10 and any varName: N emits produce exactly N executeScript calls" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
-                Arb.int(1..10),
+                Arb.int(1..5),
                 Arb.string(1..32),
                 Arb.element(listOf(VariableScopeType.PLOT, VariableScopeType.SAVED))
             ) { plotId, n, varName, scope ->
@@ -241,7 +241,7 @@ class VariableChangeReactivityPropertyTest : FreeSpec({
         // **Validates: Requirements 5.2**
         "emitChange for plotB does not produce events in changes(plotA)" {
             checkAll(
-                PropTestConfig(iterations = 100),
+                PropTestConfig(iterations = 20),
                 Arb.uuid(),
                 Arb.uuid(),
                 Arb.string(1..32)

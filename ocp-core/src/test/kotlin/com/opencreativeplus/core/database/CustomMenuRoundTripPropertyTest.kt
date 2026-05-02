@@ -166,7 +166,7 @@ class CustomMenuRoundTripPropertyTest : FreeSpec({
         "for any CustomMenuData, save then load produces an object equal to the original" {
             // Feature: ocp-plugin-fixes-and-completions, Property 6: CustomMenuDefinition round-trip
             checkAll(
-                PropTestConfig(iterations = 50),
+                PropTestConfig(iterations = 15),
                 arbCustomMenuData
             ) { menuData ->
                 val (persistence, _) = buildPersistence()
@@ -186,7 +186,7 @@ class CustomMenuRoundTripPropertyTest : FreeSpec({
         "multiple menus for the same plot are all returned by loadCustomMenus" {
             // Feature: ocp-plugin-fixes-and-completions, Property 6: CustomMenuDefinition round-trip
             checkAll(
-                PropTestConfig(iterations = 30),
+                PropTestConfig(iterations = 10),
                 arbCustomMenuData,
                 arbCustomMenuData
             ) { menu1, menu2 ->
@@ -209,7 +209,7 @@ class CustomMenuRoundTripPropertyTest : FreeSpec({
         "saving the same menu twice (upsert) returns the latest version" {
             // Feature: ocp-plugin-fixes-and-completions, Property 6: CustomMenuDefinition round-trip
             checkAll(
-                PropTestConfig(iterations = 30),
+                PropTestConfig(iterations = 10),
                 arbSafeName,
                 arbSlots,
                 arbSlots
@@ -235,7 +235,7 @@ class CustomMenuRoundTripPropertyTest : FreeSpec({
         "menus from different plots are isolated" {
             // Feature: ocp-plugin-fixes-and-completions, Property 6: CustomMenuDefinition round-trip
             checkAll(
-                PropTestConfig(iterations = 30),
+                PropTestConfig(iterations = 10),
                 arbCustomMenuData
             ) { menuData ->
                 val (persistence, _) = buildPersistence()

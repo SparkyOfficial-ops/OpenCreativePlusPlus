@@ -3,8 +3,10 @@ package com.opencreativeplus.plugin.node.gui
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.plot.PlotMode
+import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
+import kotlinx.coroutines.CoroutineScope
 import org.bukkit.plugin.Plugin
 
 /**
@@ -23,7 +25,9 @@ class GUIDesignerNode(
     private val params: Map<String, Any>,
     private val plugin: Plugin,
     private val modeManager: ModeManagerImpl,
-    private val plotManager: PlotManagerImpl
+    private val plotManager: PlotManagerImpl,
+    private val plotPersistence: PlotPersistence? = null,
+    private val scope: CoroutineScope? = null
 ) : IAction {
 
     override val nodeId = "gui_designer"
@@ -44,7 +48,9 @@ class GUIDesignerNode(
             menuName = menuName,
             menuStore = menuStore,
             plugin = plugin,
-            plotId = plot.id
+            plotId = plot.id,
+            plotPersistence = plotPersistence,
+            scope = scope
         )
 
         context.syncContext {

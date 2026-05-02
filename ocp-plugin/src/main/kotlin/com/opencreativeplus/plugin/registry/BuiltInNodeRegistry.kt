@@ -129,11 +129,12 @@ object BuiltInNodeRegistry {
         modeManager: ModeManagerImpl,
         plotManager: PlotManagerImpl,
         eventDispatcher: EventDispatcher,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        plotPersistence: com.opencreativeplus.core.database.PlotPersistence? = null
     ) {
         // GUIDesignerNode — opens the 54-slot editor for the player in DEV mode (req 1.2)
         registry.registerAction(Material.CRAFTING_TABLE, "gui_designer") { params ->
-            GUIDesignerNode(params, plugin, modeManager, plotManager)
+            GUIDesignerNode(params, plugin, modeManager, plotManager, plotPersistence, scope)
         }
 
         // OpenMenuNode — opens a custom menu for a target player (req 1.1)

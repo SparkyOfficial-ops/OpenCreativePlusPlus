@@ -13,6 +13,34 @@ import org.bson.Document
 import java.util.UUID
 
 /**
+ * Generic representation of a custom menu slot for MongoDB persistence.
+ * Uses primitive types only so that ocp-core has no dependency on Bukkit/Paper.
+ *
+ * @property displayName Human-readable display name of the slot item.
+ * @property clickScriptName Optional name of the script triggered on click.
+ * @property itemType Material name (e.g. "STONE", "DIAMOND_SWORD").
+ * @property itemData Raw serialized item bytes encoded as Base64, or null if unavailable.
+ */
+data class CustomMenuSlotData(
+    val displayName: String,
+    val clickScriptName: String?,
+    val itemType: String,
+    val itemData: String?
+)
+
+/**
+ * Generic representation of a custom menu definition for MongoDB persistence.
+ * Uses primitive types only so that ocp-core has no dependency on Bukkit/Paper.
+ *
+ * @property name Unique name of the menu within the plot.
+ * @property slots Map of slot index to slot data.
+ */
+data class CustomMenuData(
+    val name: String,
+    val slots: Map<Int, CustomMenuSlotData>
+)
+
+/**
  * Plot persistence layer for MongoDB operations.
  * Handles plot serialization/deserialization and CRUD operations.
  * 
@@ -185,6 +213,98 @@ class PlotPersistence(
                 .map { deserializePlot(it) }
         }
     }
+
+    // ── Custom Menu Persistence ───────────────────────────────────────────────
+
+    /**
+     * Save or update a custom menu definition for a plot in MongoDB.
+     *
+     * Uses composite key `(plotId, menuName)` as the document `_id` for upsert.
+     *
+     * @param plotId The UUID of the plot that owns this menu.
+     * @param menuData The generic menu data to persist (Bukkit-free representation).
+     * @throws Exception if the operation fails after retries.
+     *
+     * Requirements: 6.3
+     */
+    suspend fun saveCustomMenu(plotId: UUID, menuData: CustomMenuData) {
+        connectionManager.withRetry {
+            val col = database.getCollection<Document>("custom_menus")
+            val doc = Document().apply {
+                put("_id", "${plotId}:${menuData.name}")
+                put("plot_id", plotId.toString())
+                put("menu_name", menuData.name)
+                put("slots", serializeSlots(menuData.slots))
+                put("updated_at", System.currentTimeMillis())
+            }
+            col.replaceOne(
+                Filters.eq("_id", "${plotId}:${menuData.name}"),
+                doc,
+                ReplaceOptions().upsert(true)
+            )
+        }
+    }
+
+    /**
+     * Load all custom menu definitions for a plot from MongoDB.
+     *
+     * @param plotId The UUID of the plot whose menus to load.
+     * @return List of generic menu data objects; empty if none found.
+     * @throws Exception if the operation fails after retries.
+     *
+     * Requirements: 6.3
+     */
+    suspend fun loadCustomMenus(plotId: UUID): List<CustomMenuData> {
+        return connectionManager.withRetry {
+            val col = database.getCollection<Document>("custom_menus")
+            col.find(Filters.eq("plot_id", plotId.toString()))
+                .toList()
+                .mapNotNull { deserializeCustomMenu(it) }
+        }
+    }
+
+    /**
+     * Serialize a map of slot index → [CustomMenuSlotData] to a BSON [Document].
+     */
+    private fun serializeSlots(slots: Map<Int, CustomMenuSlotData>): Document {
+        return Document().apply {
+            slots.forEach { (index, slotData) ->
+                put(index.toString(), Document().apply {
+                    put("display_name", slotData.displayName)
+                    put("click_script_name", slotData.clickScriptName)
+                    put("item_type", slotData.itemType)
+                    put("item_data", slotData.itemData)
+                })
+            }
+        }
+    }
+
+    /**
+     * Deserialize a BSON [Document] from the `custom_menus` collection into a [CustomMenuData].
+     * Returns null if the document is malformed.
+     */
+    private fun deserializeCustomMenu(doc: Document): CustomMenuData? {
+        return try {
+            val menuName = doc.getString("menu_name") ?: return null
+            val slotsDoc = doc.get("slots", Document::class.java) ?: Document()
+            val slots = mutableMapOf<Int, CustomMenuSlotData>()
+            for (key in slotsDoc.keys) {
+                val slotIndex = key.toIntOrNull() ?: continue
+                val slotDoc = slotsDoc.get(key, Document::class.java) ?: continue
+                slots[slotIndex] = CustomMenuSlotData(
+                    displayName = slotDoc.getString("display_name") ?: "",
+                    clickScriptName = slotDoc.getString("click_script_name"),
+                    itemType = slotDoc.getString("item_type") ?: "STONE",
+                    itemData = slotDoc.getString("item_data")
+                )
+            }
+            CustomMenuData(name = menuName, slots = slots)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ── Plot Serialization ────────────────────────────────────────────────────
 
     /**
      * Serialize a Plot object to a MongoDB Document.

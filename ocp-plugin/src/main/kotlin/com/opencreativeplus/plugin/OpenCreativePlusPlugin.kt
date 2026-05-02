@@ -232,12 +232,13 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             cycleManager = cycleManager,
             functionRegistry = functionRegistry,
             variableManager = variableManager,
-            scope = coroutineConfig.executionScope
+            scope = coroutineConfig.executionScope,
+            plotPersistence = plotPersistence
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)
 
-        BuiltInNodeRegistry.registerGUINodes(nodeRegistry, this, modeManager, plotManager, eventDispatcher, coroutineConfig.executionScope)
+        BuiltInNodeRegistry.registerGUINodes(nodeRegistry, this, modeManager, plotManager, eventDispatcher, coroutineConfig.executionScope, plotPersistence)
 
         // ── Logging ───────────────────────────────────────────────────────────
         val executionLogger = ExecutionLogger(database, connectionManager)

@@ -46,7 +46,8 @@ class ModeManagerImpl(
     private val cycleManager: CycleManager? = null,
     private val functionRegistry: FunctionRegistry? = null,
     private val variableManager: VariableManager? = null,
-    private val scope: CoroutineScope? = null
+    private val scope: CoroutineScope? = null,
+    private val plotPersistence: com.opencreativeplus.core.database.PlotPersistence? = null
 ) : ModeManager {
 
     private val currentModes = ConcurrentHashMap<String, PlotMode>()
@@ -175,6 +176,7 @@ class ModeManagerImpl(
                 }
             }
         }
+        loadAndRegisterCustomMenus(plot.id)
     }
 
     private suspend fun applyPlayMode(player: Player, plot: Plot): Boolean {
@@ -195,6 +197,9 @@ class ModeManagerImpl(
         }
 
         eventDispatcher.registerScripts(plot.id, result.scripts)
+
+        // Load custom menus from MongoDB and register in PlotMenuRegistry
+        loadAndRegisterCustomMenus(plot.id)
 
         // Req 5.6: subscribe to variable changes for this plot when entering PLAY mode
         if (variableManager != null && scope != null) {
@@ -234,6 +239,37 @@ class ModeManagerImpl(
             player.sendMessage("§a[OCP] ${result.scripts.size} script(s) compiled and active.")
         }
         return true
+    }
+
+    private suspend fun loadAndRegisterCustomMenus(plotId: UUID) {
+        val persistence = plotPersistence ?: return
+        runCatching {
+            val menuDataList = persistence.loadCustomMenus(plotId)
+            menuDataList.forEach { menuData ->
+                val slots = menuData.slots.mapValues { (_, slotData) ->
+                    val item = try {
+                        val bytes = java.util.Base64.getDecoder().decode(slotData.itemData ?: "")
+                        org.bukkit.inventory.ItemStack.deserializeBytes(bytes)
+                    } catch (_: Exception) {
+                        org.bukkit.inventory.ItemStack(
+                            org.bukkit.Material.matchMaterial(slotData.itemType) ?: org.bukkit.Material.STONE
+                        )
+                    }
+                    com.opencreativeplus.plugin.node.gui.MenuSlotDefinition(
+                        item = item,
+                        displayName = slotData.displayName,
+                        clickScriptName = slotData.clickScriptName
+                    )
+                }
+                val definition = com.opencreativeplus.plugin.node.gui.CustomMenuDefinition(
+                    name = menuData.name,
+                    slots = slots
+                )
+                com.opencreativeplus.plugin.node.gui.PlotMenuRegistry.put(plotId, definition)
+            }
+        }.onFailure { e ->
+            plugin.logger.warning("[OCP] Failed to load custom menus for plot $plotId: ${e.message}")
+        }
     }
 
     private fun resetPlayerState(player: Player) {

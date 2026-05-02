@@ -92,6 +92,7 @@ class PlotManagerImpl(
         plotPersistence.updatePlot(plot.copy(updatedAt = System.currentTimeMillis()))
         worldManager.unloadPlotWorlds(plotId)
         loadedPlots.remove(plotId)
+        com.opencreativeplus.plugin.node.gui.PlotMenuRegistry.clearPlot(plotId)
         playerPlotIndex.remove(plot.owner)
     }
 

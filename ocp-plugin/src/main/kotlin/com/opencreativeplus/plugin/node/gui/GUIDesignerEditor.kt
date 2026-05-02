@@ -1,5 +1,10 @@
 package com.opencreativeplus.plugin.node.gui
 
+import com.opencreativeplus.core.database.CustomMenuData
+import com.opencreativeplus.core.database.CustomMenuSlotData
+import com.opencreativeplus.core.database.PlotPersistence
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -29,6 +34,8 @@ class GUIDesignerEditor(
     private val menuStore: ICustomMenuStore,
     private val plugin: Plugin,
     private val plotId: java.util.UUID? = null,
+    private val plotPersistence: PlotPersistence? = null,
+    private val scope: CoroutineScope? = null,
     inventoryFactory: (String) -> Inventory = { title ->
         Bukkit.createInventory(null, 54, title)
     }
@@ -119,6 +126,38 @@ class GUIDesignerEditor(
         if (plotId != null) {
             PlotMenuRegistry.put(plotId, definition)
         }
+        // Persist to MongoDB asynchronously if persistence is configured
+        if (plotId != null && plotPersistence != null && scope != null) {
+            val menuData = toCustomMenuData(definition)
+            scope.launch {
+                runCatching { plotPersistence.saveCustomMenu(plotId, menuData) }
+                    .onFailure { plugin.logger.warning("[OCP] Failed to save menu to MongoDB: ${it.message}") }
+            }
+        }
         player.sendMessage("§a[OCP] Menu '$menuName' saved (${slots.size} slot(s)).")
+    }
+
+    /**
+     * Converts a [CustomMenuDefinition] (which may contain Bukkit [ItemStack]s) to the
+     * Bukkit-free [CustomMenuData] used by [PlotPersistence].
+     *
+     * Item data is serialized to a Base64 string via Bukkit's [ItemStack.serializeAsBytes] so
+     * that it can be round-tripped without a Bukkit dependency in ocp-core.
+     */
+    private fun toCustomMenuData(definition: CustomMenuDefinition): CustomMenuData {
+        val slotData = definition.slots.mapValues { (_, slotDef) ->
+            val itemData: String? = try {
+                java.util.Base64.getEncoder().encodeToString(slotDef.item.serializeAsBytes())
+            } catch (_: Exception) {
+                null
+            }
+            CustomMenuSlotData(
+                displayName = slotDef.displayName,
+                clickScriptName = slotDef.clickScriptName,
+                itemType = slotDef.item.type.name,
+                itemData = itemData
+            )
+        }
+        return CustomMenuData(name = definition.name, slots = slotData)
     }
 }

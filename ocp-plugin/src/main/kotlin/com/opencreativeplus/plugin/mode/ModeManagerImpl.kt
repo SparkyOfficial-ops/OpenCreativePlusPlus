@@ -7,6 +7,7 @@ import com.opencreativeplus.core.execution.CycleEntry
 import com.opencreativeplus.core.execution.CycleManager
 import com.opencreativeplus.core.execution.ExecutionEngine
 import com.opencreativeplus.core.execution.FunctionRegistry
+import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.plugin.compiler.BytecodeCompiler
 import com.opencreativeplus.plugin.compiler.ASTCompiler
 import com.opencreativeplus.plugin.compiler.CompilationResult
@@ -17,6 +18,7 @@ import com.opencreativeplus.plugin.scanner.cycleIntervalTicks
 import com.opencreativeplus.plugin.visualizer.DevVisualizer
 import com.opencreativeplus.plugin.visualizer.HologramReporter
 import com.opencreativeplus.plugin.world.WorldManager
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
 import org.bukkit.GameMode
@@ -42,7 +44,9 @@ class ModeManagerImpl(
     private val hologramReporter: HologramReporter? = null,
     private val bytecodeCompiler: BytecodeCompiler? = null,
     private val cycleManager: CycleManager? = null,
-    private val functionRegistry: FunctionRegistry? = null
+    private val functionRegistry: FunctionRegistry? = null,
+    private val variableManager: VariableManager? = null,
+    private val scope: CoroutineScope? = null
 ) : ModeManager {
 
     private val currentModes = ConcurrentHashMap<String, PlotMode>()
@@ -191,6 +195,11 @@ class ModeManagerImpl(
         }
 
         eventDispatcher.registerScripts(plot.id, result.scripts)
+
+        // Req 5.6: subscribe to variable changes for this plot when entering PLAY mode
+        if (variableManager != null && scope != null) {
+            eventDispatcher.subscribeToVariableChanges(plot.id, variableManager, scope)
+        }
 
         // Req 5.1: load function definitions into registry
         functionRegistry?.loadFromAST(result.scripts)

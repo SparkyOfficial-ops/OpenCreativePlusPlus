@@ -2,7 +2,9 @@ package com.opencreativeplus.plugin.event
 
 import com.opencreativeplus.core.execution.CompiledScript
 import com.opencreativeplus.core.execution.ExecutionEngine
+import com.opencreativeplus.core.execution.VariableManager
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.bukkit.entity.Player
 import java.util.UUID
@@ -68,6 +70,35 @@ class EventDispatcher(
                     // Isolate failures — log and continue (req 16.5)
                     System.err.println("[OCP] Event dispatch error for $eventType on plot $plotId: ${e.message}")
                 }
+            }
+        }
+    }
+
+    /**
+     * Subscribe to variable changes for [plotId] via [variableManager].
+     * Each change emits a `variable_change` event with the variable name, value, and scope.
+     *
+     * The subscription runs in [scope] and is cancelled when the scope is cancelled.
+     *
+     * Requirements: 5.3, 5.6
+     */
+    fun subscribeToVariableChanges(
+        plotId: UUID,
+        variableManager: VariableManager,
+        scope: CoroutineScope
+    ) {
+        scope.launch {
+            variableManager.changes(plotId).collect { event ->
+                dispatchEvent(
+                    plotId,
+                    "variable_change",
+                    mapOf(
+                        "variable_name" to event.name,
+                        "variable_value" to (event.newValue ?: ""),
+                        "scope" to event.scope.name
+                    ),
+                    null
+                )
             }
         }
     }

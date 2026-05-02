@@ -230,7 +230,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             hologramReporter = hologramReporter,
             bytecodeCompiler = bytecodeCompiler,
             cycleManager = cycleManager,
-            functionRegistry = functionRegistry
+            functionRegistry = functionRegistry,
+            variableManager = variableManager,
+            scope = coroutineConfig.executionScope
         )
 
         plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)

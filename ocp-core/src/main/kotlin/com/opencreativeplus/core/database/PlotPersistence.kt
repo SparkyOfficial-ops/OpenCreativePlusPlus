@@ -189,6 +189,71 @@ class PlotPersistence(
     }
     
     /**
+     * Get all plots owned by a specific player.
+     *
+     * @param ownerId The UUID of the owner
+     * @return List of plots owned by the player
+     */
+    suspend fun getPlotsByOwner(ownerId: UUID): List<Plot> {
+        return connectionManager.withRetry {
+            collection
+                .find(Document("owner", ownerId.toString()))
+                .toList()
+                .map { deserializePlot(it) }
+        }
+    }
+
+    /**
+     * Count plots owned by a player.
+     *
+     * @param ownerId The UUID of the owner
+     * @return Number of plots owned by the player
+     */
+    suspend fun countPlotsByOwner(ownerId: UUID): Int {
+        return connectionManager.withRetry {
+            collection
+                .find(Document("owner", ownerId.toString()))
+                .toList()
+                .size
+        }
+    }
+
+    /**
+     * Delete all data for a plot (used when owner deletes it).
+     * Removes the plot document and all associated custom menus.
+     *
+     * @param plotId The UUID of the plot to delete
+     */
+    suspend fun deletePlotAllData(plotId: UUID) {
+        connectionManager.withRetry {
+            collection.deleteOne(Document("_id", plotId.toString()))
+            val menuCol = database.getCollection<Document>("custom_menus")
+            menuCol.deleteMany(Document("plot_id", plotId.toString()))
+        }
+    }
+
+    /**
+     * Search plots by name (case-insensitive partial match).
+     *
+     * @param query The search string
+     * @param page Zero-based page index
+     * @param pageSize Maximum number of results to return
+     * @return List of matching plots
+     */
+    suspend fun searchPlots(query: String, page: Int, pageSize: Int): List<Plot> {
+        return connectionManager.withRetry {
+            val filter = Filters.regex("name", query, "i")
+            collection
+                .find(filter)
+                .sort(Sorts.descending("metadata.rating"))
+                .skip(page * pageSize)
+                .limit(pageSize)
+                .toList()
+                .map { deserializePlot(it) }
+        }
+    }
+
+    /**
      * Load a paged list of plots sorted by rating descending.
      * Optionally filter by tag.
      *
@@ -327,6 +392,11 @@ class PlotPersistence(
                 put("pvp_enabled", plot.settings.pvpEnabled)
                 put("mob_spawning_enabled", plot.settings.mobSpawningEnabled)
                 put("world_border_size", plot.settings.worldBorderSize)
+                put("is_public", plot.settings.isPublic)
+                put("allow_interactions", plot.settings.allowInteractions)
+                put("allow_explosions", plot.settings.allowExplosions)
+                put("allow_fire", plot.settings.allowFire)
+                put("allow_coding_access", plot.settings.allowCodingAccess)
             })
             
             // Serialize metadata
@@ -359,11 +429,16 @@ class PlotPersistence(
             createdAt = document.getLong("created_at"),
             updatedAt = document.getLong("updated_at"),
             settings = PlotSettings(
-                biome = settingsDoc.getString("biome"),
-                timeOfDay = settingsDoc.getLong("time_of_day"),
-                pvpEnabled = settingsDoc.getBoolean("pvp_enabled"),
-                mobSpawningEnabled = settingsDoc.getBoolean("mob_spawning_enabled"),
-                worldBorderSize = settingsDoc.getInteger("world_border_size")
+                biome = settingsDoc?.getString("biome") ?: "PLAINS",
+                timeOfDay = settingsDoc?.getLong("time_of_day") ?: 6000L,
+                pvpEnabled = settingsDoc?.getBoolean("pvp_enabled") ?: false,
+                mobSpawningEnabled = settingsDoc?.getBoolean("mob_spawning_enabled") ?: false,
+                worldBorderSize = settingsDoc?.getInteger("world_border_size") ?: 1024,
+                isPublic = settingsDoc?.getBoolean("is_public") ?: true,
+                allowInteractions = settingsDoc?.getBoolean("allow_interactions") ?: true,
+                allowExplosions = settingsDoc?.getBoolean("allow_explosions") ?: false,
+                allowFire = settingsDoc?.getBoolean("allow_fire") ?: false,
+                allowCodingAccess = settingsDoc?.getBoolean("allow_coding_access") ?: false
             ),
             metadata = PlotMetadata(
                 tags = metadataDoc.getList("tags", String::class.java),

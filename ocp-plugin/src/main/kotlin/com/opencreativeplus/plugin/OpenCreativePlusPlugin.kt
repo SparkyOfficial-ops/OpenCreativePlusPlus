@@ -29,7 +29,11 @@ import com.opencreativeplus.plugin.compiler.ASTCompiler
 import com.opencreativeplus.plugin.compiler.BytecodeCompiler
 import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.event.PlotEventListener
+import com.opencreativeplus.plugin.gui.MyWorldsGUI
 import com.opencreativeplus.plugin.gui.PlotBrowserGUI
+import com.opencreativeplus.plugin.gui.WorldBrowserGUI
+import com.opencreativeplus.plugin.gui.WorldSettingsGUI
+import com.opencreativeplus.plugin.listener.WorldNavigationListener
 import com.opencreativeplus.plugin.gui.PlotConfigGUI
 import com.opencreativeplus.plugin.gui.PlotTopGUI
 import com.opencreativeplus.plugin.gui.SmartGUI
@@ -320,6 +324,17 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                 signInputManager.onPlayerQuit(event.player.uniqueId)
             }
         }, this)
+
+        // World management GUIs (after signInputManager is initialized)
+        val myWorldsGUI = MyWorldsGUI(plotManager, plotPersistence, modeManager, scope, this)
+        val worldSettingsGUI = WorldSettingsGUI(plotManager, scope, this)
+        val worldBrowserGUI = WorldBrowserGUI(plotManager, plotPersistence, signInputManager, scope, this)
+        server.pluginManager.registerEvents(myWorldsGUI, this)
+        server.pluginManager.registerEvents(worldSettingsGUI, this)
+        server.pluginManager.registerEvents(worldBrowserGUI, this)
+        server.pluginManager.registerEvents(
+            WorldNavigationListener(myWorldsGUI, worldBrowserGUI, scope), this
+        )
 
         // Action node interact listener: opens SmartGUI on right-click in DEV mode
         server.pluginManager.registerEvents(

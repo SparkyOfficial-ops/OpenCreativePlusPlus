@@ -16,7 +16,11 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
+import org.bukkit.event.block.BlockIgniteEvent
 import org.bukkit.event.block.BlockPlaceEvent
+import org.bukkit.event.entity.EntityExplodeEvent
+import org.bukkit.event.block.BlockExplodeEvent
+import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 
@@ -129,12 +133,87 @@ class PlotProtectionListener(
     }
 
     // -------------------------------------------------------------------------
+    // New flag handlers: interactions, explosions, fire
+    // -------------------------------------------------------------------------
+
+    /**
+     * Cancel PlayerInteractEvent for non-owners when allowInteractions is false.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onPlayerInteract(event: PlayerInteractEvent) {
+        val player = event.player
+        scope.launch {
+            val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+            if (modeManager.getCurrentMode(player, plot) != PlotMode.PLAY) return@launch
+            if (plot.settings.allowInteractions) return@launch
+            if (plot.owner == player.uniqueId) return@launch
+            if (plot.trustedPlayers.contains(player.uniqueId)) return@launch
+            event.isCancelled = true
+        }
+    }
+
+    /**
+     * Cancel EntityExplodeEvent when allowExplosions is false.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onEntityExplode(event: EntityExplodeEvent) {
+        val location = event.location
+        scope.launch {
+            val plot = findPlotAtLocation(location) ?: return@launch
+            if (!plot.settings.allowExplosions) {
+                event.blockList().clear()
+                event.isCancelled = true
+            }
+        }
+    }
+
+    /**
+     * Cancel BlockExplodeEvent when allowExplosions is false.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onBlockExplode(event: BlockExplodeEvent) {
+        val location = event.block.location
+        scope.launch {
+            val plot = findPlotAtLocation(location) ?: return@launch
+            if (!plot.settings.allowExplosions) {
+                event.blockList().clear()
+                event.isCancelled = true
+            }
+        }
+    }
+
+    /**
+     * Cancel BlockIgniteEvent when allowFire is false.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onBlockIgnite(event: BlockIgniteEvent) {
+        val location = event.block.location
+        scope.launch {
+            val plot = findPlotAtLocation(location) ?: return@launch
+            if (!plot.settings.allowFire) {
+                event.isCancelled = true
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
     /** Returns true if [material] is in the combined whitelist. */
     private fun isWhitelisted(material: Material): Boolean =
         material in FIXED_WHITELIST || categoryRegistry.isCategoryMaterial(material)
+
+    /**
+     * Find the plot associated with a world location by checking all loaded plots.
+     * Returns null if no plot is found for that world.
+     */
+    private suspend fun findPlotAtLocation(location: org.bukkit.Location): com.opencreativeplus.api.plot.Plot? {
+        val worldName = location.world?.name ?: return null
+        return plotManager.getAllLoadedPlots().firstOrNull { plot ->
+            plot.mainWorldName == worldName || plot.devWorldName == worldName
+        }
+    }
 
     /**
      * Cancels [event] and sends the player a descriptive message.

@@ -197,4 +197,58 @@ class PlotManagerImpl(
         return worldManager.getLoadedWorlds(plotId)
             ?: runCatching { worldManager.loadPlotWorlds(plotId) }.getOrNull()
     }
+
+    // -------------------------------------------------------------------------
+    // World management
+    // -------------------------------------------------------------------------
+
+    /** Default max plots per player (can be overridden by permission) */
+    companion object {
+        const val DEFAULT_MAX_PLOTS = 3
+    }
+
+    /**
+     * Check if player can create another plot.
+     */
+    suspend fun canCreatePlot(playerId: UUID): Boolean {
+        val count = plotPersistence.countPlotsByOwner(playerId)
+        return count < DEFAULT_MAX_PLOTS
+    }
+
+    /**
+     * Delete a plot completely: unload worlds, delete from DB, remove files.
+     */
+    suspend fun deletePlot(plotId: UUID, @Suppress("UNUSED_PARAMETER") plugin: org.bukkit.plugin.Plugin) {
+        val plot = loadedPlots[plotId] ?: plotPersistence.loadPlot(plotId) ?: return
+        
+        // Unload the plot if loaded
+        if (loadedPlots.containsKey(plotId)) {
+            unloadPlot(plotId)
+        }
+        
+        // Delete from database
+        plotPersistence.deletePlotAllData(plotId)
+        
+        // Delete world folders from disk
+        val worldContainer = org.bukkit.Bukkit.getWorldContainer()
+        val mainWorldFolder = java.io.File(worldContainer, plot.mainWorldName)
+        val devWorldFolder = java.io.File(worldContainer, plot.devWorldName)
+        
+        mainWorldFolder.deleteRecursively()
+        devWorldFolder.deleteRecursively()
+    }
+
+    /**
+     * Get all plots owned by a player (from DB, not just loaded).
+     */
+    suspend fun getPlotsByOwner(ownerId: UUID): List<Plot> {
+        return plotPersistence.getPlotsByOwner(ownerId)
+    }
+
+    /**
+     * Search plots by name.
+     */
+    suspend fun searchPlots(query: String, page: Int = 0): List<Plot> {
+        return plotPersistence.searchPlots(query, page, 45)
+    }
 }

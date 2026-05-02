@@ -127,6 +127,14 @@ class ModeManagerImpl(
     }
 
     private suspend fun applyDevMode(player: Player, plot: Plot) {
+        // Check if player is allowed to enter DEV mode
+        val isOwner = plot.owner == player.uniqueId
+        val isTrustedWithAccess = plot.trustedPlayers.contains(player.uniqueId) && plot.settings.allowCodingAccess
+        if (!isOwner && !isTrustedWithAccess) {
+            player.sendMessage("§c[OCP] У вас нет доступа к режиму разработки на этом участке.")
+            return
+        }
+
         val worlds = worldManager.getLoadedWorlds(plot.id)
         if (worlds != null) {
             val spawnLoc: Location = worlds.second.spawnLocation

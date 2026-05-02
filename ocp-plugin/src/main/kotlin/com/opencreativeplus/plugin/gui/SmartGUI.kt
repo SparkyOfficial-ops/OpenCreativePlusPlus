@@ -12,6 +12,8 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
+import org.bukkit.event.HandlerList
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -213,6 +215,14 @@ class SmartGUI(
         if (event.view.title != GUI_TITLE) return
         event.isCancelled = true
         handleClick(event.rawSlot, p)
+    }
+
+    @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        val p = event.player as? Player ?: return
+        if (p.uniqueId != player.uniqueId) return
+        if (event.inventory != inventory) return
+        HandlerList.unregisterAll(this)
     }
 
     // -------------------------------------------------------------------------

@@ -55,10 +55,12 @@ import com.opencreativeplus.plugin.world.BukkitWorldOperations
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.registry.NodeRegistry
 import com.comphenix.protocol.ProtocolLibrary
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.bukkit.NamespacedKey
+import org.bukkit.event.HandlerList
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
@@ -396,6 +398,8 @@ class ActionNodeInteractListener(
     private val plugin: JavaPlugin
 ) : Listener {
 
+    private val activeGuis = ConcurrentHashMap<java.util.UUID, SmartGUI>()
+
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
@@ -419,6 +423,8 @@ class ActionNodeInteractListener(
                 variableManager = variableManager,
                 itemFactory = { mat, name, lore -> smartGuiMakeItem(mat, name, lore) }
             )
+            activeGuis[player.uniqueId]?.let { HandlerList.unregisterAll(it) }
+            activeGuis[player.uniqueId] = gui
             plugin.server.pluginManager.registerEvents(gui, plugin)
             gui.open()
         }

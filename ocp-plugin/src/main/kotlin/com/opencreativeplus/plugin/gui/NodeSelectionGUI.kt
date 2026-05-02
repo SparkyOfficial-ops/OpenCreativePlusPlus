@@ -19,11 +19,14 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.block.Action
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * GUI for selecting an action from a NodeCategory.
@@ -47,6 +50,8 @@ class NodeSelectionGUI(
         private val KEY_ACTION_ID = NamespacedKey("ocp", "action_id")
         private const val GUI_TITLE_PREFIX = "Выбор действия: "
     }
+
+    internal val pendingBlocks = ConcurrentHashMap<UUID, Block>()
 
     /**
      * Open the action selection GUI for [category] at [page].
@@ -100,6 +105,7 @@ class NodeSelectionGUI(
         // Req 4 AC1: only open GUI when block has no action_id assigned yet
         if (readCurrentActionId(block) != null) return
         event.isCancelled = true
+        pendingBlocks[event.player.uniqueId] = block
         open(event.player, block, category)
     }
 
@@ -118,12 +124,22 @@ class NodeSelectionGUI(
         val player = event.whoClicked as? Player ?: return
         player.closeInventory()
 
-        val targetBlock = player.getTargetBlockExact(5) ?: return
+        val targetBlock = pendingBlocks[player.uniqueId] ?: return
         if (!categoryRegistry.isCategoryMaterial(targetBlock.type)) return
 
         writeActionId(targetBlock, actionId)
         placeOrUpdateSign(targetBlock, categoryRegistry.getDescriptorById(actionId)?.displayName ?: actionId)
         parameterPlacer.placeChest(targetBlock)
+    }
+
+    @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        val player = event.player as? Player ?: return
+        val titleStr = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText()
+            .serialize(event.view.title())
+        if (titleStr.startsWith(GUI_TITLE_PREFIX)) {
+            pendingBlocks.remove(player.uniqueId)
+        }
     }
 
     // -----------------------------------------------------------------------

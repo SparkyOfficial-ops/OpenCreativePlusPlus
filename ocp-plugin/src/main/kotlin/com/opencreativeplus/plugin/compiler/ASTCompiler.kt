@@ -16,9 +16,17 @@ import org.bukkit.Location
  * - [CodeLine.children] are compiled into [CompiledScript.conditionalBranches]
  * - The branch at index i corresponds to the condition node at actions[i-1] (offset by 1 for event)
  *
+ * Loop Body (Requirements 2.1, 2.4 — ocp-plugin-fixes-and-completions):
+ * - For loop nodes ("foreach", "repeat"), the corresponding child CodeLine is compiled as
+ *   the "body" parameter and the child is excluded from conditionalBranches.
+ *
  5.1, 5.2, 5.3, 5.4, 5.5, 23.1, 23.2, 23.3, 23.4, 23.5
  */
 class ASTCompiler(private val nodeRegistry: NodeRegistry) {
+
+    companion object {
+        private val LOOP_NODE_IDS = setOf("foreach", "repeat")
+    }
 
     /**
      * Compile all [codeLines] and return a [CompilationResult] containing
@@ -30,7 +38,6 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         val scripts = mutableListOf<CompiledScript>()
 
         for (codeLine in codeLines) {
-            // Collect error for empty lines (no blocks placed yet)
             if (codeLine.nodes.isEmpty()) {
                 errors.add(CompilationError(codeLine.startLocation, "Code line has no blocks"))
                 continue
@@ -49,9 +56,9 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
      * Compile a single [CodeLine] into a [CompiledScript].
      * Throws [CompilationException] on any error.
      *
-     * [CodeLine.children] are compiled into [CompiledScript.conditionalBranches]:
-     * child[i] → conditionalBranches[actionIndex] where actionIndex is the index of the
-     * corresponding condition node in the actions list (0-based, after the event node).
+     * [CodeLine.children] are compiled into either:
+     * - "body" param of the corresponding loop node ("foreach"/"repeat"), or
+     * - [CompiledScript.conditionalBranches] for condition/piston nodes.
      *
      5.1, 5.2, 23.1, 23.2, 23.3, 2.3, 2.4, 2.5
      */
@@ -69,19 +76,38 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
 
         val event = eventFactory()
 
-        // Compile remaining nodes as actions (req 5.2, 23.1, 23.3)
+        // Compile remaining nodes as actions (req 5.2, 23.1, 23.3).
+        // Track which child indices are consumed as loop bodies.
         val actions = mutableListOf<com.opencreativeplus.api.node.IAction>()
+        val loopBodyChildIndices = mutableSetOf<Int>()
+
         for (i in 1 until codeLine.nodes.size) {
             val node = codeLine.nodes[i]
-            // Prefer nodeId-based lookup (PDC action_id set via NodeSelectionGUI),
-            // fall back to material-based lookup for legacy nodes.
+            val actionIndex = i - 1 // 0-based index in the actions list
+
             val actionFactory = node.nodeId?.let { nodeRegistry.getActionFactoryById(it) }
                 ?: nodeRegistry.getActionFactory(node.blockType)
                 ?: throw CompilationException(
                     "Unknown action block: ${node.blockType}${node.nodeId?.let { " (nodeId=$it)" } ?: ""} at ${locationString(node.location)}"
                 )
+
             try {
-                actions.add(actionFactory(node.parameters))
+                // Create the action with base params first to discover its nodeId
+                val baseAction = actionFactory(node.parameters)
+
+                if (baseAction.nodeId in LOOP_NODE_IDS) {
+                    // Compile the corresponding child CodeLine as the loop body (Req 2.1, 2.4)
+                    val bodyActions = codeLine.children.getOrNull(actionIndex)
+                        ?.let { compileChildActions(it) }
+                        ?: emptyList()
+                    loopBodyChildIndices.add(actionIndex)
+                    // Recreate the node with "body" injected into params
+                    actions.add(actionFactory(node.parameters + mapOf("body" to bodyActions)))
+                } else {
+                    actions.add(baseAction)
+                }
+            } catch (e: CompilationException) {
+                throw e
             } catch (e: Exception) {
                 throw CompilationException(
                     "Invalid parameters for ${node.blockType} at ${locationString(node.location)}: ${e.message}"
@@ -89,14 +115,12 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
             }
         }
 
-        // Compile child branches into conditionalBranches (Piston System, Req 2.3, 2.4, 2.5)
-        // CodeLine.children[i] corresponds to the (i+1)-th action node (index i in actions list,
-        // since actions[0] is the first action after the event node).
+        // Compile remaining child branches into conditionalBranches (Piston System, Req 2.3, 2.4, 2.5).
+        // Children consumed as loop bodies are excluded.
         val conditionalBranches = mutableMapOf<Int, List<com.opencreativeplus.api.node.IAction>>()
         for ((childIndex, childCodeLine) in codeLine.children.withIndex()) {
-            if (childIndex < actions.size) {
-                val childActions = compileChildActions(childCodeLine)
-                conditionalBranches[childIndex] = childActions
+            if (childIndex < actions.size && childIndex !in loopBodyChildIndices) {
+                conditionalBranches[childIndex] = compileChildActions(childCodeLine)
             }
         }
 
@@ -111,7 +135,7 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
 
     /**
      * Compile all nodes in a child [CodeLine] as actions (no event node expected).
-     * Used for piston-scoped child branches (Req 2.3).
+     * Used for loop bodies and piston-scoped child branches (Req 2.1, 2.3).
      */
     private fun compileChildActions(childCodeLine: CodeLine): List<com.opencreativeplus.api.node.IAction> {
         val childActions = mutableListOf<com.opencreativeplus.api.node.IAction>()

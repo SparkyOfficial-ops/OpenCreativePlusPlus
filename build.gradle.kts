@@ -36,5 +36,6 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+        jvmArgs("-Xmx1g", "-Xms256m")
     }
 }

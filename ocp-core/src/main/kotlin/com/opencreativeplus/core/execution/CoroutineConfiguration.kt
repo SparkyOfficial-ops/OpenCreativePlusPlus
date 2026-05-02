@@ -37,7 +37,7 @@ class CoroutineConfiguration(
         }
     }
 
-    /**
+    /** 
      * Cancels the execution scope and closes the underlying thread pool.
      * Call this during plugin shutdown.
      */

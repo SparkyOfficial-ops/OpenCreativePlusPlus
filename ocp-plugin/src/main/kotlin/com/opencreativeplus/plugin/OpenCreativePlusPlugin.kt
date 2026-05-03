@@ -267,8 +267,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             fun onPlayerJoin(event: org.bukkit.event.player.PlayerJoinEvent) {
                 val player = event.player
 
-                // Give navigation items on join (main thread — inventory API)
-                giveNavigationItems(player)
+                // Give navigation items after 2 ticks — inventory is ready by then
+                server.scheduler.runTaskLater(this@OpenCreativePlusPlugin, Runnable {
+                    giveNavigationItems(player)
+                }, 2L)
 
                 scope.launch {
                     val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
@@ -419,12 +421,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             listOf("§7ПКМ — открыть мои миры")
         )
 
-        if (player.inventory.getItem(0) == null) {
-            player.inventory.setItem(0, compass)
-        }
-        if (player.inventory.getItem(1) == null) {
-            player.inventory.setItem(1, diamond)
-        }
+        player.inventory.setItem(0, compass)
+        player.inventory.setItem(1, diamond)
     }
 
     private fun parseLocation(sourceLocation: String): org.bukkit.Location? {

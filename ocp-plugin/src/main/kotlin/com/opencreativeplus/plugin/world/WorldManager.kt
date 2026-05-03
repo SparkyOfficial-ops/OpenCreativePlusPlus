@@ -118,11 +118,12 @@ class WorldManager(
         val creator = WorldCreator(name)
             .generateStructures(false)
             .environment(World.Environment.NORMAL)
-        // Use VoidGenerator for both world types to avoid Paper 1.20+ errors:
-        // "No key layers in MapLike[{}]" when using WorldType.FLAT without explicit layer config.
         creator.generator(VoidGenerator())
-        return Bukkit.createWorld(creator)
+        val world = Bukkit.createWorld(creator)
             ?: error("Failed to create world: $name")
+        // Disable spawn chunk keeping to reduce memory and prevent future freezes
+        world.setKeepSpawnInMemory(false)
+        return world
     }
 
     /**
@@ -130,6 +131,7 @@ class WorldManager(
      1.1, 35.1, 35.2, 35.3, 35.4
      */
     private fun configureMainWorld(world: World) {
+        world.setKeepSpawnInMemory(false)
         world.difficulty = Difficulty.PEACEFUL
         world.pvp = false
         world.setSpawnFlags(false, false) // no monsters, no animals
@@ -148,6 +150,7 @@ class WorldManager(
      1.4, 3.1
      */
     private fun configureDevWorld(world: World) {
+        world.setKeepSpawnInMemory(false)
         world.difficulty = Difficulty.PEACEFUL
         world.pvp = false
         world.setSpawnFlags(false, false)

@@ -118,9 +118,18 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         // Compile remaining child branches into conditionalBranches (Piston System, Req 2.3, 2.4, 2.5).
         // Children consumed as loop bodies are excluded.
         val conditionalBranches = mutableMapOf<Int, List<com.opencreativeplus.api.node.IAction>>()
+        val elseBranches = mutableMapOf<Int, List<com.opencreativeplus.api.node.IAction>>()
         for ((childIndex, childCodeLine) in codeLine.children.withIndex()) {
             if (childIndex < actions.size && childIndex !in loopBodyChildIndices) {
                 conditionalBranches[childIndex] = compileChildActions(childCodeLine)
+                // Compile else-branch if present (Req 4.3, 4.4)
+                if (childCodeLine.elseActions.isNotEmpty()) {
+                    val elseCodeLine = CodeLine(
+                        startLocation = childCodeLine.startLocation,
+                        nodes = childCodeLine.elseActions
+                    )
+                    elseBranches[childIndex] = compileChildActions(elseCodeLine)
+                }
             }
         }
 
@@ -129,7 +138,8 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
             event = event,
             actions = actions,
             sourceLocation = locationStr,
-            conditionalBranches = conditionalBranches
+            conditionalBranches = conditionalBranches,
+            elseBranches = elseBranches
         )
     }
 

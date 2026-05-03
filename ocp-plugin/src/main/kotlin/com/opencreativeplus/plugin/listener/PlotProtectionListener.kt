@@ -108,15 +108,26 @@ class PlotProtectionListener(
         val block = event.block
         val material = block.type
 
+        // Glass strips must never be broken in DEV mode — cancel immediately
+        if (material in setOf(Material.BLUE_STAINED_GLASS, Material.WHITE_STAINED_GLASS, Material.GRAY_STAINED_GLASS)) {
+            scope.launch {
+                val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
+                org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
+                    event.isCancelled = true
+                    player.sendMessage("§c[OCP] Нельзя сломать стеклянную полосу в DEV-режиме.")
+                })
+            }
+            return
+        }
+
         if (!isWhitelisted(material)) {
             // Only enforce in DEV mode — check asynchronously
             scope.launch {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
                 if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
-                // Player is in DEV mode — remove the broken block's drop and notify
-                // Note: we can't un-break a block, but we can restore it on main thread
+                // Player is in DEV mode — restore the block on main thread
                 org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
-                    // Restore the block if it was broken
                     if (block.type == org.bukkit.Material.AIR) {
                         block.type = material
                         player.sendMessage("§c[OCP] Нельзя сломать §e${material.name}§c в DEV-режиме. " +

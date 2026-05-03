@@ -7,6 +7,7 @@ import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.registry.NodeCategory
 import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import net.kyori.adventure.text.Component
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -102,9 +103,25 @@ class NodeSelectionGUI(
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
-        event.isCancelled = true
-        pendingBlocks[event.player.uniqueId] = block
-        open(event.player, block, category)
+        val player = event.player
+
+        // Only open the selection GUI in DEV mode
+        if (modeManager != null && plotManager != null && scope != null) {
+            event.isCancelled = true
+            scope.launch {
+                val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
+                if (modeManager.getCurrentMode(player, plot) != com.opencreativeplus.api.plot.PlotMode.DEV) return@launch
+                pendingBlocks[player.uniqueId] = block
+                plugin.server.scheduler.runTask(plugin) { _ ->
+                    open(player, block, category)
+                }
+            }
+        } else {
+            // Fallback: no mode check available
+            event.isCancelled = true
+            pendingBlocks[player.uniqueId] = block
+            open(player, block, category)
+        }
     }
 
     @EventHandler

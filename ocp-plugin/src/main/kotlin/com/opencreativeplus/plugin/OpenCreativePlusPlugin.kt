@@ -215,7 +215,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         val devVisualizer = DevVisualizer(
             plugin = this,
             traceManager = traceManager,
-            blockScannerFactory = { world -> BlockScanner(world, nodeRegistry) }
+            blockScannerFactory = { world -> BlockScanner(world, nodeRegistry, categoryRegistry = categoryRegistry) }
         )
         server.pluginManager.registerEvents(devVisualizer, this)
 
@@ -226,7 +226,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                 val devWorld = worldManager.getLoadedWorlds(plot.id)?.second
                     ?: server.worlds.firstOrNull()
                     ?: error("No worlds available for plot ${plot.id}")
-                BlockScanner(devWorld, nodeRegistry)
+                BlockScanner(devWorld, nodeRegistry, categoryRegistry = categoryRegistry)
             },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
@@ -340,6 +340,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(
             ActionNodeInteractListener(
                 nodeRegistry = nodeRegistry,
+                categoryRegistry = categoryRegistry,
                 modeManager = modeManager,
                 plotManager = plotManager,
                 signInputManager = signInputManager,
@@ -407,6 +408,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
  */
 class ActionNodeInteractListener(
     private val nodeRegistry: NodeRegistry,
+    private val categoryRegistry: CategoryRegistry,
     private val modeManager: ModeManagerImpl,
     private val plotManager: PlotManagerImpl,
     private val signInputManager: SignInputManager,
@@ -418,18 +420,31 @@ class ActionNodeInteractListener(
 
     private val activeGuis = ConcurrentHashMap<java.util.UUID, SmartGUI>()
 
+    // PDC key for action_id — must match BlockScanner.KEY_ACTION_ID
+    private val keyActionId = NamespacedKey("ocp", "action_id")
+
     @EventHandler
     fun onInteract(event: PlayerInteractEvent) {
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         val player = event.player
 
+        // Quick material check on main thread before launching coroutine
+        if (nodeRegistry.getActionFactory(block.type) == null) return
+        event.isCancelled = true
+
         scope.launch {
             val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
             if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
-            if (nodeRegistry.getActionFactory(block.type) == null) return@launch
 
-            event.isCancelled = true
+            // Read action_id from PDC to look up descriptor and its expectedParams
+            val actionId = (block.state as? org.bukkit.block.TileState)
+                ?.persistentDataContainer
+                ?.get(keyActionId, org.bukkit.persistence.PersistentDataType.STRING)
+
+            val descriptor: com.opencreativeplus.plugin.registry.ActionDescriptor? =
+                if (actionId != null) categoryRegistry.getDescriptorById(actionId) else null
+
             val gui = SmartGUI(
                 player = player,
                 block = block,
@@ -441,10 +456,24 @@ class ActionNodeInteractListener(
                 variableManager = variableManager,
                 itemFactory = { mat, name, lore -> smartGuiMakeItem(mat, name, lore) }
             )
+
+            // Register params from descriptor so GUI knows what to show
+            descriptor?.expectedParams?.forEach { paramName ->
+                gui.registerParam(paramName, com.opencreativeplus.plugin.gui.ParamType.STRING, "")
+            }
+            // If no descriptor found but block has a material-based action, register a generic "value" param
+            if (descriptor == null) {
+                gui.registerParam("value", com.opencreativeplus.plugin.gui.ParamType.STRING, "")
+            }
+
             activeGuis[player.uniqueId]?.let { HandlerList.unregisterAll(it) }
             activeGuis[player.uniqueId] = gui
             plugin.server.pluginManager.registerEvents(gui, plugin)
-            gui.open()
+
+            // open() must run on main thread (inventory API)
+            plugin.server.scheduler.runTask(plugin) { _ ->
+                gui.open()
+            }
         }
     }
 }

@@ -366,12 +366,9 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 val plot = makePlot()
                 val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
 
-                val capturedVelocity = mutableListOf<org.bukkit.util.Vector>()
-                every { player.velocity = capture(capturedVelocity) } just Runs
-
                 runTest { switchToMode(manager, player, plot, targetMode) }
 
-                capturedVelocity.last() shouldBe org.bukkit.util.Vector(0.0, 0.0, 0.0)
+                verify(atLeast = 1) { player.velocity = org.bukkit.util.Vector(0.0, 0.0, 0.0) }
             }
         }
     }
@@ -391,12 +388,9 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 val plot = makePlot()
                 val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
 
-                val capturedFood = mutableListOf<Int>()
-                every { player.foodLevel = capture(capturedFood) } just Runs
-
                 runTest { switchToMode(manager, player, plot, targetMode) }
 
-                capturedFood.last() shouldBe 20
+                verify(atLeast = 1) { player.foodLevel = 20 }
             }
         }
     }

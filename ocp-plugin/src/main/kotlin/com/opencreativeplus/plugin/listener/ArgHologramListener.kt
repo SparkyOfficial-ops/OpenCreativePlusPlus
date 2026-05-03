@@ -1,6 +1,5 @@
 package com.opencreativeplus.plugin.listener
 
-import com.opencreativeplus.plugin.scanner.BlockScanner
 import com.opencreativeplus.plugin.scanner.DataContainer
 import com.opencreativeplus.plugin.visualizer.HologramReporter
 import org.bukkit.block.Chest
@@ -24,8 +23,7 @@ import org.bukkit.plugin.Plugin
  */
 class ArgHologramListener(
     private val plugin: Plugin,
-    private val hologramReporter: HologramReporter,
-    private val blockScanner: () -> BlockScanner
+    private val hologramReporter: HologramReporter
 ) : Listener {
 
     /**

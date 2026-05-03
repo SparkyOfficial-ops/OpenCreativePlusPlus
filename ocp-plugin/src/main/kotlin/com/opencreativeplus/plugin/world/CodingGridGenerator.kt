@@ -98,13 +98,16 @@ class CodingGridGenerator(
     private fun generateLevel(world: World, y: Int) {
         val totalWidth = STRIP_COUNT * STRIP_SPACING  // total Z span of all strips
 
-        // Fill the entire floor with WHITE_STAINED_GLASS (between and under all strips).
+        // Fill the floor with WHITE_STAINED_GLASS only between strips (not under strip rows).
         // applyPhysics=false prevents neighbor block updates that would try to load
         // ungenerated chunks and freeze the server thread.
         val whiteGlass = org.bukkit.Material.WHITE_STAINED_GLASS.createBlockData()
         for (x in -2..STRIP_LENGTH + 1) {
             for (z in -2..totalWidth + 1) {
-                world.getBlockAt(x, y - 1, z).setBlockData(whiteGlass, false)
+                // Only place floor between strips, not under them
+                if (z < 0 || z >= totalWidth || z % STRIP_SPACING != 0) {
+                    world.getBlockAt(x, y - 1, z).setBlockData(whiteGlass, false)
+                }
             }
         }
 

@@ -98,8 +98,7 @@ class AutoDecorationListener(
     private fun isGlassStrip(type: Material): Boolean = type in setOf(
         Material.BLUE_STAINED_GLASS,
         Material.WHITE_STAINED_GLASS,
-        Material.GRAY_STAINED_GLASS,
-        Material.BLACK_STAINED_GLASS
+        Material.GRAY_STAINED_GLASS
     )
 
     private fun signMaterialFor(category: NodeCategory): Material = when (category) {

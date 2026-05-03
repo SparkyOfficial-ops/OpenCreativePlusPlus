@@ -224,7 +224,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             worldManager = worldManager,
             blockScannerFactory = { plot ->
                 val devWorld = worldManager.getLoadedWorlds(plot.id)?.second
-                    ?: error("Dev world not loaded for plot ${plot.id}")
+                    ?: server.worlds.firstOrNull()
+                    ?: error("No worlds available for plot ${plot.id}")
                 BlockScanner(devWorld, nodeRegistry)
             },
             astCompiler = astCompiler,
@@ -307,8 +308,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(
             ArgHologramListener(
                 plugin = this,
-                hologramReporter = hologramReporter,
-                blockScanner = { BlockScanner(server.worlds.first(), nodeRegistry) }
+                hologramReporter = hologramReporter
             ), this
         )
 

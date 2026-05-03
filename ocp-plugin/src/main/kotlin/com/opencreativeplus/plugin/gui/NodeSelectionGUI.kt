@@ -102,8 +102,6 @@ class NodeSelectionGUI(
         if (event.action != Action.RIGHT_CLICK_BLOCK) return
         val block = event.clickedBlock ?: return
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
-        // Req 4 AC1: only open GUI when block has no action_id assigned yet
-        if (readCurrentActionId(block) != null) return
         event.isCancelled = true
         pendingBlocks[event.player.uniqueId] = block
         open(event.player, block, category)

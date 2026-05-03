@@ -133,9 +133,9 @@ class SetEntityAINodeTest {
         val entity = mockk<LivingEntity>(relaxed = true)
 
         val ctx = TrackingSyncContext()
-        ctx.localScope.set("mob", entity)
+        ctx.currentTarget = entity
 
-        val node = SetEntityAINode(mapOf("entity" to "mob", "ai" to false))
+        val node = SetEntityAINode(mapOf("ai" to false))
         node.execute(ctx)
 
         assertTrue(ctx.syncContextCalled, "syncContext must be called for SetEntityAI")
@@ -147,9 +147,9 @@ class SetEntityAINodeTest {
         val entity = mockk<LivingEntity>(relaxed = true)
 
         val ctx = TrackingSyncContext()
-        ctx.localScope.set("mob", entity)
+        ctx.currentTarget = entity
 
-        val node = SetEntityAINode(mapOf("entity" to "mob", "ai" to true))
+        val node = SetEntityAINode(mapOf("ai" to true))
         node.execute(ctx)
 
         verify { entity.setAI(true) }
@@ -160,9 +160,9 @@ class SetEntityAINodeTest {
         val entity = mockk<LivingEntity>(relaxed = true)
 
         val ctx = TrackingSyncContext()
-        ctx.localScope.set("mob", entity)
+        ctx.currentTarget = entity
 
-        val node = SetEntityAINode(mapOf("entity" to "mob"))
+        val node = SetEntityAINode(mapOf())
         node.execute(ctx)
 
         verify { entity.setAI(true) }
@@ -171,7 +171,8 @@ class SetEntityAINodeTest {
     @Test
     fun `execute does nothing when entity variable is missing`() = runTest {
         val ctx = TrackingSyncContext()
-        val node = SetEntityAINode(mapOf("entity" to "mob", "ai" to false))
+        // currentTarget is null — testing the missing entity case
+        val node = SetEntityAINode(mapOf("ai" to false))
         node.execute(ctx) // should not throw
     }
 
@@ -180,9 +181,9 @@ class SetEntityAINodeTest {
         val entity = mockk<Entity>(relaxed = true) // not LivingEntity
 
         val ctx = TrackingSyncContext()
-        ctx.localScope.set("mob", entity)
+        ctx.currentTarget = entity
 
-        val node = SetEntityAINode(mapOf("entity" to "mob", "ai" to false))
+        val node = SetEntityAINode(mapOf("ai" to false))
         node.execute(ctx) // should not throw, cast fails silently
     }
 }

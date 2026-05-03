@@ -879,7 +879,7 @@ class BlockScanner(
     internal fun readPDCParams(block: Block): Map<String, Any> {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return emptyMap()
         val result = mutableMapOf<String, Any>()
-        pdc.keys.filter { it.namespace == "ocp" }.forEach { key ->
+        pdc.keys.filter { it.namespace == "ocp" && it.key != "action_id" }.forEach { key ->
             val paramName = key.key
             pdc.get(key, PersistentDataType.INTEGER)?.let { result[paramName] = it }
             pdc.get(key, PersistentDataType.DOUBLE)?.let { result[paramName] = it }

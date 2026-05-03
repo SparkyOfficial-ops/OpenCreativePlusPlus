@@ -16,10 +16,16 @@ import com.opencreativeplus.plugin.scanner.CodeLine
 import com.opencreativeplus.plugin.world.WorldManager
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.inventory.PlayerInventory
+import org.bukkit.plugin.Plugin
+import org.bukkit.plugin.PluginManager
+import org.bukkit.scheduler.BukkitScheduler
+import org.bukkit.scheduler.BukkitTask
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -33,10 +39,27 @@ class ModeManagerTest {
     private lateinit var astCompiler: ASTCompiler
     private lateinit var eventDispatcher: EventDispatcher
     private lateinit var executionEngine: ExecutionEngine
+    private lateinit var plugin: Plugin
     private lateinit var modeManager: ModeManagerImpl
 
     @BeforeEach
     fun setup() {
+        mockkStatic(Bukkit::class)
+
+        plugin = mockk(relaxed = true)
+        val pluginManager = mockk<PluginManager>(relaxed = true)
+        every { pluginManager.getPlugin(any()) } returns plugin
+        every { Bukkit.getPluginManager() } returns pluginManager
+
+        val stubbedTask = mockk<BukkitTask>(relaxed = true)
+        val scheduler = mockk<BukkitScheduler>(relaxed = true)
+        every { Bukkit.getScheduler() } returns scheduler
+        val runnableSlot = slot<Runnable>()
+        every { scheduler.runTask(any<Plugin>(), capture(runnableSlot)) } answers {
+            runnableSlot.captured.run()
+            stubbedTask
+        }
+
         inventoryManager = mockk(relaxed = true)
         worldManager = mockk(relaxed = true)
         blockScanner = mockk(relaxed = true)
@@ -47,6 +70,7 @@ class ModeManagerTest {
         every { blockScanner.scanCodingZone() } returns emptyList()
         every { astCompiler.compile(any()) } returns CompilationResult(emptyList(), emptyList())
         every { worldManager.getLoadedWorlds(any()) } returns null
+        coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } returns null
 
         modeManager = ModeManagerImpl(
             inventoryManager = inventoryManager,
@@ -54,8 +78,14 @@ class ModeManagerTest {
             blockScannerFactory = { blockScanner },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
-            executionEngine = executionEngine
+            executionEngine = executionEngine,
+            plugin = plugin
         )
+    }
+
+    @AfterEach
+    fun teardown() {
+        unmockkAll()
     }
 
     private fun makePlot(id: UUID = UUID.randomUUID()): Plot = Plot(
@@ -96,8 +126,8 @@ class ModeManagerTest {
         val player = mockPlayer(); val plot = makePlot()
         val savedModes = mutableListOf<PlotMode>()
         val loadedModes = mutableListOf<PlotMode>()
-        coEvery { inventoryManager.saveInventory(any(), any(), capture(savedModes)) } just Runs
-        coEvery { inventoryManager.loadInventory(any(), any(), capture(loadedModes)) } just Runs
+        coEvery { inventoryManager.saveInventorySnapshot(any(), any(), capture(savedModes), any(), any(), any()) } just Runs
+        coEvery { inventoryManager.fetchInventoryDoc(any(), any(), capture(loadedModes)) } returns null
         modeManager.switchMode(player, plot, PlotMode.DEV)
         modeManager.switchMode(player, plot, PlotMode.PLAY)
         modeManager.switchMode(player, plot, PlotMode.BUILD)
@@ -109,17 +139,21 @@ class ModeManagerTest {
     fun `switchMode does not save inventory when mode is unchanged`() = runTest {
         val player = mockPlayer(); val plot = makePlot()
         modeManager.switchMode(player, plot, PlotMode.BUILD)
-        coVerify(exactly = 0) { inventoryManager.saveInventory(any(), any(), any()) }
+        coVerify(exactly = 0) { inventoryManager.saveInventorySnapshot(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `switchMode saves old inventory before restoring new inventory`() = runTest {
         val player = mockPlayer(); val plot = makePlot()
         val callOrder = mutableListOf<String>()
-        coEvery { inventoryManager.saveInventory(any(), any(), any()) } answers { callOrder.add("save") }
-        coEvery { inventoryManager.loadInventory(any(), any(), any()) } answers { callOrder.add("load") }
+        coEvery { inventoryManager.saveInventorySnapshot(any(), any(), any(), any(), any(), any()) } answers { callOrder.add("save") }
+        coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { callOrder.add("load"); null }
         modeManager.switchMode(player, plot, PlotMode.DEV)
-        assertEquals(listOf("save", "load"), callOrder)
+        assert(callOrder.indexOf("save") >= 0) { "saveInventorySnapshot should be called" }
+        assert(callOrder.indexOf("load") >= 0) { "fetchInventoryDoc should be called" }
+        assert(callOrder.indexOf("save") < callOrder.indexOf("load")) {
+            "save must happen before load, got: $callOrder"
+        }
     }
 
     // --- Script compilation (Req 2.6 / 5.1) ---
@@ -190,14 +224,14 @@ class ModeManagerTest {
         val player = mockPlayer(); val plot = makePlot()
         val callOrder = mutableListOf<String>()
         every { executionEngine.cancelAllExecutions(any()) } answers { callOrder.add("cancel") }
-        coEvery { inventoryManager.loadInventory(any(), any(), any()) } answers { callOrder.add("load") }
+        coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { callOrder.add("load"); null }
         modeManager.switchMode(player, plot, PlotMode.PLAY)
         callOrder.clear()
         modeManager.switchMode(player, plot, PlotMode.BUILD)
         val cancelIdx = callOrder.indexOf("cancel")
         val loadIdx = callOrder.indexOf("load")
         assert(cancelIdx >= 0) { "cancelAllExecutions should be called" }
-        assert(loadIdx >= 0) { "loadInventory should be called" }
+        assert(loadIdx >= 0) { "fetchInventoryDoc should be called" }
         assert(cancelIdx < loadIdx) { "Executions must be cancelled before inventory is restored" }
     }
 

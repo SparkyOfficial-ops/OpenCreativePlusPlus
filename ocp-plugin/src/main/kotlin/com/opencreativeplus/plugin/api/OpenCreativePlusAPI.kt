@@ -40,6 +40,10 @@ class OpenCreativePlusAPI private constructor(
      */
     fun registerAction(blockType: Material, factory: (params: Map<String, Any>) -> IAction) {
         validateMaterial(blockType)
+        val node = factory(emptyMap())
+        require(node.nodeId.isNotBlank()) {
+            "[OCP] Action nodeId must not be blank for material: $blockType"
+        }
         registry.registerAction(blockType, factory)
     }
 
@@ -67,6 +71,10 @@ class OpenCreativePlusAPI private constructor(
      */
     fun registerEvent(blockType: Material, factory: () -> IEvent) {
         validateMaterial(blockType)
+        val event = factory()
+        require(event.eventType.isNotBlank()) {
+            "[OCP] Event eventType must not be blank for material: $blockType"
+        }
         registry.registerEvent(blockType, factory)
     }
 

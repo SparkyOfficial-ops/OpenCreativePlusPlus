@@ -120,7 +120,8 @@ class PlayerStateResetPropertyTest : FreeSpec({
             blockScannerFactory = { blockScanner },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
-            executionEngine = executionEngine
+            executionEngine = executionEngine,
+            plugin = mockk(relaxed = true)
         )
     }
 

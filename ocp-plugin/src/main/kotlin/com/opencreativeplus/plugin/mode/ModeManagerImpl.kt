@@ -110,7 +110,7 @@ class ModeManagerImpl(
     private suspend fun onModeEnter(player: Player, plot: Plot, mode: PlotMode): Boolean {
         return when (mode) {
             PlotMode.BUILD -> { applyBuildMode(player, plot); true }
-            PlotMode.DEV   -> { applyDevMode(player, plot); true }
+            PlotMode.DEV   -> applyDevMode(player, plot)
             PlotMode.PLAY  -> applyPlayMode(player, plot)
         }
     }
@@ -126,13 +126,13 @@ class ModeManagerImpl(
         }
     }
 
-    private suspend fun applyDevMode(player: Player, plot: Plot) {
+    private suspend fun applyDevMode(player: Player, plot: Plot): Boolean {
         // Check if player is allowed to enter DEV mode
         val isOwner = plot.owner == player.uniqueId
         val isTrustedWithAccess = plot.trustedPlayers.contains(player.uniqueId) && plot.settings.allowCodingAccess
         if (!isOwner && !isTrustedWithAccess) {
             player.sendMessage("§c[OCP] У вас нет доступа к режиму разработки на этом участке.")
-            return
+            return false
         }
 
         val worlds = worldManager.getLoadedWorlds(plot.id)
@@ -185,6 +185,7 @@ class ModeManagerImpl(
             }
         }
         loadAndRegisterCustomMenus(plot.id)
+        return true
     }
 
     private suspend fun applyPlayMode(player: Player, plot: Plot): Boolean {

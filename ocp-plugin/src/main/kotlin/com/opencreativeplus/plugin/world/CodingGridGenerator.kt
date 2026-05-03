@@ -14,7 +14,7 @@ import org.bukkit.plugin.Plugin
  * - [LEVEL_COUNT] vertical levels, Y = 15, 35, 55, ...
  * - [STRIP_COUNT] coding strips per level, spaced [STRIP_SPACING] blocks apart on Z
  * - Each strip: BLUE_STAINED_GLASS at X=0, then alternating WHITE/GRAY for [STRIP_LENGTH]-1 blocks
- * - WHITE_STAINED_GLASS floor fills the entire area between strips (no black glass)
+ * - WHITE_STAINED_GLASS fills the gaps between strips at the same Y level
  */
 class CodingGridGenerator(
     private val plugin: Plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
@@ -96,22 +96,21 @@ class CodingGridGenerator(
     }
 
     private fun generateLevel(world: World, y: Int) {
-        val totalWidth = STRIP_COUNT * STRIP_SPACING  // total Z span of all strips
-
-        // Fill the floor with WHITE_STAINED_GLASS only between strips (not under strip rows).
-        // applyPhysics=false prevents neighbor block updates that would try to load
-        // ungenerated chunks and freeze the server thread.
+        // Fill the gaps between strips with WHITE_STAINED_GLASS at the same Y level as the strips.
+        // Gaps are at z positions that are NOT multiples of STRIP_SPACING.
         val whiteGlass = org.bukkit.Material.WHITE_STAINED_GLASS.createBlockData()
-        for (x in -2..STRIP_LENGTH + 1) {
-            for (z in -2..totalWidth + 1) {
-                // Only place floor between strips, not under them
-                if (z < 0 || z >= totalWidth || z % STRIP_SPACING != 0) {
-                    world.getBlockAt(x, y - 1, z).setBlockData(whiteGlass, false)
+        for (x in 0 until STRIP_LENGTH) {
+            for (stripIndex in 0 until STRIP_COUNT - 1) {
+                // Fill the gap between strip stripIndex and strip stripIndex+1
+                val stripZ = stripIndex * STRIP_SPACING
+                for (gapOffset in 1 until STRIP_SPACING) {
+                    val z = stripZ + gapOffset
+                    world.getBlockAt(x, y, z).setBlockData(whiteGlass, false)
                 }
             }
         }
 
-        // Place the coding strips on top of the floor
+        // Place the coding strips
         for (stripIndex in 0 until STRIP_COUNT) {
             val z = stripIndex * STRIP_SPACING
             generateStrip(world, y, z)

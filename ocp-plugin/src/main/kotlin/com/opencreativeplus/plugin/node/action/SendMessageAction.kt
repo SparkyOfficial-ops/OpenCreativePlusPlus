@@ -23,7 +23,7 @@ class SendMessageAction(
     override val displayName: String = "Send Message"
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.currentTarget as? Player ?: return
+        val player = (context.currentTarget as? Player) ?: (context.player) ?: return
         val rawMessage = params["message"]?.toString() ?: return
 
         // First resolve %placeholder% syntax, then legacy $varname syntax

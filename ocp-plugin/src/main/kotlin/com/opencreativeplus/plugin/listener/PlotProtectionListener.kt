@@ -109,17 +109,21 @@ class PlotProtectionListener(
         val material = block.type
 
         if (!isWhitelisted(material)) {
-            // Req 12.8: cancel break of non-whitelisted blocks synchronously
-            event.isCancelled = true
+            // Only enforce in DEV mode — check asynchronously
             scope.launch {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
-                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) {
-                    // Not in DEV mode — undo the cancel is not possible, but this is fine:
-                    // outside DEV mode the protection is a no-op by design.
-                }
+                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
+                // Player is in DEV mode — remove the broken block's drop and notify
+                // Note: we can't un-break a block, but we can restore it on main thread
+                org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
+                    // Restore the block if it was broken
+                    if (block.type == org.bukkit.Material.AIR) {
+                        block.type = material
+                        player.sendMessage("§c[OCP] Нельзя сломать §e${material.name}§c в DEV-режиме. " +
+                            "Разрешены только блоки кодирования.")
+                    }
+                })
             }
-            player.sendMessage("§c[OCP] Нельзя сломать §e${material.name}§c в DEV-режиме. " +
-                    "Разрешены только блоки кодирования.")
             return
         }
 

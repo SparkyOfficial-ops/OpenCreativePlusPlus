@@ -29,6 +29,19 @@ class WorldManager(
 
 
     /**
+     * Create both worlds for a new plot synchronously.
+     * MUST be called from the Bukkit main thread.
+     */
+    fun createPlotWorldsSync(plotId: UUID): Pair<World, World> {
+        val mainWorld = createWorld(plotId.toString(), isDevWorld = false)
+        val devWorld = createWorld("${plotId}_dev", isDevWorld = true)
+        configureMainWorld(mainWorld)
+        configureDevWorld(devWorld)
+        loadedWorlds[plotId] = Pair(mainWorld, devWorld)
+        return Pair(mainWorld, devWorld)
+    }
+
+    /**
      * Create both worlds for a new plot.
      1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
      */

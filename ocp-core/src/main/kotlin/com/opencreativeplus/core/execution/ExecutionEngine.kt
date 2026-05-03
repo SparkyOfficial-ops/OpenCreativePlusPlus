@@ -124,15 +124,18 @@ class ExecutionEngine(
                     } else {
                         // Req 1.1, 1.2: iterate over every target in context.targets, set currentTarget,
                         // and apply action to each.
-                        // Req 1.9: if targets is empty, the loop does not execute — silent skip, no exception.
                         val targets = context.targets.toList()
                         if (targets.isNotEmpty()) {
                             for (target in targets) {
                                 context.currentTarget = target
                                 action.execute(context)
                             }
+                        } else {
+                            // No targets — execute once with currentTarget = player (may be null for non-player events)
+                            // This allows player-targeting actions to use context.player as fallback
+                            context.currentTarget = context.player
+                            action.execute(context)
                         }
-                        // If targets is empty — silent skip (Req 1.9)
                     }
                     context.operationCount.incrementAndGet()
                 }
@@ -271,6 +274,9 @@ class ExecutionEngine(
                             functionContext.currentTarget = target
                             funcAction.execute(functionContext)
                         }
+                    } else {
+                        functionContext.currentTarget = functionContext.player
+                        funcAction.execute(functionContext)
                     }
                 }
                 functionContext.operationCount.incrementAndGet()

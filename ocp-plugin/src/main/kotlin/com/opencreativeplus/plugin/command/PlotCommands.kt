@@ -9,6 +9,7 @@ import com.opencreativeplus.plugin.gui.PlotTopGUI
 import com.opencreativeplus.plugin.gui.VariableExplorerGUI
 import com.opencreativeplus.plugin.input.SignInputManager
 import com.opencreativeplus.plugin.node.dialogue.DialogueManager
+import com.opencreativeplus.plugin.world.WorldManager as PluginWorldManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import kotlinx.coroutines.CoroutineScope
@@ -39,7 +40,8 @@ class PlotCommands(
     private val plugin: Plugin? = null,
     private val plotTopGUI: PlotTopGUI? = null,
     private val coreWorldManager: com.opencreativeplus.core.world.WorldManager? = null,
-    private val signInputManager: SignInputManager? = null
+    private val signInputManager: SignInputManager? = null,
+    private val pluginWorldManager: PluginWorldManager? = null,
 ) : CommandExecutor {
 
     override fun onCommand(
@@ -84,14 +86,24 @@ class PlotCommands(
         val sub = args.firstOrNull()?.lowercase()
         when (sub) {
             "create" -> scope.launch {
-                val templateName = args.getOrNull(1) ?: "void"
+                // Step 1: create the plot record in DB (async is fine)
                 val plot = plotManager.createPlot(player.uniqueId)
-                // Req 7.2: use core WorldManager for template-based creation if available
-                val wm = coreWorldManager
-                if (wm != null) {
-                    wm.createPlot(player, plot, templateName)
+                val pwm = pluginWorldManager
+                val pl = plugin
+                if (pwm != null && pl != null) {
+                    // Step 2: create worlds on main thread (required by Paper)
+                    org.bukkit.Bukkit.getScheduler().runTask(pl, Runnable {
+                        try {
+                            val (mainWorld, _) = pwm.createPlotWorldsSync(plot.id)
+                            player.sendMessage("§a[OCP] Plot '${plot.name}' created!")
+                            player.teleport(mainWorld.spawnLocation)
+                        } catch (e: Exception) {
+                            player.sendMessage("§c[OCP] Failed to create plot worlds: ${e.message}")
+                            pl.logger.severe("[OCP] createPlotWorldsSync failed: ${e.message}")
+                        }
+                    })
                 } else {
-                    player.sendMessage("§a[OCP] Plot '${plot.name}' created!")
+                    player.sendMessage("§a[OCP] Plot '${plot.name}' created (no world manager).")
                 }
             }
             "trust" -> {

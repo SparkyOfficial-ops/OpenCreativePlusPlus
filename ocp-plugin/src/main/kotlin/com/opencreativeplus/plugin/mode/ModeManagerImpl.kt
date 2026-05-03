@@ -207,6 +207,15 @@ class ModeManagerImpl(
 
         eventDispatcher.registerScripts(plot.id, result.scripts)
 
+        // Dispatch player_join immediately when entering PLAY mode so on_join scripts fire
+        // without requiring the player to reconnect to the server
+        eventDispatcher.dispatchEvent(
+            plotId = plot.id,
+            eventType = "player_join",
+            eventData = mapOf("player" to player.name),
+            player = player
+        )
+
         // Load custom menus from MongoDB and register in PlotMenuRegistry
         loadAndRegisterCustomMenus(plot.id)
 

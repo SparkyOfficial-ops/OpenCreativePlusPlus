@@ -266,6 +266,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             @EventHandler
             fun onPlayerJoin(event: org.bukkit.event.player.PlayerJoinEvent) {
                 val player = event.player
+
+                // Give navigation items on join (main thread — inventory API)
+                giveNavigationItems(player)
+
                 scope.launch {
                     val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
                     coreWorldManager.onPlayerJoin(plot.id, player.uniqueId)
@@ -383,6 +387,44 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         coreWorldManager.cancelAllTimers()
         connectionManager.close()
         logger.info("[OCP] OpenCreative++ disabled.")
+    }
+
+    /**
+     * Gives the player navigation items in fixed hotbar slots:
+     * - Slot 0: COMPASS "§bОбзор миров" — opens WorldBrowserGUI on right-click
+     * - Slot 1: DIAMOND "§eМои миры" — opens MyWorldsGUI on right-click
+     *
+     * Items are only placed if the slot is empty to avoid overwriting existing items.
+     */
+    private fun giveNavigationItems(player: org.bukkit.entity.Player) {
+        fun makeNavItem(material: org.bukkit.Material, name: String, lore: List<String>): org.bukkit.inventory.ItemStack {
+            val item = org.bukkit.inventory.ItemStack(material)
+            val meta = item.itemMeta ?: return item
+            @Suppress("DEPRECATION")
+            meta.setDisplayName(name)
+            @Suppress("DEPRECATION")
+            meta.lore = lore
+            item.itemMeta = meta
+            return item
+        }
+
+        val compass = makeNavItem(
+            org.bukkit.Material.COMPASS,
+            "§bОбзор миров",
+            listOf("§7ПКМ — открыть браузер миров")
+        )
+        val diamond = makeNavItem(
+            org.bukkit.Material.DIAMOND,
+            "§eМои миры",
+            listOf("§7ПКМ — открыть мои миры")
+        )
+
+        if (player.inventory.getItem(0) == null) {
+            player.inventory.setItem(0, compass)
+        }
+        if (player.inventory.getItem(1) == null) {
+            player.inventory.setItem(1, diamond)
+        }
     }
 
     private fun parseLocation(sourceLocation: String): org.bukkit.Location? {

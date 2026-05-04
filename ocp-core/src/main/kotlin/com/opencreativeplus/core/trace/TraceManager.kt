@@ -144,11 +144,16 @@ class TraceManager(private val plugin: Plugin) {
 
     /**
      * Removes all active ArmorStand overlays for [playerId].
+     * Also removes the player from tracingPlayers so that any pending
+     * runTaskLater callbacks become no-ops (they check tracingPlayers[playerId]).
      * s: 14.6
      */
     fun clearOverlays(playerId: UUID) {
-        tracingPlayers[playerId]?.forEach { it.remove() }
-        tracingPlayers[playerId]?.clear()
+        val stands = tracingPlayers[playerId] ?: return
+        // Snapshot the list before clearing so runTaskLater callbacks find an empty list
+        val snapshot = stands.toList()
+        stands.clear()
+        snapshot.forEach { it.remove() }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -189,6 +194,7 @@ class TraceManager(private val plugin: Plugin) {
         // Auto-remove after 60 ticks (3 seconds) — s: 14.4
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
             stand.remove()
+            // Only remove from list if the player is still tracing (guard against cleared list)
             tracingPlayers[playerId]?.remove(stand)
         }, 60L)
     }

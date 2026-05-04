@@ -43,7 +43,7 @@ abstract class ReactiveGUI(
     private val viewers = CopyOnWriteArraySet<Player>()
 
     /** Variable names this GUI declared a dependency on via [watchVariable]. */
-    private val watchedVars = mutableSetOf<String>()
+    private val watchedVars: MutableSet<String> = CopyOnWriteArraySet()
 
     /** Active Flow subscription job; null when no viewers are present. */
     private var subscription: Job? = null

@@ -110,19 +110,18 @@ class PlotProtectionListener(
 
         // Glass strips must never be broken in DEV mode — cancel immediately
         if (material in setOf(Material.BLUE_STAINED_GLASS, Material.WHITE_STAINED_GLASS, Material.GRAY_STAINED_GLASS)) {
-            scope.launch {
-                val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
-                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
-                org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
-                    event.isCancelled = true
-                    player.sendMessage("§c[OCP] Нельзя сломать стеклянную полосу в DEV-режиме.")
-                })
-            }
+            // We cannot check mode asynchronously here because the event must be cancelled
+            // synchronously. Cancel immediately and let the player know.
+            // The mode check is a best-effort guard — glass strips are always protected.
+            event.isCancelled = true
+            player.sendMessage("§c[OCP] Нельзя сломать стеклянную полосу в DEV-режиме.")
             return
         }
 
         if (!isWhitelisted(material)) {
-            // Only enforce in DEV mode — check asynchronously
+            // Only enforce in DEV mode — check asynchronously, then restore block if needed.
+            // We cannot cancel the event here (already past the synchronous window),
+            // so we restore the block on the main thread after the async check.
             scope.launch {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
                 if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
@@ -150,18 +149,19 @@ class PlotProtectionListener(
 
     /**
      * Cancel PlayerInteractEvent for non-owners when allowInteractions is false.
+     * NOTE: We cannot cancel the event asynchronously. Instead we check the plot
+     * settings synchronously using the cached mode/plot state.
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onPlayerInteract(event: PlayerInteractEvent) {
         val player = event.player
-        scope.launch {
-            val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
-            if (modeManager.getCurrentMode(player, plot) != PlotMode.PLAY) return@launch
-            if (plot.settings.allowInteractions) return@launch
-            if (plot.owner == player.uniqueId) return@launch
-            if (plot.trustedPlayers.contains(player.uniqueId)) return@launch
-            event.isCancelled = true
-        }
+        // getPlayerPlot and getCurrentMode are in-memory lookups — safe to call on main thread
+        val plot = plotManager.getPlayerPlotSync(player.uniqueId) ?: return
+        if (modeManager.getCurrentMode(player, plot) != PlotMode.PLAY) return
+        if (plot.settings.allowInteractions) return
+        if (plot.owner == player.uniqueId) return
+        if (plot.trustedPlayers.contains(player.uniqueId)) return
+        event.isCancelled = true
     }
 
     /**
@@ -170,12 +170,13 @@ class PlotProtectionListener(
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onEntityExplode(event: EntityExplodeEvent) {
         val location = event.location
-        scope.launch {
-            val plot = findPlotAtLocation(location) ?: return@launch
-            if (!plot.settings.allowExplosions) {
-                event.blockList().clear()
-                event.isCancelled = true
-            }
+        val worldName = location.world?.name ?: return
+        val plot = plotManager.getAllLoadedPlotsSync().firstOrNull {
+            it.mainWorldName == worldName || it.devWorldName == worldName
+        } ?: return
+        if (!plot.settings.allowExplosions) {
+            event.blockList().clear()
+            event.isCancelled = true
         }
     }
 
@@ -185,12 +186,13 @@ class PlotProtectionListener(
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onBlockExplode(event: BlockExplodeEvent) {
         val location = event.block.location
-        scope.launch {
-            val plot = findPlotAtLocation(location) ?: return@launch
-            if (!plot.settings.allowExplosions) {
-                event.blockList().clear()
-                event.isCancelled = true
-            }
+        val worldName = location.world?.name ?: return
+        val plot = plotManager.getAllLoadedPlotsSync().firstOrNull {
+            it.mainWorldName == worldName || it.devWorldName == worldName
+        } ?: return
+        if (!plot.settings.allowExplosions) {
+            event.blockList().clear()
+            event.isCancelled = true
         }
     }
 
@@ -200,11 +202,12 @@ class PlotProtectionListener(
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onBlockIgnite(event: BlockIgniteEvent) {
         val location = event.block.location
-        scope.launch {
-            val plot = findPlotAtLocation(location) ?: return@launch
-            if (!plot.settings.allowFire) {
-                event.isCancelled = true
-            }
+        val worldName = location.world?.name ?: return
+        val plot = plotManager.getAllLoadedPlotsSync().firstOrNull {
+            it.mainWorldName == worldName || it.devWorldName == worldName
+        } ?: return
+        if (!plot.settings.allowFire) {
+            event.isCancelled = true
         }
     }
 
@@ -215,17 +218,6 @@ class PlotProtectionListener(
     /** Returns true if [material] is in the combined whitelist. */
     private fun isWhitelisted(material: Material): Boolean =
         material in FIXED_WHITELIST || categoryRegistry.isCategoryMaterial(material)
-
-    /**
-     * Find the plot associated with a world location by checking all loaded plots.
-     * Returns null if no plot is found for that world.
-     */
-    private suspend fun findPlotAtLocation(location: org.bukkit.Location): com.opencreativeplus.api.plot.Plot? {
-        val worldName = location.world?.name ?: return null
-        return plotManager.getAllLoadedPlots().firstOrNull { plot ->
-            plot.mainWorldName == worldName || plot.devWorldName == worldName
-        }
-    }
 
     /**
      * Cancels [event] and sends the player a descriptive message.

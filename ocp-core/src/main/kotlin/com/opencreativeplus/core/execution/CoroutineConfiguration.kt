@@ -15,10 +15,11 @@ import kotlin.coroutines.CoroutineContext
 class CoroutineConfiguration(
     private val syncRunner: (() -> Unit) -> Unit
 ) {
-    private val dispatcher = newFixedThreadPoolContext(
-        nThreads = Runtime.getRuntime().availableProcessors(),
-        name = "ocp-execution"
-    )
+    private val threadPool = java.util.concurrent.Executors
+        .newFixedThreadPool(Runtime.getRuntime().availableProcessors())
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private val dispatcher: CoroutineDispatcher = threadPool.asCoroutineDispatcher()
 
     /**
      * The main execution scope. SupervisorJob isolates failures so one script
@@ -43,6 +44,6 @@ class CoroutineConfiguration(
      */
     fun close() {
         executionScope.cancel()
-        dispatcher.close()
+        threadPool.shutdown()
     }
 }

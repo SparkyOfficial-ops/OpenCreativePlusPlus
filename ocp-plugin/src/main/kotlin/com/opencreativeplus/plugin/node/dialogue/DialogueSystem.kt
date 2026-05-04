@@ -97,7 +97,10 @@ class SendDialogueNode(rawParams: Map<String, Any>) : IAction {
 
         val dialogueId = UUID.randomUUID()
         val component: Component = buildComponent(text, options, dialogueId)
-        (player as net.kyori.adventure.audience.Audience).sendMessage(component)
+        // sendMessage must run on main thread (Adventure/Bukkit API)
+        context.syncContext {
+            (player as net.kyori.adventure.audience.Audience).sendMessage(component)
+        }
 
         val result = withTimeoutOrNull(60_000L) {
             DialogueManager.awaitClick(dialogueId, player.uniqueId)

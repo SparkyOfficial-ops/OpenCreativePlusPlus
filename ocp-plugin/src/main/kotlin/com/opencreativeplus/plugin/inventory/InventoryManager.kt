@@ -189,10 +189,15 @@ class InventoryManager(
 
     private fun deserializeContents(base64: String?): Array<ItemStack?> {
         if (base64.isNullOrEmpty()) return arrayOfNulls(36)
-        val bytes = Base64.getDecoder().decode(base64)
-        BukkitObjectInputStream(ByteArrayInputStream(bytes)).use { ois ->
-            val size = ois.readInt()
-            return Array(size) { ois.readObject() as? ItemStack }
+        return try {
+            val bytes = Base64.getDecoder().decode(base64)
+            BukkitObjectInputStream(ByteArrayInputStream(bytes)).use { ois ->
+                val size = ois.readInt()
+                Array(size) { ois.readObject() as? ItemStack }
+            }
+        } catch (e: Exception) {
+            logger?.warning("deserializeContents: failed to deserialize inventory: ${e.message}")
+            arrayOfNulls(36)
         }
     }
 

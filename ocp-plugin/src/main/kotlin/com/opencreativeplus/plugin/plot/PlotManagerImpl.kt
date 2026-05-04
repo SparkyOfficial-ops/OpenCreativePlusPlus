@@ -181,9 +181,25 @@ class PlotManagerImpl(
 
     /**
      * Return all currently loaded plots.
-     10.2
+     * Synchronous — safe to call from the main thread (event handlers).
+     * 10.2
      */
     fun getAllLoadedPlots(): List<Plot> = loadedPlots.values.toList()
+
+    /**
+     * Synchronous variant of [getAllLoadedPlots] — alias for use in event handlers.
+     * Safe to call from the Bukkit main thread without suspending.
+     */
+    fun getAllLoadedPlotsSync(): List<Plot> = loadedPlots.values.toList()
+
+    /**
+     * Synchronous lookup of the plot for [playerId] — safe to call from event handlers
+     * on the main thread. Returns null if the player has no loaded plot.
+     */
+    fun getPlayerPlotSync(playerId: UUID): Plot? {
+        val plotId = playerPlotIndex[playerId] ?: return null
+        return loadedPlots[plotId]
+    }
 
     /**
      * Ensure a plot's worlds are loaded, loading them from DB if needed.

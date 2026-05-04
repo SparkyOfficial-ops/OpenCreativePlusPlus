@@ -233,7 +233,7 @@ class ModeManagerImpl(
             val locationKey = cycleCodeLine.startLocation.let {
                 "${it.world?.name ?: "unknown"}:${it.blockX}:${it.blockY}:${it.blockZ}"
             }
-            val intervalTicks = cycleCodeLine.cycleIntervalTicks()
+            val intervalTicks = cycleCodeLine.cycleIntervalTicks().coerceAtLeast(1L)
             val compiledCycle = astCompiler.compile(listOf(cycleCodeLine))
             val cycleScript = compiledCycle.scripts.firstOrNull()
             if (cycleScript != null) {

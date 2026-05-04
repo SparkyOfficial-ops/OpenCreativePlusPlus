@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Logger
 
 /**
  * Indexes compiled scripts by event type and dispatches Minecraft events to matching scripts.
@@ -20,7 +21,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class EventDispatcher(
     private val executionEngine: ExecutionEngine,
-    private val executionScope: CoroutineScope
+    private val executionScope: CoroutineScope,
+    private val logger: Logger = Logger.getLogger("EventDispatcher")
 ) {
     /** plotId → (eventType → scripts) */
     private val scriptsByEvent = ConcurrentHashMap<UUID, Map<String, List<CompiledScript>>>()
@@ -68,7 +70,8 @@ class EventDispatcher(
                     executionEngine.executeScript(script, plotId, player, eventData)
                 } catch (e: Exception) {
                     // Isolate failures — log and continue (req 16.5)
-                    System.err.println("[OCP] Event dispatch error for $eventType on plot $plotId: ${e.message}")
+                    // Use logger instead of System.err so errors appear in server log files
+                    logger.warning("[OCP] Event dispatch error for $eventType on plot $plotId: ${e.message}")
                 }
             }
         }

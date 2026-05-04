@@ -217,15 +217,18 @@ class WorldManager(
         worldStates[plotId] = WorldLifecycleState.UNLOADING
 
         // Unload the world (main-thread operation delegated to worldOps)
-        runCatching {
-            worldOps.unloadWorld(plotId.toString())
-        }.onFailure { e ->
-            logger.warning("[OCP] WorldManager: failed to unload world for plot $plotId: ${e.message}")
+        // Use try/finally to guarantee state is reset even if unload throws
+        try {
+            runCatching {
+                worldOps.unloadWorld(plotId.toString())
+            }.onFailure { e ->
+                logger.warning("[OCP] WorldManager: failed to unload world for plot $plotId: ${e.message}")
+            }
+        } finally {
+            worldStates[plotId] = WorldLifecycleState.UNLOADED
+            plotPlayers.remove(plotId)
+            logger.info("[OCP] WorldManager: plot $plotId unloaded after being empty.")
         }
-
-        worldStates[plotId] = WorldLifecycleState.UNLOADED
-        plotPlayers.remove(plotId)
-        logger.info("[OCP] WorldManager: plot $plotId unloaded after being empty.")
     }
 
     // -------------------------------------------------------------------------

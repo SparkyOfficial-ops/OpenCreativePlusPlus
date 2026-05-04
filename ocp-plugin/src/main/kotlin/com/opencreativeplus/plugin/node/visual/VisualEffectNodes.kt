@@ -27,17 +27,19 @@ class SpawnParticleNode(params: Map<String, Any>) : IAction {
             return
         }
         val particle = ocpParticle.bukkitParticle
-        // Spawn for all players within 64 blocks
-        loc.world?.players
-            ?.filter { it.location.distanceSquared(loc) <= 64.0 * 64.0 }
-            ?.forEach { player ->
-                if (particle == Particle.REDSTONE) {
-                    player.spawnParticle(particle, loc, count, spread, spread, spread,
-                        Particle.DustOptions(Color.RED, 1.0f))
-                } else {
-                    player.spawnParticle(particle, loc, count, spread, spread, spread)
+        // Spawn for all players within 64 blocks — must run on main thread (Bukkit API)
+        context.syncContext {
+            loc.world?.players
+                ?.filter { it.location.distanceSquared(loc) <= 64.0 * 64.0 }
+                ?.forEach { player ->
+                    if (particle == Particle.REDSTONE) {
+                        player.spawnParticle(particle, loc, count, spread, spread, spread,
+                            Particle.DustOptions(Color.RED, 1.0f))
+                    } else {
+                        player.spawnParticle(particle, loc, count, spread, spread, spread)
+                    }
                 }
-            }
+        }
     }
 }
 
@@ -61,7 +63,10 @@ class PlaySoundNode(params: Map<String, Any>) : IAction {
             println("[OCP] PlaySoundNode: unknown sound '$soundName'")
             return
         }
-        loc.world?.playSound(loc, ocpSound.bukkitSound, volume, pitch)
+        // playSound must run on main thread (Bukkit API)
+        context.syncContext {
+            loc.world?.playSound(loc, ocpSound.bukkitSound, volume, pitch)
+        }
     }
 }
 
@@ -95,13 +100,16 @@ class DrawLineNode(params: Map<String, Any>) : IAction {
         if (distance == 0.0) return
 
         val steps = (distance / 0.5).toInt().coerceAtLeast(1)
-        for (i in 0..steps) {
-            val t = i.toDouble() / steps
-            val loc = Location(world, from.x + dx * t, from.y + dy * t, from.z + dz * t)
-            if (particle == Particle.REDSTONE) {
-                world.spawnParticle(particle, loc, 1, Particle.DustOptions(Color.RED, 1.0f))
-            } else {
-                world.spawnParticle(particle, loc, 1)
+        // spawnParticle must run on main thread (Bukkit API)
+        context.syncContext {
+            for (i in 0..steps) {
+                val t = i.toDouble() / steps
+                val loc = Location(world, from.x + dx * t, from.y + dy * t, from.z + dz * t)
+                if (particle == Particle.REDSTONE) {
+                    world.spawnParticle(particle, loc, 1, Particle.DustOptions(Color.RED, 1.0f))
+                } else {
+                    world.spawnParticle(particle, loc, 1)
+                }
             }
         }
     }

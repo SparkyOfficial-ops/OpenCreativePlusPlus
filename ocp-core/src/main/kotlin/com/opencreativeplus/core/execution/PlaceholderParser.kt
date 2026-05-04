@@ -72,6 +72,7 @@ class PlaceholderParserImpl : PlaceholderParser {
                     val varName = match.groupValues[1]
                     context.localScope.get(varName)?.toString()
                         ?: context.plotScope.get(varName)?.toString()
+                        ?: context.savedScope.get(varName)?.toString()
                         ?: ""
                 }
             }

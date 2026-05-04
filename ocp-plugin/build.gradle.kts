@@ -30,7 +30,7 @@ dependencies {
 
 tasks {
     shadowJar {
-        archiveClassifier.set("")
+        archiveClassifier.set("all")
         archiveBaseName.set("OpenCreativePlus")
         mergeServiceFiles()
         // Relocate coroutines to avoid conflicts with other plugins

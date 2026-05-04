@@ -103,7 +103,8 @@ class MongoConnectionManager(private val config: DatabaseConfig) {
     }
     
     companion object {
-        const val DEFAULT_MAX_RETRIES = -1
+        /** Default maximum number of retry attempts. Must be > 0. */
+        const val DEFAULT_MAX_RETRIES = 3
     }
     
     /**

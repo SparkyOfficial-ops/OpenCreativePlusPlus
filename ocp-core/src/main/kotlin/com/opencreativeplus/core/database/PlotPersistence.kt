@@ -211,10 +211,7 @@ class PlotPersistence(
      */
     suspend fun countPlotsByOwner(ownerId: UUID): Int {
         return connectionManager.withRetry {
-            collection
-                .find(Document("owner", ownerId.toString()))
-                .toList()
-                .size
+            collection.countDocuments(Document("owner", ownerId.toString())).toInt()
         }
     }
 
@@ -441,12 +438,12 @@ class PlotPersistence(
                 allowCodingAccess = settingsDoc?.getBoolean("allow_coding_access") ?: false
             ),
             metadata = PlotMetadata(
-                tags = metadataDoc.getList("tags", String::class.java),
-                rating = metadataDoc.getInteger("rating"),
-                ratedBy = metadataDoc.getList("rated_by", String::class.java)
-                    .map { UUID.fromString(it) }
-                    .toSet(),
-                currentPlayers = metadataDoc.getInteger("current_players")
+                tags = metadataDoc?.getList("tags", String::class.java) ?: emptyList(),
+                rating = metadataDoc?.getInteger("rating") ?: 0,
+                ratedBy = metadataDoc?.getList("rated_by", String::class.java)
+                    ?.map { UUID.fromString(it) }
+                    ?.toSet() ?: emptySet(),
+                currentPlayers = metadataDoc?.getInteger("current_players") ?: 0
             ),
             trustedPlayers = document.getList("trusted_players", String::class.java)
                 .map { UUID.fromString(it) }

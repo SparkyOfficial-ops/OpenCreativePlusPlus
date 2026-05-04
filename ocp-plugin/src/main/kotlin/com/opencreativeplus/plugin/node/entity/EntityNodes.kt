@@ -111,6 +111,9 @@ class GetNearbyEntitiesNode(params: Map<String, Any>) : IValue<List<Entity>> {
 
     override suspend fun compute(context: ExecutionContext): List<Entity> {
         val loc = context.localScope.get(locationVar) as? Location ?: return emptyList()
-        return loc.world?.getNearbyEntities(loc, radius, radius, radius)?.toList() ?: emptyList()
+        // getNearbyEntities reads world state — must run on main thread (Bukkit API)
+        return context.syncContext {
+            loc.world?.getNearbyEntities(loc, radius, radius, radius)?.toList() ?: emptyList()
+        }
     }
 }

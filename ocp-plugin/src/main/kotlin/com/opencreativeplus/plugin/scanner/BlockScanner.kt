@@ -625,7 +625,16 @@ class BlockScanner(
                 ?: nodeRegistry.getConditionNodeId(block.type)
                 ?: nodeRegistry.getValueNodeId(block.type)
 
-            val descriptor = materialNodeId?.let { categoryRegistry?.getDescriptorById(it) }
+            // If no nodeId found by material either, skip this block (Req 4.3)
+            if (materialNodeId == null) {
+                logger.warning(
+                    "BlockScanner: block ${block.type} at ${block.location} " +
+                    "has no registered nodeId — skipping block"
+                )
+                return null
+            }
+
+            val descriptor = categoryRegistry?.getDescriptorById(materialNodeId)
             val params = extractParameters(block, descriptor).toMutableMap()
             if (materialNodeId == "and_condition" || materialNodeId == "or_condition") {
                 params["condition_children"] = readConditionChildren(block)

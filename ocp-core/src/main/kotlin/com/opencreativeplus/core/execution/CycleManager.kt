@@ -91,7 +91,7 @@ class CycleManager(
                             running.set(false)
                         }
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     running.set(false)
                     logger.warning(
                         "[OCP] CycleManager: error launching cycle at ${entry.locationKey}: ${e.message}"

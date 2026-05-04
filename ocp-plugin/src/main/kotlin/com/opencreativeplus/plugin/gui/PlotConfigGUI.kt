@@ -21,7 +21,10 @@ import org.bukkit.inventory.meta.ItemMeta
  */
 class PlotConfigGUI(
     private val plotManager: PlotManagerImpl,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val plugin: org.bukkit.plugin.Plugin = requireNotNull(
+        org.bukkit.Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
+    ) { "OpenCreativePlus plugin not found" }
 ) : Listener {
 
     companion object {
@@ -80,10 +83,7 @@ class PlotConfigGUI(
             player.closeInventory()
             // Re-open with updated state
             val updated = plotManager.getPlot(plot.id) ?: return@launch
-            Bukkit.getScheduler().runTask(
-                requireNotNull(Bukkit.getPluginManager().getPlugin("OpenCreativePlus")),
-                Runnable { open(player, updated) }
-            )
+            Bukkit.getScheduler().runTask(plugin, Runnable { open(player, updated) })
         }
     }
 

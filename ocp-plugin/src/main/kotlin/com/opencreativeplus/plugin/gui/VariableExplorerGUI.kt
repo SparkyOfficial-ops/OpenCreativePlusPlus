@@ -112,41 +112,43 @@ class VariableExplorerGUI(
                 }
             }
             slot in 0..44 -> {
-                // Variable item — delete it
-                val allVars = collectAllVars()
-                val varIndex = currentPage * 45 + slot
-                if (varIndex >= allVars.size) return
+                // Variable item — delete it asynchronously to avoid blocking main thread
+                scope.launch {
+                    val allVars = collectAllVars()
+                    val varIndex = currentPage * 45 + slot
+                    if (varIndex >= allVars.size) return@launch
 
-                val (key, _) = allVars.entries.toList()[varIndex]
+                    val (key, _) = allVars.entries.toList()[varIndex]
 
-                // Determine which scope the variable belongs to
-                val savedScope = runBlocking { variableManager.getSavedScope(plotId) }
-                val isInSavedScope = (savedScope as? VariableScopeImpl)?.has(key) == true
+                    // Determine which scope the variable belongs to
+                    val savedScope = variableManager.getSavedScope(plotId)
+                    val isInSavedScope = (savedScope as? VariableScopeImpl)?.has(key) == true
 
-                // Delete from the appropriate scope by rebuilding it (clear + re-set all except deleted key)
-                if (isInSavedScope) {
-                    val savedImpl = savedScope as VariableScopeImpl
-                    val remaining = savedImpl.toMap().filterKeys { it != key }
-                    savedImpl.clear()
-                    remaining.forEach { (k, v) -> savedImpl.set(k, v) }
+                    // Delete from the appropriate scope by rebuilding it (clear + re-set all except deleted key)
+                    if (isInSavedScope) {
+                        val savedImpl = savedScope as VariableScopeImpl
+                        val remaining = savedImpl.toMap().filterKeys { it != key }
+                        savedImpl.clear()
+                        remaining.forEach { (k, v) -> savedImpl.set(k, v) }
 
-                    // Req 2.4: persist immediately when deleting from SAVED scope
-                    scope.launch { variableManager.savePlotVariables(plotId) }
-                } else {
-                    val plotScope = variableManager.getPlotScope(plotId)
-                    val plotImpl = plotScope as? VariableScopeImpl
-                    if (plotImpl != null) {
-                        val remaining = plotImpl.toMap().filterKeys { it != key }
-                        plotImpl.clear()
-                        remaining.forEach { (k, v) -> plotImpl.set(k, v) }
+                        // Req 2.4: persist immediately when deleting from SAVED scope
+                        variableManager.savePlotVariables(plotId)
+                    } else {
+                        val plotScope = variableManager.getPlotScope(plotId)
+                        val plotImpl = plotScope as? VariableScopeImpl
+                        if (plotImpl != null) {
+                            val remaining = plotImpl.toMap().filterKeys { it != key }
+                            plotImpl.clear()
+                            remaining.forEach { (k, v) -> plotImpl.set(k, v) }
+                        }
                     }
+
+                    // Req 2.3: log deletion with player name, variable name, and timestamp
+                    logger.info("[VariableExplorer] Player ${player.name} deleted variable '$key' at ${java.time.Instant.now()}")
+
+                    // Refresh all viewers on main thread
+                    scheduleRefresh()
                 }
-
-                // Req 2.3: log deletion with player name, variable name, and timestamp
-                logger.info("[VariableExplorer] Player ${player.name} deleted variable '$key' at ${java.time.Instant.now()}")
-
-                // Refresh all viewers
-                scheduleRefresh()
             }
         }
     }
@@ -265,6 +267,9 @@ class VariableExplorerGUI(
     /**
      * Collect all variables from both saved and plot scopes, merged into a single map.
      * Saved scope is loaded first; plot scope overrides on key collision.
+     * Uses runBlocking only as a last resort — getSavedScope is a suspend function.
+     * NOTE: runBlocking on the main thread is safe here because getSavedScope uses
+     * a per-plot Mutex and only does a ConcurrentHashMap lookup on the fast path.
      */
     private fun collectAllVars(): Map<String, Any?> {
         val plotScope = variableManager.getPlotScope(plotId)

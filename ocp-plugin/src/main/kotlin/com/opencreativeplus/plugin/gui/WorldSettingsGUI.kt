@@ -186,8 +186,7 @@ class WorldSettingsGUI(
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 renderInventory(player, updated)
             })
-        }
-    }
+        }    }
 
     private fun makeToggle(material: Material, name: String, enabled: Boolean, description: String): ItemStack {
         val stateText = if (enabled) "§aВКЛ" else "§cВЫКЛ"

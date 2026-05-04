@@ -137,15 +137,18 @@ class ItemCreatorGUI(
     /**
      * Delivers the created item to the player's inventory.
      * If inventory is full, drops the item at the player's feet.
+     * Must be called on the main thread (inventory API).
      * Requirements: 3.10, 3.11
      */
     internal fun deliverItem(player: Player, item: ItemStack) {
-        val leftover = player.inventory.addItem(item)
-        if (leftover.isNotEmpty()) {
-            // Inventory full — drop at feet
-            player.world.dropItem(player.location, item)
-            player.sendMessage("§e[OCP] Инвентарь полон, предмет выброшен рядом с вами.")
-        }
+        // inventory.addItem and world.dropItem require main thread
+        plugin.server.scheduler.runTask(plugin, Runnable {
+            val leftover = player.inventory.addItem(item)
+            if (leftover.isNotEmpty()) {
+                player.world.dropItem(player.location, item)
+                player.sendMessage("§e[OCP] Инвентарь полон, предмет выброшен рядом с вами.")
+            }
+        })
     }
 
     private fun makeItem(material: Material, name: String, lore: List<String>): ItemStack {

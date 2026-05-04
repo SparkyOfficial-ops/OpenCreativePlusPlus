@@ -259,7 +259,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(
             PlotEventListener(eventDispatcher, plotManager, modeManager, scope), this
         )
-        server.pluginManager.registerEvents(PlotBrowserGUI(plotPersistence, plotManager, scope), this)
+        server.pluginManager.registerEvents(PlotBrowserGUI(plotPersistence, plotManager, scope, this), this)
 
         // Req 7.5, 7.6: track player join/leave for WorldManager auto-unload
         server.pluginManager.registerEvents(object : Listener {
@@ -286,10 +286,10 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                 }
             }
         }, this)
-        server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope), this)
+        server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope, this), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
 
-        val plotTopGUI = PlotTopGUI(plotPersistence, plotManager, scope)
+        val plotTopGUI = PlotTopGUI(plotPersistence, plotManager, scope, this)
         server.pluginManager.registerEvents(plotTopGUI, this)
 
         // Category-based coding UI listeners

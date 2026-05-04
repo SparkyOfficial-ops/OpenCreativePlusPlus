@@ -27,7 +27,10 @@ import java.util.concurrent.CopyOnWriteArraySet
 class PlotTopGUI(
     private val plotPersistence: PlotPersistence,
     private val plotManager: PlotManagerImpl,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val plugin: org.bukkit.plugin.Plugin = requireNotNull(
+        org.bukkit.Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
+    ) { "OpenCreativePlus plugin not found" }
 ) : Listener {
 
     companion object {
@@ -82,11 +85,7 @@ class PlotTopGUI(
             val plots = loadTop27()
             val inv = buildInventory(plots)
             openInventories[player.uniqueId] = plots
-            Bukkit.getScheduler().runTask(
-                requireNotNull(Bukkit.getPluginManager().getPlugin("OpenCreativePlus")) {
-                    "Plugin not found"
-                }
-            ) { _ ->
+            Bukkit.getScheduler().runTask(plugin) { _ ->
                 viewers.add(player)
                 player.openInventory(inv)
             }
@@ -103,8 +102,8 @@ class PlotTopGUI(
      * Requirements: 8.5
      */
     fun onRatingChange(plotId: UUID) {
-        val plugin = Bukkit.getPluginManager().getPlugin("OpenCreativePlus") ?: return
         Bukkit.getScheduler().runTaskLater(plugin, Runnable {
+            // Snapshot viewers to avoid ConcurrentModificationException
             val currentViewers = viewers.filter { it.isOnline && it.openInventory.title == GUI_TITLE }
             currentViewers.forEach { player ->
                 open(player)
@@ -186,7 +185,7 @@ class PlotTopGUI(
             return
         }
         Bukkit.getScheduler().runTask(
-            requireNotNull(Bukkit.getPluginManager().getPlugin("OpenCreativePlus")),
+            plugin,
             Runnable { player.teleport(mainWorld.spawnLocation) }
         )
     }

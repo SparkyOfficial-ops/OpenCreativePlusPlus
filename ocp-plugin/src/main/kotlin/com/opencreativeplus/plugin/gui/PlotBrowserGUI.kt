@@ -28,7 +28,10 @@ import java.util.concurrent.ConcurrentHashMap
 class PlotBrowserGUI(
     private val plotPersistence: PlotPersistence,
     private val plotManager: PlotManagerImpl,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val plugin: org.bukkit.plugin.Plugin = requireNotNull(
+        org.bukkit.Bukkit.getPluginManager().getPlugin("OpenCreativePlus")
+    ) { "OpenCreativePlus plugin not found" }
 ) : Listener {
 
     companion object {
@@ -55,11 +58,7 @@ class PlotBrowserGUI(
             // Store mapping so click handler can resolve the plot
             openInventories[player.uniqueId] = plots
             // Inventory must be opened on the main thread
-            Bukkit.getScheduler().runTask(
-                requireNotNull(Bukkit.getPluginManager().getPlugin("OpenCreativePlus")) {
-                    "Plugin not found"
-                }
-            ) { _ ->
+            Bukkit.getScheduler().runTask(plugin) { _ ->
                 player.openInventory(inv)
             }
         }
@@ -161,7 +160,7 @@ class PlotBrowserGUI(
             return
         }
         Bukkit.getScheduler().runTask(
-            requireNotNull(Bukkit.getPluginManager().getPlugin("OpenCreativePlus")),
+            plugin,
             Runnable { player.teleport(mainWorld.spawnLocation) }
         )
     }

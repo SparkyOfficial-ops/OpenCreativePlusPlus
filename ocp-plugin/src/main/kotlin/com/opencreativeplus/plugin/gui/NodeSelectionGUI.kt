@@ -105,9 +105,11 @@ class NodeSelectionGUI(
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
         val player = event.player
 
+        // Cancel the event synchronously — mode check happens after
+        event.isCancelled = true
+
         // Only open the selection GUI in DEV mode
         if (modeManager != null && plotManager != null && scope != null) {
-            event.isCancelled = true
             scope.launch {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
                 if (modeManager.getCurrentMode(player, plot) != com.opencreativeplus.api.plot.PlotMode.DEV) return@launch
@@ -118,7 +120,6 @@ class NodeSelectionGUI(
             }
         } else {
             // Fallback: no mode check available
-            event.isCancelled = true
             pendingBlocks[player.uniqueId] = block
             open(player, block, category)
         }

@@ -13,6 +13,7 @@ import org.bukkit.event.entity.EntityDeathEvent
 import org.bukkit.event.entity.PlayerDeathEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.event.player.PlayerJoinEvent
+import java.util.logging.Logger
 
 /**
  * Bukkit event listener that bridges Minecraft events to the [EventDispatcher].
@@ -29,6 +30,8 @@ class PlotEventListener(
     private val scope: CoroutineScope
 ) : Listener {
 
+    private val logger = Logger.getLogger("PlotEventListener")
+
     @EventHandler
     fun onPlayerJoin(event: PlayerJoinEvent) {
         val player = event.player
@@ -44,7 +47,7 @@ class PlotEventListener(
                     player = player
                 )
             } catch (e: Exception) {
-                System.err.println("[OCP] Error handling PlayerJoinEvent for ${player.name}: ${e.message}")
+                logger.warning("[OCP] Error handling PlayerJoinEvent for ${player.name}: ${e.message}")
             }
         }
     }
@@ -73,7 +76,7 @@ class PlotEventListener(
                     player = player
                 )
             } catch (e: Exception) {
-                System.err.println("[OCP] Error handling PlayerInteractEvent for ${player.name}: ${e.message}")
+                logger.warning("[OCP] Error handling PlayerInteractEvent for ${player.name}: ${e.message}")
             }
         }
     }
@@ -121,7 +124,7 @@ class PlotEventListener(
                     player = player
                 )
             } catch (e: Exception) {
-                System.err.println("[OCP] Error handling EntityDamageByEntityEvent: ${e.message}")
+                logger.warning("[OCP] Error handling EntityDamageByEntityEvent: ${e.message}")
             }
         }
     }
@@ -151,7 +154,7 @@ class PlotEventListener(
                     player = victim
                 )
             } catch (e: Exception) {
-                System.err.println("[OCP] Error handling PlayerDeathEvent for ${victim.name}: ${e.message}")
+                logger.warning("[OCP] Error handling PlayerDeathEvent for ${victim.name}: ${e.message}")
             }
         }
     }
@@ -195,7 +198,7 @@ class PlotEventListener(
                     player = killerPlayer
                 )
             } catch (e: Exception) {
-                System.err.println("[OCP] Error handling EntityDeathEvent for ${victim.name}: ${e.message}")
+                logger.warning("[OCP] Error handling EntityDeathEvent for ${victim.name}: ${e.message}")
             }
         }
     }

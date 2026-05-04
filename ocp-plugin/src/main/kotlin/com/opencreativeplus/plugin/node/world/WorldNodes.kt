@@ -43,7 +43,8 @@ class GetBlockNode(params: Map<String, Any>) : IValue<Material?> {
 
     override suspend fun compute(context: ExecutionContext): Material? {
         val loc = context.localScope.get(locationVar) as? Location ?: return null
-        return loc.block.type
+        // getBlock().type reads world state — must run on main thread (Bukkit API)
+        return context.syncContext { loc.block.type }
     }
 }
 

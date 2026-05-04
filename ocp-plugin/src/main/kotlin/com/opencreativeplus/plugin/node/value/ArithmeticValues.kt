@@ -2,6 +2,9 @@ package com.opencreativeplus.plugin.node.value
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IValue
+import java.util.logging.Logger
+
+private val logger: Logger = Logger.getLogger("ArithmeticValues")
 
 /**
  * Arithmetic and comparison value nodes.
@@ -34,7 +37,10 @@ class DivideValue(private val left: Any?, private val right: Any?) : IValue<Doub
     override val displayName = "Divide"
     override suspend fun compute(context: ExecutionContext): Double {
         val r = resolve(right, context)
-        if (r == 0.0) return 0.0
+        if (r == 0.0) {
+            logger.warning("[OCP] DivideValue: division by zero — returning 0.0")
+            return 0.0
+        }
         return resolve(left, context) / r
     }
 }

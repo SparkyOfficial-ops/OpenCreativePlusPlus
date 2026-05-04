@@ -29,7 +29,8 @@ class SendMessageAction(
         // First resolve %placeholder% syntax, then legacy $varname syntax
         val parsedMessage = placeholderParser.parse(rawMessage, context)
         val resolvedMessage = resolveVariables(parsedMessage, context)
-        player.sendMessage(resolvedMessage)
+        // sendMessage must run on main thread (Bukkit API)
+        context.syncContext { player.sendMessage(resolvedMessage) }
     }
 
     /**

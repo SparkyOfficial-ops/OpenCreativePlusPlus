@@ -63,7 +63,8 @@ class SendActionBarNode(params: Map<String, Any>) : IAction {
 
     override suspend fun execute(context: ExecutionContext) {
         val player = context.localScope.get(playerVar) as? Player ?: return
-        player.sendActionBar(Component.text(message))
+        // sendActionBar must run on main thread (Adventure/Bukkit API)
+        context.syncContext { player.sendActionBar(Component.text(message)) }
     }
 }
 
@@ -132,6 +133,9 @@ class SendBossBarNode(params: Map<String, Any>) : IAction {
             val bossBar = Bukkit.createBossBar(title, barColor, BarStyle.SOLID)
             bossBar.progress = clampedProgress
             bossBar.addPlayer(player)
+            // Remove any existing bossbar for this player before storing the new one
+            (context.plotScope.get("bossbar_${player.uniqueId}") as? org.bukkit.boss.BossBar)
+                ?.removePlayer(player)
             context.plotScope.set("bossbar_${player.uniqueId}", bossBar)
         }
     }

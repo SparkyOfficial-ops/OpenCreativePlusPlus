@@ -37,7 +37,8 @@ class CreateScoreboardNode(params: Map<String, Any>) : IAction {
     override suspend fun execute(context: ExecutionContext) {
         val resolvedTitle = resolveTemplate(title, context)
         context.syncContext {
-            val scoreboard = Bukkit.getScoreboardManager()!!.newScoreboard
+            val scoreboard = Bukkit.getScoreboardManager().newScoreboard
+            @Suppress("DEPRECATION")
             val objective = scoreboard.registerNewObjective(name, "dummy", resolvedTitle)
             context.plotScope.set("scoreboard_$name", scoreboard)
             context.plotScope.set("scoreboard_obj_$name", objective)
@@ -108,7 +109,7 @@ class HideScoreboardNode(params: Map<String, Any>) : IAction {
     override suspend fun execute(context: ExecutionContext) {
         val player = context.localScope.get(playerVar) as? Player ?: return
         context.syncContext {
-            player.scoreboard = Bukkit.getScoreboardManager()!!.mainScoreboard
+            player.scoreboard = Bukkit.getScoreboardManager().mainScoreboard
         }
     }
 }

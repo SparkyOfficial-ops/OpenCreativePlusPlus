@@ -256,6 +256,23 @@ class BlockScanner(
     // -----------------------------------------------------------------------
 
     /**
+     * Safe variant of [Block.getRelative] that returns null instead of
+     * synchronously loading/generating a chunk when the target coordinates
+     * fall outside the currently loaded chunks.
+     *
+     * Using plain [Block.getRelative] across a chunk boundary on the main thread
+     * causes Bukkit to synchronously load (and potentially generate) the target
+     * chunk, freezing the server for several seconds — a guaranteed Watchdog crash
+     * if the BFS walks a glass strip built by a player toward the world border.
+     */
+    private fun Block.getRelativeSafe(face: BlockFace): Block? {
+        val targetX = this.x + face.modX
+        val targetZ = this.z + face.modZ
+        if (!world.isChunkLoaded(targetX shr 4, targetZ shr 4)) return null
+        return this.getRelative(face)
+    }
+
+    /**
      * Scan a single Y level for blue glass strip starts.
      * Only scans Z in [-SCAN_Z_RADIUS..SCAN_Z_RADIUS] and skips unloaded chunks.
      * Requirements: 4.1, 10.1
@@ -299,7 +316,7 @@ class BlockScanner(
             val state = queue.removeFirst()
             val (block, dir, nodeList) = state
 
-            // Collect block above current glass
+            // Collect block above current glass (UP is always loaded if the block itself is)
             val above = block.getRelative(BlockFace.UP)
             if (above.type != Material.AIR) {
                 val node = buildScannedNode(above)
@@ -308,53 +325,48 @@ class BlockScanner(
                 }
             }
 
-            // Determine candidate next blocks
-            val ahead      = block.getRelative(dir.toBlockFace())
+            // Determine candidate next blocks — use getRelativeSafe to avoid loading unloaded chunks
+            val ahead      = block.getRelativeSafe(dir.toBlockFace())
             val leftDir    = dir.turnLeft()
             val rightDir   = dir.turnRight()
-            val leftBlock  = block.getRelative(leftDir.toBlockFace())
-            val rightBlock = block.getRelative(rightDir.toBlockFace())
+            val leftBlock  = block.getRelativeSafe(leftDir.toBlockFace())
+            val rightBlock = block.getRelativeSafe(rightDir.toBlockFace())
 
-            val candidates = listOf(ahead to dir, leftBlock to leftDir, rightBlock to rightDir)
-                .filter { (b, _) -> b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited }
+            val candidates = listOfNotNull(
+                ahead?.let { it to dir },
+                leftBlock?.let { it to leftDir },
+                rightBlock?.let { it to rightDir }
+            ).filter { (b, _) -> b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited }
 
             when (candidates.size) {
                 0 -> {
-                    // Dead end — finalise this path
                     results.add(CodeLine(startBlock.location, nodeList, state.children))
                 }
                 1 -> {
                     val (next, nextDir) = candidates[0]
-                    // Piston System (Req 2.1, 2.3): if the last collected node was a conditional
-                    // and the next glass block has STICKY_PISTON above it, scan the child scope.
                     val nextAbove = next.getRelative(BlockFace.UP)
                     val lastNode = nodeList.lastOrNull()
                     if (lastNode != null &&
                         lastNode.blockType in CONDITIONAL_MATERIALS &&
                         nextAbove.type == OPENING_BRACKET
                     ) {
-                        // Mark the opening bracket glass as visited and scan the child scope
                         visited.add(LocationKey.of(next.location))
                         val (childCodeLine, afterPiston) = scanChildBranch(next, nextDir, visited)
                         state.children.add(childCodeLine)
 
                         if (afterPiston != null) {
-                            // Continue scanning from the block after the closing PISTON
                             val (afterBlock, afterDir) = afterPiston
                             visited.add(LocationKey.of(afterBlock.location))
                             queue.add(TraversalState(afterBlock, afterDir, nodeList, state.children))
                         } else {
-                            // No block after closing piston — dead end
                             results.add(CodeLine(startBlock.location, nodeList, state.children))
                         }
                     } else {
-                        // Continue along the single candidate normally
                         visited.add(LocationKey.of(next.location))
                         queue.add(TraversalState(next, nextDir, nodeList, state.children))
                     }
                 }
                 else -> {
-                    // Branch — current path is done; each candidate starts a new independent path
                     results.add(CodeLine(startBlock.location, nodeList, state.children))
                     for ((next, nextDir) in candidates) {
                         visited.add(LocationKey.of(next.location))
@@ -409,23 +421,23 @@ class BlockScanner(
         // The opening bracket glass block is already marked visited by the caller.
         // Now advance through the strip collecting nodes until depth reaches 0.
         while (true) {
-            // Find the next glass block
-            val ahead      = current.getRelative(dir.toBlockFace())
+            // Find the next glass block — use getRelativeSafe to prevent loading unloaded chunks
+            val ahead      = current.getRelativeSafe(dir.toBlockFace())
             val leftDir    = dir.turnLeft()
             val rightDir   = dir.turnRight()
-            val leftBlock  = current.getRelative(leftDir.toBlockFace())
-            val rightBlock = current.getRelative(rightDir.toBlockFace())
+            val leftBlock  = current.getRelativeSafe(leftDir.toBlockFace())
+            val rightBlock = current.getRelativeSafe(rightDir.toBlockFace())
 
-            val next = listOf(
-                ahead to dir,
-                leftBlock to leftDir,
-                rightBlock to rightDir
+            val next = listOfNotNull(
+                ahead?.let { it to dir },
+                leftBlock?.let { it to leftDir },
+                rightBlock?.let { it to rightDir }
             ).firstOrNull { (b, _) ->
                 b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
             }
 
             if (next == null) {
-                // End of strip without closing bracket
+                // End of strip without closing bracket (or hit unloaded chunk boundary)
                 if (depth > 0) {
                     parseErrors.add(ParseError(
                         "Unclosed bracket at ${current.location.blockX},${current.location.blockY},${current.location.blockZ}",
@@ -443,41 +455,35 @@ class BlockScanner(
             val above = current.getRelative(BlockFace.UP)
             when {
                 above.type == OPENING_BRACKET -> {
-                    // Nested opening bracket (Req 2.7)
                     depth++
                     if (depth > MAX_PISTON_DEPTH) {
                         parseErrors.add(ParseError(
                             "Piston nesting depth exceeded $MAX_PISTON_DEPTH at ${above.location.blockX},${above.location.blockY},${above.location.blockZ}",
                             above.location
                         ))
-                        // Continue scanning but don't go deeper — treat as a regular node
                     }
                 }
                 above.type == CLOSING_BRACKET -> {
-                    // Closing bracket (Req 2.2)
                     depth--
                     if (depth == 0) {
-                        // End of this scope — find the block after the closing piston
-                        val afterAhead      = current.getRelative(dir.toBlockFace())
+                        val afterAhead      = current.getRelativeSafe(dir.toBlockFace())
                         val afterLeftDir    = dir.turnLeft()
                         val afterRightDir   = dir.turnRight()
-                        val afterLeftBlock  = current.getRelative(afterLeftDir.toBlockFace())
-                        val afterRightBlock = current.getRelative(afterRightDir.toBlockFace())
+                        val afterLeftBlock  = current.getRelativeSafe(afterLeftDir.toBlockFace())
+                        val afterRightBlock = current.getRelativeSafe(afterRightDir.toBlockFace())
 
-                        val afterNext = listOf(
-                            afterAhead to dir,
-                            afterLeftBlock to afterLeftDir,
-                            afterRightBlock to afterRightDir
+                        val afterNext = listOfNotNull(
+                            afterAhead?.let { it to dir },
+                            afterLeftBlock?.let { it to afterLeftDir },
+                            afterRightBlock?.let { it to afterRightDir }
                         ).firstOrNull { (b, _) ->
                             b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
                         }
 
-                        // Req 4.1: check if the next glass block has END_STONE above it (else-marker)
                         if (afterNext != null) {
                             val (afterBlock, afterDir) = afterNext
                             val afterAbove = afterBlock.getRelative(BlockFace.UP)
                             if (afterAbove.type == ELSE_MARKER) {
-                                // Mark the else-marker glass as visited and scan the else branch
                                 visited.add(LocationKey.of(afterBlock.location))
                                 val (elseNodes, continuationAfterElse) = scanElseBranch(afterBlock, afterDir, visited)
                                 val childLineWithElse = CodeLine(
@@ -491,10 +497,8 @@ class BlockScanner(
 
                         return CodeLine(openingBracketGlass.location, childNodes) to afterNext
                     }
-                    // depth > 0: closing bracket for a nested scope — don't collect as node
                 }
                 above.type != Material.AIR -> {
-                    // Regular node inside the scope
                     val node = buildScannedNode(above)
                     if (node != null) childNodes.add(node)
                 }
@@ -526,22 +530,22 @@ class BlockScanner(
         var dir = direction
 
         while (true) {
-            val ahead      = current.getRelative(dir.toBlockFace())
+            // Use getRelativeSafe to avoid loading unloaded chunks during BFS
+            val ahead      = current.getRelativeSafe(dir.toBlockFace())
             val leftDir    = dir.turnLeft()
             val rightDir   = dir.turnRight()
-            val leftBlock  = current.getRelative(leftDir.toBlockFace())
-            val rightBlock = current.getRelative(rightDir.toBlockFace())
+            val leftBlock  = current.getRelativeSafe(leftDir.toBlockFace())
+            val rightBlock = current.getRelativeSafe(rightDir.toBlockFace())
 
-            val next = listOf(
-                ahead to dir,
-                leftBlock to leftDir,
-                rightBlock to rightDir
+            val next = listOfNotNull(
+                ahead?.let { it to dir },
+                leftBlock?.let { it to leftDir },
+                rightBlock?.let { it to rightDir }
             ).firstOrNull { (b, _) ->
                 b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
             }
 
             if (next == null) {
-                // End of strip without closing PISTON — Req 4.2: add ParseError
                 parseErrors.add(ParseError(
                     "Else block (END_STONE) at ${current.location.blockX},${current.location.blockY},${current.location.blockZ} has no closing PISTON",
                     current.location
@@ -557,17 +561,16 @@ class BlockScanner(
             val above = current.getRelative(BlockFace.UP)
             when {
                 above.type == CLOSING_BRACKET -> {
-                    // End of else scope — find the block after the closing PISTON
-                    val afterAhead      = current.getRelative(dir.toBlockFace())
+                    val afterAhead      = current.getRelativeSafe(dir.toBlockFace())
                     val afterLeftDir    = dir.turnLeft()
                     val afterRightDir   = dir.turnRight()
-                    val afterLeftBlock  = current.getRelative(afterLeftDir.toBlockFace())
-                    val afterRightBlock = current.getRelative(afterRightDir.toBlockFace())
+                    val afterLeftBlock  = current.getRelativeSafe(afterLeftDir.toBlockFace())
+                    val afterRightBlock = current.getRelativeSafe(afterRightDir.toBlockFace())
 
-                    val afterNext = listOf(
-                        afterAhead to dir,
-                        afterLeftBlock to afterLeftDir,
-                        afterRightBlock to afterRightDir
+                    val afterNext = listOfNotNull(
+                        afterAhead?.let { it to dir },
+                        afterLeftBlock?.let { it to afterLeftDir },
+                        afterRightBlock?.let { it to afterRightDir }
                     ).firstOrNull { (b, _) ->
                         b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
                     }

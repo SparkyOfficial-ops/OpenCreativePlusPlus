@@ -1,7 +1,6 @@
 package com.opencreativeplus.core.execution
 
 import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Configures the coroutine infrastructure for script execution.
@@ -28,13 +27,21 @@ class CoroutineConfiguration(
     val executionScope: CoroutineScope = CoroutineScope(SupervisorJob() + dispatcher)
 
     /**
-     * A dispatcher that runs blocks on the Bukkit main thread via the injected
-     * [syncRunner] callback. The plugin layer supplies something like:
-     *   `{ block -> Bukkit.getScheduler().runTask(plugin) { block() } }`
+     * A dispatcher that runs blocks on the Bukkit main thread via [syncRunner],
+     * with a fast-path: if the current thread is already the main thread
+     * (Bukkit.isPrimaryThread()), the block runs immediately without going
+     * through the Bukkit scheduler.  This eliminates the N×dispatch overhead
+     * when ExecutionEngine iterates over many targets all calling syncContext
+     * in sequence — each subsequent call after the first is essentially free.
      */
     val syncDispatcher: CoroutineDispatcher = object : CoroutineDispatcher() {
-        override fun dispatch(context: CoroutineContext, block: Runnable) {
-            syncRunner { block.run() }
+        override fun dispatch(context: kotlin.coroutines.CoroutineContext, block: Runnable) {
+            if (org.bukkit.Bukkit.isPrimaryThread()) {
+                // Fast-path: already on the main thread — run inline, no scheduler round-trip
+                block.run()
+            } else {
+                syncRunner { block.run() }
+            }
         }
     }
 

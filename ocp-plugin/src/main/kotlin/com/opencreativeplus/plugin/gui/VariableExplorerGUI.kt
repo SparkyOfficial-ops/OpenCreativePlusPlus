@@ -284,12 +284,21 @@ class VariableExplorerGUI(
     /**
      * Schedule a refresh on the Bukkit main thread for all current viewers,
      * using each viewer's current page.
+     *
+     * Soft-update: overwrites inventory contents in-place when the size matches
+     * to avoid resetting the player's mouse cursor position on every refresh.
      */
     private fun scheduleRefresh() {
         Bukkit.getScheduler().runTask(plugin, Runnable {
             viewers.forEach { viewer ->
                 val currentPage = viewerPages[viewer.uniqueId] ?: 0
-                viewer.openInventory(buildPagedInventory(currentPage))
+                val newInv = buildPagedInventory(currentPage)
+                val currentTop = viewer.openInventory.topInventory
+                if (currentTop.size == newInv.size) {
+                    currentTop.contents = newInv.contents
+                } else {
+                    viewer.openInventory(newInv)
+                }
             }
         })
     }

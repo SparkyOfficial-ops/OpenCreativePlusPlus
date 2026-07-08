@@ -154,12 +154,27 @@ abstract class ReactiveGUI(
     }
 
     /**
-     * Rebuild the inventory and push it to every current viewer.
+     * Rebuild the inventory and push changes to every current viewer.
+     *
+     * Uses a soft-update strategy: instead of calling [Player.openInventory] again
+     * (which resets the mouse cursor every time), we overwrite the contents of the
+     * already-open inventory when the size matches.  This keeps the cursor stable
+     * while the GUI refreshes — critical when a variable changes every tick and the
+     * player is trying to click a pagination button.
      *
      * s: 11.3
      */
     private fun updateAll() {
-        val inv = buildInventory()
-        viewers.forEach { p -> p.openInventory(inv) }
+        val newInv = buildInventory()
+        viewers.forEach { p ->
+            val currentTop = p.openInventory.topInventory
+            if (currentTop.size == newInv.size) {
+                // Soft update: swap contents in-place — no cursor reset
+                currentTop.contents = newInv.contents
+            } else {
+                // Size changed (e.g. variable count crossed a page boundary)
+                p.openInventory(newInv)
+            }
+        }
     }
 }

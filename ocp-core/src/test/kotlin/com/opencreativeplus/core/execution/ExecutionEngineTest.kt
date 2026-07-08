@@ -16,8 +16,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
@@ -230,26 +228,27 @@ class ExecutionEngineTest {
     // =========================================================================
 
     @Test
-    fun `multiple scripts for the same plot run concurrently`() = runBlocking {
-        // Given: two scripts each with a blocking latch action
+    fun `multiple scripts for the same plot execute sequentially via plot mutex`() = runBlocking {
+        // Given: two scripts on the same plot — with the per-plot execution mutex
+        // they run one after another, not simultaneously.
+        // Scripts on DIFFERENT plots still run concurrently.
         val plotId = UUID.randomUUID()
-        val latch1 = CountDownLatch(1)
-        val latch2 = CountDownLatch(1)
-        val started1 = AtomicBoolean(false)
-        val started2 = AtomicBoolean(false)
+        val log = CopyOnWriteArrayList<String>()
 
         val action1 = object : IAction {
             override val nodeId = "a1"; override val displayName = "A1"
             override suspend fun execute(context: ExecutionContext) {
-                started1.set(true)
-                withContext(Dispatchers.IO) { latch1.await(3, TimeUnit.SECONDS) }
+                log.add("script1_start")
+                delay(100)
+                log.add("script1_end")
             }
         }
         val action2 = object : IAction {
             override val nodeId = "a2"; override val displayName = "A2"
             override suspend fun execute(context: ExecutionContext) {
-                started2.set(true)
-                withContext(Dispatchers.IO) { latch2.await(3, TimeUnit.SECONDS) }
+                log.add("script2_start")
+                delay(50)
+                log.add("script2_end")
             }
         }
 
@@ -257,16 +256,18 @@ class ExecutionEngineTest {
         engine.executeScript(script(action1), plotId, mockPlayer(), emptyMap())
         engine.executeScript(script(action2), plotId, mockPlayer(), emptyMap())
 
-        // Give both coroutines time to start
-        delay(200)
+        delay(500)
 
-        // Then: both scripts started concurrently (neither blocked the other)
-        assertTrue(started1.get(), "Script 1 should have started")
-        assertTrue(started2.get(), "Script 2 should have started concurrently")
+        // Then: both scripts completed (in order — script1 holds the mutex first)
+        assertTrue(log.contains("script1_start"), "Script 1 should have started")
+        assertTrue(log.contains("script2_start"), "Script 2 should have started")
+        assertTrue(log.contains("script1_end"), "Script 1 should have finished")
+        assertTrue(log.contains("script2_end"), "Script 2 should have finished")
 
-        // Cleanup
-        latch1.countDown()
-        latch2.countDown()
+        // Sequential order: script1 must fully finish before script2 starts
+        val s1End = log.indexOf("script1_end")
+        val s2Start = log.indexOf("script2_start")
+        assertTrue(s1End < s2Start, "Script 2 must start only after script 1 finishes (mutex serialization)")
     }
 
     @Test
@@ -290,6 +291,9 @@ class ExecutionEngineTest {
     @Test
     fun `many concurrent scripts all complete successfully`() = runBlocking {
         // Given: 10 scripts on the same plot
+        // Note: with per-plot execution mutex, scripts on the same plot now run
+        // sequentially (one at a time). With delay(10) per action and 10 scripts,
+        // total time ≈ 10 * 10ms = 100ms. Timeout is 2000ms — no deadlock risk.
         val plotId = UUID.randomUUID()
         val completedCount = AtomicInteger(0)
         val scriptCount = 10
@@ -299,18 +303,18 @@ class ExecutionEngineTest {
             val action = object : IAction {
                 override val nodeId = "a$i"; override val displayName = "A$i"
                 override suspend fun execute(context: ExecutionContext) {
-                    delay(10) // small delay to ensure concurrency
+                    delay(10) // small delay to ensure sequencing is observable
                     completedCount.incrementAndGet()
                 }
             }
             engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
-        // Allow all coroutines to finish
-        delay(500)
+        // Allow all coroutines to finish — extra headroom for sequential execution
+        delay(2000)
 
-        // Then: all scripts completed
-        assertEquals(scriptCount, completedCount.get(), "All $scriptCount scripts should complete")
+        // Then: all scripts completed (sequential via mutex, but all eventually run)
+        assertEquals(scriptCount, completedCount.get(), "All $scriptCount scripts should complete (sequentially via plot mutex)")
     }
 
     // =========================================================================

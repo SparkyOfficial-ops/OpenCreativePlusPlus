@@ -17,6 +17,7 @@ import io.kotest.property.Arb
 import io.kotest.property.PropTestConfig
 import io.kotest.property.arbitrary.int
 import io.kotest.property.checkAll
+import org.junit.jupiter.api.Assertions.assertTrue
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.Location
@@ -417,8 +418,163 @@ class BlockScannerElsePropertyTest : FreeSpec({
     }
 
     // -----------------------------------------------------------------------
-    // Property 7c: then-branch and else-branch are mutually exclusive
+    // Property 7d: Nested if inside else-branch is parsed correctly
     // -----------------------------------------------------------------------
+
+    "Property 7d: nested if inside else-branch parses without errors and collects nodes correctly" - {
+
+        /**
+         * Verifies that a construct like:
+         *   if (A) { thenNode } else { if (B) { innerThenNode } innerElseNode }
+         *
+         * Strip layout (going EAST):
+         * [0]  BLUE_GLASS  — AIR above (start)
+         * [1]  WHITE_GLASS — OAK_PLANKS "if_player" above (outer conditional)
+         * [2]  WHITE_GLASS — STICKY_PISTON above (outer opening bracket)
+         * [3]  WHITE_GLASS — COBBLESTONE "outer_then" above
+         * [4]  WHITE_GLASS — PISTON above (outer closing bracket)
+         * [5]  WHITE_GLASS — END_STONE above (else-marker)
+         * [6]  WHITE_GLASS — OAK_PLANKS "if_player" above (inner conditional)
+         * [7]  WHITE_GLASS — STICKY_PISTON above (inner opening bracket — depth++ inside else)
+         * [8]  WHITE_GLASS — COBBLESTONE "inner_then" above
+         * [9]  WHITE_GLASS — PISTON above (inner closing bracket — depth-- inside else, depth still > 0)
+         * [10] WHITE_GLASS — COBBLESTONE "outer_else_after_inner" above
+         * [11] WHITE_GLASS — PISTON above (outer else closing bracket — depth == 0 → ends else)
+         * [12] WHITE_GLASS — AIR above (continuation after else)
+         *
+         * Expected:
+         * - No parse errors
+         * - The outer conditional child has elseActions containing nodes collected at depth==0:
+         *   "if_player" node (inner conditional) + "outer_else_after_inner" node
+         * - The sticky_piston and inner closing piston are NOT collected as nodes
+         *   (they are bracket markers, not registered actions)
+         */
+        "nested STICKY_PISTON inside else increments depth; inner PISTON decrements but does not close else" {
+            val y = 0
+            val totalBlocks = 13
+
+            val glassBlocks = (0 until totalBlocks).map { x ->
+                val mat = if (x == 0) Material.BLUE_STAINED_GLASS else Material.WHITE_STAINED_GLASS
+                mockGlass(x, y, 0, mat)
+            }
+            wireLinearStrip(glassBlocks)
+
+            // [0] AIR above start
+            every { glassBlocks[0].getRelative(BlockFace.UP) } returns mockAirAbove()
+
+            // [1] outer conditional (OAK_PLANKS / if_player)
+            val outerCond = mockConditionalNode(1, y + 1, 0)
+            every { glassBlocks[1].getRelative(BlockFace.UP) } returns outerCond
+
+            // [2] outer STICKY_PISTON (opening bracket)
+            every { glassBlocks[2].getRelative(BlockFace.UP) } returns mockStickyPiston(2, y + 1, 0)
+
+            // [3] outer then-node
+            every { glassBlocks[3].getRelative(BlockFace.UP) } returns mockActionNode(3, y + 1, 0, "outer_then")
+
+            // [4] outer PISTON (closing bracket for then-branch)
+            every { glassBlocks[4].getRelative(BlockFace.UP) } returns mockPiston(4, y + 1, 0)
+
+            // [5] END_STONE (else-marker)
+            every { glassBlocks[5].getRelative(BlockFace.UP) } returns mockEndStone(5, y + 1, 0)
+
+            // [6] inner conditional (OAK_PLANKS / if_player) — depth=0 in else, collected as node
+            val innerCond = mockConditionalNode(6, y + 1, 0)
+            every { glassBlocks[6].getRelative(BlockFace.UP) } returns innerCond
+
+            // [7] inner STICKY_PISTON (opening bracket) — depth++ → depth=1, NOT collected as node
+            every { glassBlocks[7].getRelative(BlockFace.UP) } returns mockStickyPiston(7, y + 1, 0)
+
+            // [8] inner then-node — depth=1, collected as node... but we're inside a nested scope
+            // According to the depth algorithm: at depth>0 blocks ARE collected as nodes
+            // This is the inner then-branch content
+            every { glassBlocks[8].getRelative(BlockFace.UP) } returns mockActionNode(8, y + 1, 0, "inner_then")
+
+            // [9] inner PISTON (closing bracket) — depth-- → depth=0, does NOT end else-branch
+            every { glassBlocks[9].getRelative(BlockFace.UP) } returns mockPiston(9, y + 1, 0)
+
+            // [10] outer-else node AFTER inner if — depth=0, collected
+            every { glassBlocks[10].getRelative(BlockFace.UP) } returns mockActionNode(10, y + 1, 0, "outer_else_after_inner")
+
+            // [11] outer PISTON (closing bracket for else-branch) — depth=0, ends else
+            every { glassBlocks[11].getRelative(BlockFace.UP) } returns mockPiston(11, y + 1, 0)
+
+            // [12] AIR above (continuation after else)
+            every { glassBlocks[12].getRelative(BlockFace.UP) } returns mockAirAbove()
+
+            val codeLines = scanner.scanStrip(glassBlocks[0])
+
+            // No parse errors
+            scanner.parseErrors shouldBe emptyList()
+            codeLines shouldHaveAtLeastSize 1
+
+            val outerChild = codeLines[0].children.firstOrNull()
+            checkNotNull(outerChild) { "Expected outer conditional child CodeLine" }
+
+            // Then-branch: outer_then node only
+            outerChild.nodes shouldHaveSize 1
+            outerChild.nodes[0].nodeId shouldBe "outer_then"
+
+            // Else-branch: inner conditional + inner_then (at depth=1) + outer_else_after_inner
+            // The depth algorithm collects nodes at ALL depth levels, not only depth==0.
+            // STICKY_PISTON and PISTON are NOT registered actions → buildScannedNode returns null → not added.
+            // inner conditional (OAK_PLANKS) IS a registered condition → added.
+            // inner_then (COBBLESTONE) IS registered → added at depth=1.
+            // outer_else_after_inner (COBBLESTONE) IS registered → added at depth=0.
+            outerChild.elseActions.shouldHaveAtLeastSize(2)
+            val elseNodeIds = outerChild.elseActions.mapNotNull { it.nodeId }
+            elseNodeIds shouldHaveAtLeastSize 1
+            assertTrue(
+                elseNodeIds.any { it.contains("outer_else_after_inner") },
+                "outer_else_after_inner must be present in elseActions"
+            )
+        }
+
+        "nested if inside else: closing piston of inner scope does NOT terminate else-branch (regression test)" {
+            // A minimal case: else { if (X) {} someAction }
+            // Before fix: first PISTON after END_STONE would close the else branch prematurely.
+            // After fix: depth tracking ensures only depth==0 PISTON closes the branch.
+            val y = 0
+
+            // Strip: [0]start [1]cond [2]openOuter [3]outerThen [4]closeOuter
+            //        [5]elseMarker [6]innerCond [7]openInner [8]innerThen [9]closeInner
+            //        [10]elseNode [11]closeElse [12]end
+            val totalBlocks = 13
+            val glassBlocks = (0 until totalBlocks).map { x ->
+                val mat = if (x == 0) Material.BLUE_STAINED_GLASS else Material.WHITE_STAINED_GLASS
+                mockGlass(x, y, x * 10, mat)  // unique Z to avoid LocationKey collision
+            }
+            wireLinearStrip(glassBlocks)
+
+            every { glassBlocks[0].getRelative(BlockFace.UP) } returns mockAirAbove()
+            every { glassBlocks[1].getRelative(BlockFace.UP) } returns mockConditionalNode(1, y+1, 10)
+            every { glassBlocks[2].getRelative(BlockFace.UP) } returns mockStickyPiston(2, y+1, 20)
+            every { glassBlocks[3].getRelative(BlockFace.UP) } returns mockActionNode(3, y+1, 30, "outer_then_b")
+            every { glassBlocks[4].getRelative(BlockFace.UP) } returns mockPiston(4, y+1, 40)
+            every { glassBlocks[5].getRelative(BlockFace.UP) } returns mockEndStone(5, y+1, 50)
+            every { glassBlocks[6].getRelative(BlockFace.UP) } returns mockConditionalNode(6, y+1, 60)
+            every { glassBlocks[7].getRelative(BlockFace.UP) } returns mockStickyPiston(7, y+1, 70)
+            every { glassBlocks[8].getRelative(BlockFace.UP) } returns mockActionNode(8, y+1, 80, "inner_then_b")
+            every { glassBlocks[9].getRelative(BlockFace.UP) } returns mockPiston(9, y+1, 90)
+            every { glassBlocks[10].getRelative(BlockFace.UP) } returns mockActionNode(10, y+1, 100, "else_after_inner_b")
+            every { glassBlocks[11].getRelative(BlockFace.UP) } returns mockPiston(11, y+1, 110)
+            every { glassBlocks[12].getRelative(BlockFace.UP) } returns mockAirAbove()
+
+            val codeLines = scanner.scanStrip(glassBlocks[0])
+            scanner.parseErrors shouldBe emptyList()
+
+            val child = codeLines[0].children.firstOrNull()
+            checkNotNull(child)
+
+            // The else-branch must include "else_after_inner_b" — only possible if
+            // the inner PISTON at [9] did NOT prematurely close the else-branch.
+            val elseIds = child.elseActions.mapNotNull { it.nodeId }
+            assertTrue(
+                elseIds.contains("else_after_inner_b"),
+                "else_after_inner_b must be in elseActions — inner PISTON must not close the else-branch"
+            )
+        }
+    }
 
     "Property 7c: then-branch nodes and else-branch nodes are mutually exclusive" - {
 

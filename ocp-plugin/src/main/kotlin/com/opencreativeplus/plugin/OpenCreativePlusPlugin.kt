@@ -241,7 +241,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             plotPersistence = plotPersistence
         )
 
-        plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager)
+        plotManager = PlotManagerImpl(plotPersistence, worldManager, modeManager, variableManager)
 
         BuiltInNodeRegistry.registerGUINodes(nodeRegistry, this, modeManager, plotManager, eventDispatcher, coroutineConfig.executionScope, plotPersistence)
 

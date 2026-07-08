@@ -216,13 +216,21 @@ class WorldManager(
 
         worldStates[plotId] = WorldLifecycleState.UNLOADING
 
-        // Unload the world (main-thread operation delegated to worldOps)
-        // Use try/finally to guarantee state is reset even if unload throws
+        // Unload both worlds by their real names stored in the plot record.
+        // Fall back to UUID-derived names if the plot record was unavailable.
+        val mainWorldName = plot?.mainWorldName ?: plotId.toString()
+        val devWorldName  = plot?.devWorldName  ?: "${plotId}_dev"
+
         try {
             runCatching {
-                worldOps.unloadWorld(plotId.toString())
+                worldOps.unloadWorld(mainWorldName)
             }.onFailure { e ->
-                logger.warning("[OCP] WorldManager: failed to unload world for plot $plotId: ${e.message}")
+                logger.warning("[OCP] WorldManager: failed to unload main world '$mainWorldName' for plot $plotId: ${e.message}")
+            }
+            runCatching {
+                worldOps.unloadWorld(devWorldName)
+            }.onFailure { e ->
+                logger.warning("[OCP] WorldManager: failed to unload dev world '$devWorldName' for plot $plotId: ${e.message}")
             }
         } finally {
             worldStates[plotId] = WorldLifecycleState.UNLOADED

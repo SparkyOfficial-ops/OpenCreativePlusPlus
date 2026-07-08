@@ -2,7 +2,9 @@ package com.opencreativeplus.plugin.node.worldedit
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.bukkit.Location
 import java.util.logging.Logger
 
@@ -55,8 +57,13 @@ class PasteRegionNode(params: Map<String, Any>) : IAction {
         context.operationCount.addAndGet(blockCount)
 
         // Batch execution: ≤ 5000 blocks per tick (req 10.5)
+        // Cancellation check per batch — stops paste if script is cancelled by Watchdog or mode-switch.
         val batches = clipboard.blocks.chunked(5000)
-        batches.forEachIndexed { index, batch ->
+        for ((index, batch) in batches.withIndex()) {
+            if (!kotlinx.coroutines.currentCoroutineContext().isActive) {
+                logger.warning("[OCP] PasteRegionNode: paste_region cancelled mid-flight (script terminated).")
+                break
+            }
             context.syncContext {
                 for (snapshot in batch) {
                     val block = world.getBlockAt(
@@ -67,7 +74,6 @@ class PasteRegionNode(params: Map<String, Any>) : IAction {
                     block.blockData = snapshot.data.clone()
                 }
             }
-            // Delay between batches (not after the last one)
             if (index < batches.size - 1) {
                 delay(50L)
             }

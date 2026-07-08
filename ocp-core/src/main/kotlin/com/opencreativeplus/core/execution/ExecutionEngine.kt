@@ -13,6 +13,7 @@ import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Logger
 
@@ -36,11 +37,11 @@ class ExecutionEngine(
     private val compiledScriptProvider: ((UUID) -> CompiledScript?)? = null,
     private val functionRegistry: FunctionRegistry? = null
 ) {
-    /** plotId → active jobs for that plot */
-    private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
+    /** plotId → active jobs for that plot (CopyOnWriteArrayList for thread-safe concurrent add/remove) */
+    private val activeExecutions = ConcurrentHashMap<UUID, CopyOnWriteArrayList<Job>>()
 
     /** "$plotId:$playerId" → active jobs for that player on that plot */
-    private val playerExecutions = ConcurrentHashMap<String, MutableList<Job>>()
+    private val playerExecutions = ConcurrentHashMap<String, CopyOnWriteArrayList<Job>>()
 
     /**
      * Inject or replace the [TraceManager] used for debug visualisation.
@@ -180,15 +181,22 @@ class ExecutionEngine(
             }
         }
 
-        // Track by plot
-        activeExecutions.getOrPut(plotId) { mutableListOf() }.add(job)
-        job.invokeOnCompletion { activeExecutions[plotId]?.remove(job) }
+        // Track by plot — CopyOnWriteArrayList is safe for concurrent add/remove across coroutine threads
+        activeExecutions.getOrPut(plotId) { CopyOnWriteArrayList() }.add(job)
+        job.invokeOnCompletion {
+            activeExecutions[plotId]?.remove(job)
+            // Remove empty list to prevent map memory leak
+            if (activeExecutions[plotId]?.isEmpty() == true) activeExecutions.remove(plotId)
+        }
 
         // Track by player if present
         player?.let {
             val key = playerKey(plotId, it.uniqueId)
-            playerExecutions.getOrPut(key) { mutableListOf() }.add(job)
-            job.invokeOnCompletion { playerExecutions[key]?.remove(job) }
+            playerExecutions.getOrPut(key) { CopyOnWriteArrayList() }.add(job)
+            job.invokeOnCompletion {
+                playerExecutions[key]?.remove(job)
+                if (playerExecutions[key]?.isEmpty() == true) playerExecutions.remove(key)
+            }
         }
     }
 

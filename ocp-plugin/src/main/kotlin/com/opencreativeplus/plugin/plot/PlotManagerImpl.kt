@@ -7,11 +7,13 @@ import com.opencreativeplus.api.plot.PlotMetadata
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.api.plot.PlotSettings
 import com.opencreativeplus.core.database.PlotPersistence
+import com.opencreativeplus.core.execution.VariableManager
 import com.opencreativeplus.plugin.world.WorldManager
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import java.util.logging.Logger
 
 /**
  * Implementation of [PlotManager] that coordinates world creation, database persistence,
@@ -23,8 +25,12 @@ import java.util.concurrent.ConcurrentHashMap
 class PlotManagerImpl(
     private val plotPersistence: PlotPersistence,
     private val worldManager: WorldManager,
-    private val modeManager: ModeManager
+    private val modeManager: ModeManager,
+    /** Injected to flush saved-scope variables to MongoDB on unload. Null in tests that don't need persistence. */
+    private val variableManager: VariableManager? = null
 ) : PlotManager {
+
+    private val logger = Logger.getLogger("PlotManagerImpl")
 
     /** In-memory cache of loaded plots */
     private val loadedPlots = ConcurrentHashMap<UUID, Plot>()
@@ -84,11 +90,20 @@ class PlotManagerImpl(
     }
 
     /**
-     * Unload a plot: save state, unload worlds, remove from cache.
-     27.5
+     * Unload a plot: flush saved variables, persist state, unload worlds, remove from cache.
+     * 27.5
      */
     override suspend fun unloadPlot(plotId: UUID) {
         val plot = loadedPlots[plotId] ?: return
+
+        // Auto-save saved-scope variables BEFORE anything else so no player data is lost
+        // on server restart, /clean, or automatic world unload. Req: saved-variable persistence.
+        runCatching {
+            variableManager?.savePlotVariables(plotId)
+        }.onFailure { e ->
+            logger.severe("[OCP] Failed to auto-save variables for plot $plotId before unload: ${e.message}")
+        }
+
         plotPersistence.updatePlot(plot.copy(updatedAt = System.currentTimeMillis()))
         worldManager.unloadPlotWorlds(plotId)
         loadedPlots.remove(plotId)

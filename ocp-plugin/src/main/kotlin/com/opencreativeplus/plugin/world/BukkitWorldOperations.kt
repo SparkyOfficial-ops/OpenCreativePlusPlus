@@ -48,6 +48,13 @@ class BukkitWorldOperations(
             try {
                 // Req 6.8: use FileUtils.copyDirectory from commons-io
                 FileUtils.copyDirectory(templateDir, destDir)
+
+                // Delete uid.dat so Bukkit generates a fresh world UUID for this plot.
+                // If uid.dat is copied from the template, all plots share the same Bukkit
+                // world UUID, causing teleportation, entity lookup, and chunk-save corruption.
+                val uidFile = File(destDir, "uid.dat")
+                if (uidFile.exists()) uidFile.delete()
+
                 // Req 6.5: load world on main thread after copy
                 loadWorldOnMainThread(worldName, onSuccess, onError)
             } catch (e: Exception) {

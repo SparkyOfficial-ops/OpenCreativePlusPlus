@@ -2,7 +2,9 @@ package com.opencreativeplus.plugin.node.worldedit
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.bukkit.Location
 import org.bukkit.Material
 import org.bukkit.util.BoundingBox
@@ -103,14 +105,20 @@ class FillRegionNode(params: Map<String, Any>) : IAction {
         context.operationCount.addAndGet(blockCount)
 
         // Batch execution: ≤ 5000 blocks per tick (req 9.3, 9.4)
+        // Check coroutine cancellation before every batch so a Watchdog-cancelled
+        // script or a mode-switch cancel() actually stops the fill mid-flight
+        // instead of continuing to place blocks for potentially 10+ seconds.
         val batches = positions.chunked(5000)
-        batches.forEachIndexed { index, batch ->
+        for ((index, batch) in batches.withIndex()) {
+            if (!kotlinx.coroutines.currentCoroutineContext().isActive) {
+                logger.warning("[OCP] FillRegionNode: fill_region cancelled mid-flight (script terminated).")
+                break
+            }
             context.syncContext {
                 for ((x, y, z) in batch) {
                     world.getBlockAt(x, y, z).type = material
                 }
             }
-            // Delay between batches (not after the last one)
             if (index < batches.size - 1) {
                 delay(50L)
             }

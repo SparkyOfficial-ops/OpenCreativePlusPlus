@@ -12,7 +12,6 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
 import org.bukkit.block.Sign
 import org.bukkit.block.TileState
 import org.bukkit.inventory.ItemStack
@@ -110,6 +109,13 @@ class BlockScanner(
 
         /** Function definition entry point block (Req 5.1). */
         val FUNCTION_ENTRY_MATERIAL = Material.LAPIS_BLOCK
+
+        /**
+         * Half-width of the Z scan range in [scanLevel].
+         * Kept within the plot coding-zone boundary so scanLevel never touches
+         * unloaded chunks outside the dev world.
+         */
+        const val SCAN_Z_RADIUS = 200
     }
 
     /**
@@ -139,8 +145,8 @@ class BlockScanner(
      */
     fun readFunctionName(block: org.bukkit.block.Block): String? {
         val above = block.getRelative(org.bukkit.block.BlockFace.UP)
-        val chest = above.state as? org.bukkit.block.Chest ?: return null
-        val firstItem = chest.inventory.getItem(0) ?: return null
+        val barrel = above.state as? org.bukkit.block.Barrel ?: return null
+        val firstItem = barrel.inventory.getItem(0) ?: return null
         return firstItem.plainDisplayName().takeIf { it.isNotBlank() }
     }
 
@@ -251,11 +257,14 @@ class BlockScanner(
 
     /**
      * Scan a single Y level for blue glass strip starts.
+     * Only scans Z in [-SCAN_Z_RADIUS..SCAN_Z_RADIUS] and skips unloaded chunks.
      * Requirements: 4.1, 10.1
      */
     private fun scanLevel(y: Int): List<CodeLine> {
         val lines = mutableListOf<CodeLine>()
-        for (z in -512..512 step 2) {
+        for (z in -SCAN_Z_RADIUS..SCAN_Z_RADIUS step 2) {
+            val chunkZ = z shr 4
+            if (!world.isChunkLoaded(0, chunkZ)) continue
             val startBlock = world.getBlockAt(0, y, z)
             if (startBlock.type == Material.BLUE_STAINED_GLASS) {
                 lines.addAll(scanStrip(startBlock))
@@ -664,7 +673,7 @@ class BlockScanner(
      */
     internal fun readConditionChildren(block: Block): List<String> {
         val above = block.getRelative(BlockFace.UP)
-        val aboveState = above.state as? Chest ?: return emptyList()
+        val aboveState = above.state as? org.bukkit.block.Barrel ?: return emptyList()
         val children = mutableListOf<String>()
         for (item in aboveState.inventory.contents) {
             if (item == null) continue
@@ -758,8 +767,8 @@ class BlockScanner(
      */
     fun readParamChestContainers(block: org.bukkit.block.Block): List<DataContainer?> {
         val above = block.getRelative(org.bukkit.block.BlockFace.UP)
-        val chest = above.state as? org.bukkit.block.Chest ?: return emptyList()
-        val contents = chest.inventory.contents
+        val barrel = above.state as? org.bukkit.block.Barrel ?: return emptyList()
+        val contents = barrel.inventory.contents
         return contents.mapIndexed { slot, item -> readDataContainer(item, slot, block.location) }
     }
 
@@ -778,11 +787,11 @@ class BlockScanner(
         // Try param-chest path first (new category-based system)
         val above = block.getRelative(BlockFace.UP)
         val aboveState = above.state
-        if (aboveState is Chest) {
+        if (aboveState is org.bukkit.block.Barrel) {
             val chestPdc = (aboveState as? TileState)?.persistentDataContainer
             val isParamChest = chestPdc?.get(KEY_PARAM_CHEST, PersistentDataType.STRING) == "true"
             if (isParamChest && descriptor != null) {
-                return buildParamChestMap(aboveState, descriptor)
+                return buildParamBarrelMap(aboveState, descriptor)
             }
         }
 
@@ -802,9 +811,9 @@ class BlockScanner(
      *
      * Requirements: 9.5, 9.6, 9.7, 9.8, 9.9
      */
-    private fun buildParamChestMap(chest: Chest, descriptor: ActionDescriptor): Map<String, Any> {
+    private fun buildParamBarrelMap(barrel: org.bukkit.block.Barrel, descriptor: ActionDescriptor): Map<String, Any> {
         val params = mutableMapOf<String, Any>()
-        val contents = chest.inventory.contents
+        val contents = barrel.inventory.contents
         var paramIndex = 0
 
         for (slot in contents.indices) {
@@ -849,10 +858,10 @@ class BlockScanner(
             }
         }
 
-        // 2. Read chest above (legacy Item_Variable detection)
+        // 2. Read barrel above (legacy Item_Variable detection)
         val above = block.getRelative(BlockFace.UP)
         val aboveState = above.state
-        if (aboveState is Chest) {
+        if (aboveState is org.bukkit.block.Barrel) {
             val nonNullContents = aboveState.inventory.contents.filterNotNull()
             params["chest_contents"] = nonNullContents
 

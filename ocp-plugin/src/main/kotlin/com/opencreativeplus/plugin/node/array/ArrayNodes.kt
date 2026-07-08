@@ -53,6 +53,13 @@ class AddToListNode(params: Map<String, Any>) : IAction {
 
         mutableList.add(resolvedValue)
         context.localScope.set(listVar, mutableList)
+
+        // Track heap growth for Watchdog memory limit. Req 29.1
+        val valueBytes: Long = when (val v = resolvedValue) {
+            is String -> (v.length * 2 + 40).toLong()
+            else -> 64L
+        }
+        context.trackMemory(valueBytes + 8L)
     }
 }
 

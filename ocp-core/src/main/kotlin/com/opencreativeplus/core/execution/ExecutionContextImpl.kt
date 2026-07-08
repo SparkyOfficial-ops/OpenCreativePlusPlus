@@ -31,21 +31,16 @@ class ExecutionContextImpl(
     override val operationCount: AtomicInteger,
     private val syncDispatcher: CoroutineDispatcher,
     override val callStackSize: AtomicInteger = AtomicInteger(0),
-    override val targets: MutableList<Entity> = if (player != null) mutableListOf(player) else mutableListOf()
+    override val targets: MutableList<Entity> = if (player != null) mutableListOf(player) else mutableListOf(),
+    /** Forwarded to Watchdog.trackMemoryAllocation. No-op by default. Req 29.1 */
+    private val memoryTracker: (plotId: UUID, bytes: Long) -> Unit = { _, _ -> }
 ) : ExecutionContext {
 
-    /**
-     * The current target entity being processed in the targets iteration loop.
-     * Set by ExecutionEngine before each action.execute(context) call.
-     * Null outside of the iteration loop.
-     * Req 1.1, 1.2
-     */
     override var currentTarget: Entity? = null
 
-    /**
-     * Switches to [syncDispatcher] (the Bukkit main thread) for the duration
-     * of [block], then resumes on the calling coroutine's dispatcher.
-     */
     override suspend fun <T> syncContext(block: () -> T): T =
         withContext(syncDispatcher) { block() }
+
+    /** Forward heap allocation to the Watchdog. Req 29.1 */
+    override fun trackMemory(bytes: Long) = memoryTracker(plotId, bytes)
 }

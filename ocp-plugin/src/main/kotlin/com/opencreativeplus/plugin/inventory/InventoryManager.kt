@@ -156,9 +156,9 @@ class InventoryManager(
         items.add(ItemStack(Material.WHITE_STAINED_GLASS, 64))
         items.add(ItemStack(Material.GRAY_STAINED_GLASS, 64))
 
-        // Slots 9–10: sign and chest (Req 2.4)
+        // Slots 9–10: sign and barrel (BARREL prevents double-chest merge, Req 2.4)
         items.add(ItemStack(Material.OAK_SIGN, 64))
-        items.add(ItemStack(Material.CHEST, 1))
+        items.add(ItemStack(Material.BARREL, 1))
 
         // Warn if exceeding 36 slots (Req 2.6)
         if (items.size > 36) {

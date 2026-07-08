@@ -35,5 +35,13 @@ class SetVariableNode(
             "saved" -> context.savedScope.set(resolvedKey, value)
             else    -> context.plotScope.set(resolvedKey, value)
         }
+
+        // Track heap for Watchdog memory limit. Req 29.1
+        val bytes: Long = when (value) {
+            is String -> (value.length * 2 + 40).toLong()
+            is List<*> -> (value.size * 8 + 48).toLong()
+            else -> 16L
+        }
+        context.trackMemory(bytes)
     }
 }

@@ -66,6 +66,15 @@ interface ExecutionContext {
     var currentTarget: Entity?
 
     /**
+     * Report [bytes] of memory allocated by this script execution to the Watchdog.
+     * Nodes that allocate significant heap (list append, string assign) must call
+     * this so the Watchdog can stop runaway scripts before OOM.
+     * Default is a no-op — overridden by ExecutionContextImpl.
+     * Req 29.1
+     */
+    fun trackMemory(bytes: Long) { /* no-op by default */ }
+
+    /**
      * Execute a block of code on the Bukkit main thread.
      * Used for operations that require sync context (e.g., teleportation, world manipulation).
      *

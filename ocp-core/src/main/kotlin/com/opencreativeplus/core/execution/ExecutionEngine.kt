@@ -80,7 +80,8 @@ class ExecutionEngine(
             plotScope = variableManager.getPlotScope(plotId),
             savedScope = variableManager.getSavedScope(plotId),
             operationCount = AtomicInteger(0),
-            syncDispatcher = coroutineConfig.syncDispatcher
+            syncDispatcher = coroutineConfig.syncDispatcher,
+            memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) }
         )
 
         val job = coroutineConfig.executionScope.launch {
@@ -236,7 +237,8 @@ class ExecutionEngine(
                 operationCount = context.operationCount,
                 syncDispatcher = coroutineConfig.syncDispatcher,
                 callStackSize = context.callStackSize,
-                targets = context.targets
+                targets = context.targets,
+                memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) }
             )
 
             // Execute the function's actions

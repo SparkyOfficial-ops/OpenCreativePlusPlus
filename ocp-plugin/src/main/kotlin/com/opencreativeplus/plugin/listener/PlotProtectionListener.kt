@@ -17,6 +17,10 @@ import org.bukkit.event.EventPriority
 import org.bukkit.event.Listener
 import org.bukkit.event.block.BlockBreakEvent
 import org.bukkit.event.block.BlockIgniteEvent
+import org.bukkit.event.block.BlockPhysicsEvent
+import org.bukkit.event.block.BlockPistonExtendEvent
+import org.bukkit.event.block.BlockPistonRetractEvent
+import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.block.BlockExplodeEvent
@@ -52,7 +56,7 @@ class PlotProtectionListener(
             Material.WHITE_STAINED_GLASS,
             Material.GRAY_STAINED_GLASS,
             Material.BLUE_STAINED_GLASS,
-            Material.CHEST,
+            Material.BARREL,
             Material.OAK_SIGN,
             Material.OAK_WALL_SIGN
         )
@@ -212,8 +216,35 @@ class PlotProtectionListener(
     }
 
     // -------------------------------------------------------------------------
+    // DEV-world physics freeze — pistons, block physics, leaves decay
+    // -------------------------------------------------------------------------
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onPistonExtend(event: BlockPistonExtendEvent) {
+        if (isDevWorld(event.block.world.name)) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onPistonRetract(event: BlockPistonRetractEvent) {
+        if (isDevWorld(event.block.world.name)) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onBlockPhysics(event: BlockPhysicsEvent) {
+        if (isDevWorld(event.block.world.name)) event.isCancelled = true
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onLeavesDecay(event: LeavesDecayEvent) {
+        if (isDevWorld(event.block.world.name)) event.isCancelled = true
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    private fun isDevWorld(worldName: String): Boolean =
+        plotManager.getAllLoadedPlotsSync().any { it.devWorldName == worldName }
 
     /** Returns true if [material] is in the combined whitelist. */
     private fun isWhitelisted(material: Material): Boolean =
@@ -237,9 +268,9 @@ class PlotProtectionListener(
      * Req 12.10
      */
     private fun cascadeBreakAttachments(categoryBlock: Block) {
-        // Break the parameter chest above
+        // Break the parameter barrel above
         val above = categoryBlock.getRelative(BlockFace.UP)
-        if (above.type == Material.CHEST && hasParamChestTag(above)) {
+        if (above.type == Material.BARREL && hasParamChestTag(above)) {
             above.type = Material.AIR
         }
 

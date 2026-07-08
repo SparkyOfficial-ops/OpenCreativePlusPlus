@@ -280,8 +280,17 @@ class BlockScanner(
     private fun scanLevel(y: Int): List<CodeLine> {
         val lines = mutableListOf<CodeLine>()
         for (z in -SCAN_Z_RADIUS..SCAN_Z_RADIUS step 2) {
+            val chunkX = 0 shr 4
             val chunkZ = z shr 4
-            if (!world.isChunkLoaded(0, chunkZ)) continue
+            // Force-load the chunk synchronously if needed.
+            // This is a one-shot operation that happens when the player switches to /play —
+            // acceptable cost vs. silently ignoring code the player built away from spawn.
+            if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                world.loadChunk(chunkX, chunkZ, /* generate = */ false)
+            }
+            // After load attempt: if still not loaded (chunk doesn't exist on disk), skip.
+            if (!world.isChunkLoaded(chunkX, chunkZ)) continue
+
             val startBlock = world.getBlockAt(0, y, z)
             if (startBlock.type == Material.BLUE_STAINED_GLASS) {
                 lines.addAll(scanStrip(startBlock))
@@ -528,9 +537,12 @@ class BlockScanner(
         val elseNodes = mutableListOf<ScannedNode>()
         var current = elseMarkerGlass
         var dir = direction
+        // depth tracks nested piston scopes INSIDE the else-branch.
+        // depth=0 means we are at the top level of the else-branch itself.
+        // When depth reaches 0 and we see CLOSING_BRACKET, the else-branch ends.
+        var depth = 0
 
         while (true) {
-            // Use getRelativeSafe to avoid loading unloaded chunks during BFS
             val ahead      = current.getRelativeSafe(dir.toBlockFace())
             val leftDir    = dir.turnLeft()
             val rightDir   = dir.turnRight()
@@ -560,22 +572,40 @@ class BlockScanner(
 
             val above = current.getRelative(BlockFace.UP)
             when {
-                above.type == CLOSING_BRACKET -> {
-                    val afterAhead      = current.getRelativeSafe(dir.toBlockFace())
-                    val afterLeftDir    = dir.turnLeft()
-                    val afterRightDir   = dir.turnRight()
-                    val afterLeftBlock  = current.getRelativeSafe(afterLeftDir.toBlockFace())
-                    val afterRightBlock = current.getRelativeSafe(afterRightDir.toBlockFace())
-
-                    val afterNext = listOfNotNull(
-                        afterAhead?.let { it to dir },
-                        afterLeftBlock?.let { it to afterLeftDir },
-                        afterRightBlock?.let { it to afterRightDir }
-                    ).firstOrNull { (b, _) ->
-                        b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
+                above.type == OPENING_BRACKET -> {
+                    // Nested conditional scope inside the else-branch — track depth,
+                    // do NOT collect as a regular node (piston is not a registered action).
+                    depth++
+                    if (depth > MAX_PISTON_DEPTH) {
+                        parseErrors.add(ParseError(
+                            "Piston nesting depth exceeded $MAX_PISTON_DEPTH inside else-branch at " +
+                            "${above.location.blockX},${above.location.blockY},${above.location.blockZ}",
+                            above.location
+                        ))
                     }
+                }
+                above.type == CLOSING_BRACKET -> {
+                    if (depth > 0) {
+                        // Closing bracket of a nested scope inside the else-branch — decrement, skip.
+                        depth--
+                    } else {
+                        // depth == 0: this is the closing bracket of the else-branch itself.
+                        val afterAhead      = current.getRelativeSafe(dir.toBlockFace())
+                        val afterLeftDir    = dir.turnLeft()
+                        val afterRightDir   = dir.turnRight()
+                        val afterLeftBlock  = current.getRelativeSafe(afterLeftDir.toBlockFace())
+                        val afterRightBlock = current.getRelativeSafe(afterRightDir.toBlockFace())
 
-                    return elseNodes to afterNext
+                        val afterNext = listOfNotNull(
+                            afterAhead?.let { it to dir },
+                            afterLeftBlock?.let { it to afterLeftDir },
+                            afterRightBlock?.let { it to afterRightDir }
+                        ).firstOrNull { (b, _) ->
+                            b.type in GLASS_STRIP_MATERIALS && LocationKey.of(b.location) !in visited
+                        }
+
+                        return elseNodes to afterNext
+                    }
                 }
                 above.type != Material.AIR -> {
                     val node = buildScannedNode(above)

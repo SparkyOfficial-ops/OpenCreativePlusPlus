@@ -365,6 +365,20 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         getCommand("ocplogs")?.setExecutor(LogViewCommand(executionLogger, plotManager, scope))
         getCommand("ocp_dialogue")?.setExecutor(OcpDialogueCommand())
 
+        // ── Auto-save: flush saved-scope variables to MongoDB every 5 minutes ──
+        // Guards against data loss on unexpected server crash (OOM, power cut, etc.)
+        // where onDisable/unloadPlot may not run.
+        server.scheduler.runTaskTimerAsynchronously(this, Runnable {
+            coroutineConfig.executionScope.launch {
+                plotManager.getAllLoadedPlots().forEach { plot ->
+                    runCatching { variableManager.savePlotVariables(plot.id) }
+                        .onFailure { e ->
+                            logger.warning("[OCP] Auto-save failed for plot ${plot.id}: ${e.message}")
+                        }
+                }
+            }
+        }, 6000L, 6000L)  // 6000 ticks = 5 minutes at 20 TPS
+
         logger.info("[OCP] OpenCreative++ enabled.")
     }
 
@@ -476,6 +490,23 @@ class ActionNodeInteractListener(
         scope.launch {
             val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
             if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
+
+            // Special case: CRAFTING_TABLE is the gui_designer node.
+            // The editor must open via right-click, not via script execution (design deadlock).
+            if (block.type == org.bukkit.Material.CRAFTING_TABLE) {
+                val actionId = (block.state as? org.bukkit.block.TileState)
+                    ?.persistentDataContainer
+                    ?.get(keyActionId, org.bukkit.persistence.PersistentDataType.STRING)
+                if (actionId == "gui_designer") {
+                    val params: Map<String, Any> = mapOf("menu_name" to (actionId + "_" + block.location.blockX))
+                    val node = nodeRegistry.getActionFactoryById("gui_designer")?.invoke(params)
+                    val designerNode = node as? com.opencreativeplus.plugin.node.gui.GUIDesignerNode
+                    designerNode?.let {
+                        plugin.server.scheduler.runTask(plugin) { _ -> it.openEditor(player, plot) }
+                    }
+                    return@launch
+                }
+            }
 
             // Read action_id from PDC to look up descriptor and its expectedParams
             val actionId = (block.state as? org.bukkit.block.TileState)

@@ -9,11 +9,11 @@ import com.opencreativeplus.core.watchdog.WatchdogException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Logger
 
@@ -37,11 +37,16 @@ class ExecutionEngine(
     private val compiledScriptProvider: ((UUID) -> CompiledScript?)? = null,
     private val functionRegistry: FunctionRegistry? = null
 ) {
-    /** plotId → active jobs for that plot (CopyOnWriteArrayList for thread-safe concurrent add/remove) */
-    private val activeExecutions = ConcurrentHashMap<UUID, CopyOnWriteArrayList<Job>>()
+    /** plotId → active jobs for that plot.
+     *  Uses a plain ArrayList wrapped in synchronized{} instead of CopyOnWriteArrayList:
+     *  COWAL copies the entire array on every add/remove — on Raspberry Pi 3 with hundreds
+     *  of events/sec this fills the JVM Eden space and triggers frequent STW GC pauses.
+     *  Write contention here is low (add on launch, remove on completion), so synchronized
+     *  is faster and GC-friendlier. */
+    private val activeExecutions = ConcurrentHashMap<UUID, MutableList<Job>>()
 
     /** "$plotId:$playerId" → active jobs for that player on that plot */
-    private val playerExecutions = ConcurrentHashMap<String, CopyOnWriteArrayList<Job>>()
+    private val playerExecutions = ConcurrentHashMap<String, MutableList<Job>>()
 
     /**
      * Inject or replace the [TraceManager] used for debug visualisation.
@@ -87,6 +92,11 @@ class ExecutionEngine(
 
         val job = coroutineConfig.executionScope.launch {
             val startTime = System.currentTimeMillis()
+            // Acquire per-plot mutex to serialize plotScope Read-Modify-Write operations.
+            // Prevents race conditions when multiple players trigger events simultaneously
+            // and both scripts modify the same global plot variable (e.g. balance).
+            val mutex = variableManager.getExecutionMutex(plotId)
+            mutex.withLock {
             try {
                 for ((index, action) in effectiveScript.actions.withIndex()) {
                     watchdog.checkExecution(context)
@@ -144,9 +154,7 @@ class ExecutionEngine(
             } catch (e: CancellationException) {
                 throw e  // always rethrow so the coroutine machinery can clean up
             } catch (e: WatchdogException) {
-                // 10.1 plotId is available from context; 10.4 use logger.warning instead of System.err
                 logger.warning("[OCP] Script stopped for plot $plotId: ${e.message}")
-                // 10.2 find plot owner; 10.3 notify via syncContext
                 val ownerUuid = plotManager?.getPlot(plotId)?.owner
                 if (ownerUuid != null) {
                     context.syncContext {
@@ -156,17 +164,13 @@ class ExecutionEngine(
                     }
                 }
             } catch (e: Exception) {
-                // Isolate the failure to this script only — log and continue (req 38.1)
                 logger.warning("[OCP] Script error on plot $plotId at ${effectiveScript.sourceLocation}: ${e.message}")
                 if (errorReporter != null) {
-                    // Hologram will be shown — suppress chat message to avoid spam (Req 12.5)
                     errorReporter.invoke(effectiveScript.sourceLocation, e.message ?: "Unknown error")
                 } else {
-                    // No hologram reporter configured — fall back to chat notification
                     player?.sendMessage("§c[OCP] Script error: ${e.message ?: "Unknown error"}")
                 }
             } finally {
-                // Trace hook: execution complete summary (s: 14.7)
                 player?.let { p ->
                     if (traceManager?.isTracing(p.uniqueId) == true) {
                         val durationMs = System.currentTimeMillis() - startTime
@@ -179,23 +183,33 @@ class ExecutionEngine(
                 }
                 context.localScope.clear()
             }
+            } // end mutex.withLock
         }
 
-        // Track by plot — CopyOnWriteArrayList is safe for concurrent add/remove across coroutine threads
-        activeExecutions.getOrPut(plotId) { CopyOnWriteArrayList() }.add(job)
+        // Track by plot — synchronized ArrayList: low write contention, GC-friendlier than COWAL
+        val plotJobs = activeExecutions.getOrPut(plotId) { mutableListOf() }
+        synchronized(plotJobs) { plotJobs.add(job) }
         job.invokeOnCompletion {
-            activeExecutions[plotId]?.remove(job)
-            // Remove empty list to prevent map memory leak
-            if (activeExecutions[plotId]?.isEmpty() == true) activeExecutions.remove(plotId)
+            activeExecutions[plotId]?.let { list ->
+                synchronized(list) {
+                    list.remove(job)
+                    if (list.isEmpty()) activeExecutions.remove(plotId)
+                }
+            }
         }
 
         // Track by player if present
         player?.let {
             val key = playerKey(plotId, it.uniqueId)
-            playerExecutions.getOrPut(key) { CopyOnWriteArrayList() }.add(job)
+            val playerJobs = playerExecutions.getOrPut(key) { mutableListOf() }
+            synchronized(playerJobs) { playerJobs.add(job) }
             job.invokeOnCompletion {
-                playerExecutions[key]?.remove(job)
-                if (playerExecutions[key]?.isEmpty() == true) playerExecutions.remove(key)
+                playerExecutions[key]?.let { list ->
+                    synchronized(list) {
+                        list.remove(job)
+                        if (list.isEmpty()) playerExecutions.remove(key)
+                    }
+                }
             }
         }
     }
@@ -306,7 +320,10 @@ class ExecutionEngine(
      * Called when a plot switches out of PLAY mode (req 26.2).
      */
     fun cancelAllExecutions(plotId: UUID) {
-        activeExecutions.remove(plotId)?.forEach { it.cancel() }
+        activeExecutions.remove(plotId)?.let { list ->
+            val snapshot = synchronized(list) { list.toList() }
+            snapshot.forEach { it.cancel() }
+        }
     }
 
     /**
@@ -315,7 +332,10 @@ class ExecutionEngine(
      */
     fun cancelPlayerExecutions(plotId: UUID, playerId: UUID) {
         val key = playerKey(plotId, playerId)
-        playerExecutions.remove(key)?.forEach { it.cancel() }
+        playerExecutions.remove(key)?.let { list ->
+            val snapshot = synchronized(list) { list.toList() }
+            snapshot.forEach { it.cancel() }
+        }
     }
 
     private fun playerKey(plotId: UUID, playerId: UUID) = "$plotId:$playerId"

@@ -2,7 +2,6 @@ package com.opencreativeplus.plugin.node.gui
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
-import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
@@ -12,8 +11,11 @@ import org.bukkit.plugin.Plugin
 /**
  * Action node that opens the [GUIDesignerEditor] for the executing player.
  *
- * Only works in DEV mode. The `menu_name` param identifies which [CustomMenuDefinition]
- * is being edited. The menu is stored in [PlotMenuRegistry] (keyed by plotId + menuName).
+ * The editor is opened only when the player right-clicks the CRAFTING_TABLE node
+ * block in DEV mode (via [ActionNodeInteractListener]). The execute() method itself
+ * is intentionally a no-op: scripts run in PLAY mode where DEV tooling must not open,
+ * and in DEV mode scripts don't execute at all — so there is no scenario in which
+ * calling execute() should open the editor.
  *
  * nodeId = "gui_designer"
  * params:
@@ -33,15 +35,23 @@ class GUIDesignerNode(
     override val nodeId = "gui_designer"
     override val displayName = "GUI Designer"
 
+    /**
+     * No-op: the GUI Designer is opened by right-clicking the CRAFTING_TABLE block
+     * in DEV mode via [ActionNodeInteractListener], not by script execution.
+     *
+     * Executing this node inside a PLAY-mode script would be a design error —
+     * the editor is a developer tool, not a runtime action.
+     */
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.player ?: return
-        val menuName = params["menu_name"]?.toString() ?: return
+        // intentional no-op — see class KDoc
+    }
 
-        // Only open the editor in DEV mode
-        val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return
-        if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return
-
-        // Use a no-op store (menus are stored in PlotMenuRegistry)
+    /**
+     * Opens the [GUIDesignerEditor] for [player] on the given [plot].
+     * Called directly by [ActionNodeInteractListener] on right-click in DEV mode.
+     */
+    fun openEditor(player: org.bukkit.entity.Player, plot: com.opencreativeplus.api.plot.Plot) {
+        val menuName = params["menu_name"]?.toString() ?: "menu_${System.currentTimeMillis()}"
         val menuStore = NoOpCustomMenuStore()
         val editor = GUIDesignerEditor(
             player = player,
@@ -52,10 +62,7 @@ class GUIDesignerNode(
             plotPersistence = plotPersistence,
             scope = scope
         )
-
-        context.syncContext {
-            plugin.server.pluginManager.registerEvents(editor, plugin)
-            editor.open()
-        }
+        plugin.server.pluginManager.registerEvents(editor, plugin)
+        editor.open()
     }
 }

@@ -33,6 +33,27 @@ class VariableManager(private val database: MongoDatabase) {
     private val savedScopes = ConcurrentHashMap<UUID, VariableScope>()
     private val scopeMutexes = ConcurrentHashMap<UUID, Mutex>()
 
+    /**
+     * Per-plot execution mutexes.
+     *
+     * Serializes concurrent script executions that touch the same plot's plotScope.
+     * Without this, two players triggering events simultaneously can interleave
+     * Read-Modify-Write operations on the same global variable (race condition).
+     *
+     * Usage in ExecutionEngine: acquire before executing a script, release after.
+     * Note: local-scope operations are inherently safe (isolated per execution).
+     * Note: for plots with many concurrent scripts this adds latency — acceptable
+     * trade-off vs. data corruption on shared variables like player balance.
+     */
+    private val executionMutexes = ConcurrentHashMap<UUID, Mutex>()
+
+    /**
+     * Returns the per-plot execution [Mutex] for [plotId].
+     * Used by ExecutionEngine to serialize script executions on the same plot.
+     */
+    fun getExecutionMutex(plotId: UUID): Mutex =
+        executionMutexes.getOrPut(plotId) { Mutex() }
+
     /** Shared flow that emits every variable change across all plots. */
     private val _changes = MutableSharedFlow<VariableChange>(extraBufferCapacity = 64)
 

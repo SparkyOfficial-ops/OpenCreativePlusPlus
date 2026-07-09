@@ -12,6 +12,7 @@ import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.inventory.InventoryClickEvent
+import org.bukkit.event.inventory.InventoryCloseEvent
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.inventory.meta.SkullMeta
@@ -59,6 +60,11 @@ class WorldBrowserGUI(
             val totalPages = if (allPublicPlots.isEmpty()) 1 else ((allPublicPlots.size - 1) / PAGE_SIZE) + 1
             val safePage = page.coerceIn(0, maxOf(0, totalPages - 1))
             val pagePlots = allPublicPlots.drop(safePage * PAGE_SIZE).take(PAGE_SIZE)
+
+            // Guard: player may have disconnected while we were loading plots from DB.
+            // ConcurrentHashMap.put() throws NPE when value is null — player.uniqueId
+            // can be null on a disconnected bukkit Player proxy in some Paper versions.
+            if (!player.isOnline) return@launch
 
             openInventories[player.uniqueId] = pagePlots
             playerPages[player.uniqueId] = safePage
@@ -116,11 +122,21 @@ class WorldBrowserGUI(
     }
 
     @EventHandler
+    fun onInventoryClose(event: InventoryCloseEvent) {
+        val player = event.player as? Player ?: return
+        if (event.view.title != GUI_TITLE) return
+        // Clean up to prevent memory leaks when player closes the GUI
+        openInventories.remove(player.uniqueId)
+        playerPages.remove(player.uniqueId)
+        playerSortModes.remove(player.uniqueId)
+        playerSearchQueries.remove(player.uniqueId)
+    }
+
+    @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
         val player = event.whoClicked as? Player ?: return
         if (event.view.title != GUI_TITLE) return
         event.isCancelled = true
-
         val slot = event.rawSlot
         val plots = openInventories[player.uniqueId] ?: return
         val currentPage = playerPages[player.uniqueId] ?: 0

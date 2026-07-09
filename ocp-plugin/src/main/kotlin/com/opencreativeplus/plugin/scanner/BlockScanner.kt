@@ -639,7 +639,7 @@ class BlockScanner(
                 ?: nodeRegistry.getValueFactoryById(pdcActionId)
 
             if (factory == null) {
-                logger.warning(
+                logger.fine(
                     "BlockScanner: action_id '$pdcActionId' at ${block.location} " +
                     "is not registered in NodeRegistry — skipping block"
                 )
@@ -669,7 +669,7 @@ class BlockScanner(
 
             // If no nodeId found by material either, skip this block (Req 4.3)
             if (materialNodeId == null) {
-                logger.warning(
+                logger.fine(
                     "BlockScanner: block ${block.type} at ${block.location} " +
                     "has no registered nodeId — skipping block"
                 )

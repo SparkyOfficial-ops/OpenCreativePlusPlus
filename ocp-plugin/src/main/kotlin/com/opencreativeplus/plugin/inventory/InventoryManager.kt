@@ -7,6 +7,8 @@ import com.opencreativeplus.core.database.MongoConnectionManager
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.registry.NodeCategory
 import kotlinx.coroutines.flow.firstOrNull
+import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.format.TextDecoration
 import org.bson.Document
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -18,6 +20,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
 
 /**
@@ -111,18 +114,64 @@ class InventoryManager(
         applyInventoryDoc(player, doc)
     }
 
+    /**
+     * Tracks which players are currently in DEV mode (plotId stored per player UUID).
+     * Used by [isDevInventoryComplete] to decide when to reprovision.
+     */
+    private val playersInDev = ConcurrentHashMap<UUID, UUID>() // playerId -> plotId
+
+    /**
+     * Records that [player] has entered DEV mode on [plotId].
+     */
+    fun markPlayerInDev(player: Player, plotId: UUID) {
+        playersInDev[player.uniqueId] = plotId
+    }
+
+    /**
+     * Records that [player] has left DEV mode.
+     */
+    fun unmarkPlayerInDev(player: Player) {
+        playersInDev.remove(player.uniqueId)
+    }
+
+    /**
+     * Returns true if [player] is currently in DEV mode.
+     */
+    fun isPlayerInDev(player: Player): Boolean = playersInDev.containsKey(player.uniqueId)
+
+    /**
+     * Returns the expected number of slots a provisioned DEV inventory occupies.
+     * Used to detect when items have gone missing.
+     */
+    private fun expectedDevSlotCount(): Int {
+        val categoryCount = categoryRegistry?.let { NodeCategory.entries.size } ?: 0
+        return categoryCount + 3 + 2  // categories + 3 glass + sign + barrel
+    }
+
+    /**
+     * Returns true if the player's DEV inventory is missing any items that should be there.
+     * Checks that the first [expectedDevSlotCount] slots are all non-empty.
+     */
+    fun isDevInventoryIncomplete(player: Player): Boolean {
+        val expected = expectedDevSlotCount()
+        for (i in 0 until minOf(expected, 36)) {
+            val item = player.inventory.getItem(i)
+            if (item == null || item.type == Material.AIR) return true
+        }
+        return false
+    }
+
     // -------------------------------------------------------------------------
     // DEV mode provisioning (Requirements 2.1–2.6, 7.2)
     // -------------------------------------------------------------------------
 
     /**
-     * Provision the DEV mode inventory with category blocks, glass, signs, and chests.
+     * Provision the DEV mode inventory with category blocks, glass, signs, and barrels.
      *
-     * Slots 0–5: one ItemStack (qty 64) per NodeCategory, display name = russianLabel.
-     * Slots 6–8: BLUE_STAINED_GLASS (64), WHITE_STAINED_GLASS (64), GRAY_STAINED_GLASS (64).
-     * Slots 9–10: OAK_SIGN (64), CHEST (1).
-     *
-     * If total item types exceed 36, logs a WARNING and fills only the first 36 slots.
+     * Each item:
+     * - Quantity = 1 (not stackable — easier to notice when missing)
+     * - Display name = non-italic bold white text via Adventure API
+     * - Lore = category description (italic disabled)
      *
      * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
      */
@@ -131,47 +180,83 @@ class InventoryManager(
 
         val items = mutableListOf<ItemStack>()
 
-        // Slots 0–5: six NodeCategory blocks with Russian display names (Req 2.2, 2.5)
         if (categoryRegistry != null) {
             NodeCategory.entries.forEach { category ->
-                val stack = ItemStack(category.material, 64)
-                val meta: ItemMeta? = stack.itemMeta
-                if (meta != null) {
-                    meta.setDisplayName(category.russianLabel)
-                    stack.itemMeta = meta
-                }
-                items.add(stack)
+                items.add(makeCategoryItem(category))
             }
         } else {
-            // Fallback: legacy material-based provisioning when no CategoryRegistry provided
             if (nodeRegistry is com.opencreativeplus.plugin.registry.NodeRegistryImpl) {
                 nodeRegistry.getRegisteredActionMaterials().forEach { material ->
-                    items.add(ItemStack(material, 64))
+                    items.add(ItemStack(material, 1))
                 }
             }
         }
 
-        // Slots 6–8: glass blocks (Req 2.3)
-        items.add(ItemStack(Material.BLUE_STAINED_GLASS, 64))
-        items.add(ItemStack(Material.WHITE_STAINED_GLASS, 64))
-        items.add(ItemStack(Material.GRAY_STAINED_GLASS, 64))
+        // Glass strips — qty 64 is intentional (placed in world, not held)
+        items.add(makeNamedItem(Material.BLUE_STAINED_GLASS,  64, "Синяя полоса",  "Начало новой строки кода"))
+        items.add(makeNamedItem(Material.WHITE_STAINED_GLASS, 64, "Белое стекло",  "Продолжение строки кода"))
+        items.add(makeNamedItem(Material.GRAY_STAINED_GLASS,  64, "Серое стекло",  "Разделитель / заполнитель"))
 
-        // Slots 9–10: sign and barrel (BARREL prevents double-chest merge, Req 2.4)
-        items.add(ItemStack(Material.OAK_SIGN, 64))
-        items.add(ItemStack(Material.BARREL, 1))
+        // Tools
+        items.add(makeNamedItem(Material.OAK_SIGN,  1, "Табличка",  "Параметры действий"))
+        items.add(makeNamedItem(Material.BARREL,    1, "Бочка",     "Хранилище параметров"))
 
-        // Warn if exceeding 36 slots (Req 2.6)
         if (items.size > 36) {
-            logger?.warning(
-                "provisionDevInventory: total item types (${items.size}) exceeds 36 — " +
-                "provisioning only the first 36 slots."
-            )
+            logger?.warning("provisionDevInventory: ${items.size} items — showing first 36 slots only.")
         }
 
-        // Fill inventory slots (Req 2.6: max 36)
         items.forEachIndexed { index, item ->
             if (index < 36) player.inventory.setItem(index, item)
         }
+    }
+
+    /**
+     * Creates a category block item with non-italic display name and lore.
+     */
+    private fun makeCategoryItem(category: NodeCategory): ItemStack {
+        val stack = ItemStack(category.material, 1)
+        val meta = stack.itemMeta ?: return stack
+
+        // Adventure API: bold white, italic explicitly disabled
+        meta.displayName(
+            Component.text(category.russianLabel)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true)
+        )
+        meta.lore(listOf(
+            Component.text("§7ПКМ — открыть список действий")
+                .decoration(TextDecoration.ITALIC, false)
+        ))
+
+        stack.itemMeta = meta
+        return stack
+    }
+
+    /**
+     * Creates a named item with non-italic bold white display name and grey lore.
+     */
+    private fun makeNamedItem(material: Material, amount: Int, name: String, loreLine: String): ItemStack {
+        val stack = ItemStack(material, amount)
+        val meta = stack.itemMeta ?: return stack
+
+        // Strip legacy § codes and build Adventure component directly
+        val cleanName = name.replace(Regex("§[0-9a-fk-orA-FK-OR]"), "")
+        val cleanLore = loreLine.replace(Regex("§[0-9a-fk-orA-FK-OR]"), "")
+
+        meta.displayName(
+            Component.text(cleanName)
+                .color(net.kyori.adventure.text.format.NamedTextColor.WHITE)
+                .decoration(TextDecoration.ITALIC, false)
+                .decoration(TextDecoration.BOLD, true)
+        )
+        meta.lore(listOf(
+            Component.text(cleanLore)
+                .color(net.kyori.adventure.text.format.NamedTextColor.GRAY)
+                .decoration(TextDecoration.ITALIC, false)
+        ))
+
+        stack.itemMeta = meta
+        return stack
     }
 
     // -------------------------------------------------------------------------

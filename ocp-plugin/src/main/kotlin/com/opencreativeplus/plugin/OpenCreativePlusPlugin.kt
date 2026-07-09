@@ -300,7 +300,9 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(
             PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
         )
-        // Auto-decoration: places a coloured glowing sign when a Category_Block lands on a strip
+        server.pluginManager.registerEvents(
+            com.opencreativeplus.plugin.listener.DevInventoryGuardListener(inventoryManager, this), this
+        )        // Auto-decoration: places a coloured glowing sign when a Category_Block lands on a strip
         server.pluginManager.registerEvents(
             AutoDecorationListener(
                 modeManager = modeManager,

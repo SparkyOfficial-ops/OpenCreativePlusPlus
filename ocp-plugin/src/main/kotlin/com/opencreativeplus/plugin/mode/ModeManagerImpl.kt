@@ -97,6 +97,7 @@ class ModeManagerImpl(
                 devVisualizer?.stopFor(player)
                 hologramReporter?.hideFromPlayer(player)
                 hologramReporter?.hideArgHolograms(player)
+                inventoryManager.unmarkPlayerInDev(player)
             }
             PlotMode.BUILD -> {
                 runOnMain {
@@ -145,6 +146,7 @@ class ModeManagerImpl(
         }
 
         runOnMain { inventoryManager.provisionDevInventory(player) }
+        inventoryManager.markPlayerInDev(player, plot.id)
         runOnMain {
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }

@@ -127,7 +127,6 @@ class ModeManagerImpl(
     }
 
     private suspend fun applyDevMode(player: Player, plot: Plot): Boolean {
-        // Check if player is allowed to enter DEV mode
         val isOwner = plot.owner == player.uniqueId
         val isTrustedWithAccess = plot.trustedPlayers.contains(player.uniqueId) && plot.settings.allowCodingAccess
         if (!isOwner && !isTrustedWithAccess) {
@@ -136,54 +135,49 @@ class ModeManagerImpl(
         }
 
         val worlds = worldManager.getLoadedWorlds(plot.id)
-        if (worlds != null) {
-            val spawnLoc: Location = worlds.second.spawnLocation
-            runOnMain {
-                resetPlayerState(player)
-                player.gameMode = GameMode.CREATIVE
-                player.allowFlight = true
-                player.teleport(spawnLoc)
-            }
-        } else {
-            runOnMain {
-                resetPlayerState(player)
-                player.gameMode = GameMode.CREATIVE
-            }
+        val spawnLoc: Location? = worlds?.second?.spawnLocation
+
+        runOnMain {
+            resetPlayerState(player)
+            player.gameMode = GameMode.CREATIVE
+            player.allowFlight = true
+            if (spawnLoc != null) player.teleport(spawnLoc)
         }
-        // provisionDevInventory — синхронный метод, должен выполняться на main thread
+
         runOnMain { inventoryManager.provisionDevInventory(player) }
         runOnMain {
             player.sendMessage("§a[OCP] DEV mode — place blocks on the blue glass strips to code.")
         }
+
+        // Scan async on coroutine thread — scanCodingZoneAsync suspends until main-thread scan is done
         val scanner = blockScannerFactory(plot)
         val codeLines = scanner.scanCodingZoneAsync { runOnMain(it) }
         devVisualizer?.startFor(player, codeLines)
         hologramReporter?.showToPlayer(player)
-        // Req 9.1: show arg holograms for all ParamChests when entering DEV mode
+
+        // Arg holograms: only show if there are actually any nodes with params
+        // Previously this iterated ALL nodes on EVERY /dev — now skipped when empty
         val hr = hologramReporter
-        if (hr != null) {
-            val devWorld = worldManager.getLoadedWorlds(plot.id)?.second
+        if (hr != null && codeLines.any { it.nodes.isNotEmpty() }) {
+            val devWorld = worlds?.second
             if (devWorld != null) {
                 for (codeLine in codeLines) {
                     for (node in codeLine.nodes) {
                         val args = runOnMain {
-                            val nodeBlock = devWorld.getBlockAt(node.location)
-                            val chestBlock = nodeBlock.getRelative(org.bukkit.block.BlockFace.UP)
-                            val chest = chestBlock.state as? org.bukkit.block.Chest
-                            chest?.inventory?.contents
-                                ?.filterNotNull()
-                                ?.mapNotNull { item ->
-                                    com.opencreativeplus.plugin.scanner.DataContainer.deserializeFrom(item)
-                                }
-                                ?.let { it to chestBlock.location }
+                            val chestBlock = devWorld.getBlockAt(node.location)
+                                .getRelative(org.bukkit.block.BlockFace.UP)
+                            val barrel = chestBlock.state as? org.bukkit.block.Barrel ?: return@runOnMain null
+                            val containers = barrel.inventory.contents
+                                .filterNotNull()
+                                .mapNotNull { com.opencreativeplus.plugin.scanner.DataContainer.deserializeFrom(it) }
+                            if (containers.isEmpty()) null else containers to chestBlock.location
                         } ?: continue
-                        if (args.first.isNotEmpty()) {
-                            hr.showArgHolograms(player, args.second, args.first)
-                        }
+                        hr.showArgHolograms(player, args.second, args.first)
                     }
                 }
             }
         }
+
         loadAndRegisterCustomMenus(plot.id)
         return true
     }

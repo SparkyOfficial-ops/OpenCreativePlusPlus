@@ -21,14 +21,15 @@ class CodingGridGenerator(
         ?: error("OpenCreativePlus plugin not found")
 ) {
     companion object {
-        const val STRIP_LENGTH  = 100
-        const val STRIP_COUNT   = 40
+        const val STRIP_LENGTH  = 50   // 50 блоков длина полосы (было 100 — вдвое меньше блоков)
+        const val STRIP_COUNT   = 20   // 20 полос (было 40 — вдвое меньше полос)
         const val LEVEL_SPACING = 20
         const val STRIP_SPACING = 4
-        const val LEVEL_COUNT   = 8
+        const val LEVEL_COUNT   = 4    // 4 уровня (было 8 — вдвое меньше уровней)
 
+        // Итого: 50*20*4 = 4000 стрипов вместо 100*40*8 = 32000 (в 8 раз меньше блоков)
         // World border size for the dev world (full area + margin)
-        const val DEV_BORDER_SIZE = 512.0
+        const val DEV_BORDER_SIZE = 256.0  // уменьшаем вместе с сеткой
     }
 
     /**
@@ -80,6 +81,8 @@ class CodingGridGenerator(
     }
 
     private fun startBatchedGeneration(world: World) {
+        // With reduced grid (4 levels × 50 strips × 50 length) total blocks ≈ 12,000
+        // Generate all levels in one go — fast enough not to lag the server
         object : org.bukkit.scheduler.BukkitRunnable() {
             var currentLevel = 0
 
@@ -92,7 +95,7 @@ class CodingGridGenerator(
                 generateLevel(world, y)
                 currentLevel++
             }
-        }.runTaskTimer(plugin, 0L, 2L)
+        }.runTaskTimer(plugin, 0L, 1L)  // 1 tick per level instead of 2
     }
 
     private fun generateLevel(world: World, y: Int) {

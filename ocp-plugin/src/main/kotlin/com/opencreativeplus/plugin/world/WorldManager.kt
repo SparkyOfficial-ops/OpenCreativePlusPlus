@@ -63,6 +63,7 @@ class WorldManager(
 
     /**
      * Load existing worlds for a plot (fallback to creation if not found).
+     * Does NOT regenerate the coding grid — grid is generated only on creation.
      1.5, 27.2, 27.4
      */
     suspend fun loadPlotWorlds(plotId: UUID): Pair<World, World> =
@@ -73,8 +74,10 @@ class WorldManager(
                     val devWorldName = "${plotId}_dev"
                     val mainWorld = Bukkit.getWorld(mainWorldName)
                         ?: createWorld(mainWorldName, isDevWorld = false).also { configureMainWorld(it) }
+                    // For dev world on load: configure settings but DON'T regenerate the grid
+                    // (grid already exists from createPlotWorlds — regenerating it every load is the #1 cause of slowness)
                     val devWorld = Bukkit.getWorld(devWorldName)
-                        ?: createWorld(devWorldName, isDevWorld = true).also { configureDevWorld(it) }
+                        ?: createWorld(devWorldName, isDevWorld = true).also { configureDevWorldSettings(it) }
                     loadedWorlds[plotId] = Pair(mainWorld, devWorld)
                     cont.resume(Pair(mainWorld, devWorld))
                 } catch (e: Exception) {
@@ -147,9 +150,20 @@ class WorldManager(
 
     /**
      * Configure the dev world and generate the coding grid.
+     * Called ONLY during plot creation (createPlotWorlds).
      1.4, 3.1
      */
     private fun configureDevWorld(world: World) {
+        configureDevWorldSettings(world)
+        // Generate the coding grid (req 3.1) — only on first creation
+        codingGridGenerator.generate(world)
+    }
+
+    /**
+     * Apply dev world game rules and settings WITHOUT regenerating the grid.
+     * Called during loadPlotWorlds to avoid regenerating blocks every server restart.
+     */
+    private fun configureDevWorldSettings(world: World) {
         world.setKeepSpawnInMemory(false)
         world.difficulty = Difficulty.PEACEFUL
         world.pvp = false
@@ -158,11 +172,6 @@ class WorldManager(
         world.setGameRuleValue("doDaylightCycle", "false")
         world.setGameRuleValue("doWeatherCycle", "false")
         world.setGameRuleValue("fallDamage", "false")
-
-        // Generate the coding grid (req 3.1)
-        codingGridGenerator.generate(world)
-
-        // Spawn player above the first strip at level Y=15 (first level)
         world.setSpawnLocation(0, 16, 0)
     }
 }

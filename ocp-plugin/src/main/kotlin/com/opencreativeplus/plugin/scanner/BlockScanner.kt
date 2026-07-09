@@ -112,10 +112,10 @@ class BlockScanner(
 
         /**
          * Half-width of the Z scan range in [scanLevel].
-         * Kept within the plot coding-zone boundary so scanLevel never touches
-         * unloaded chunks outside the dev world.
+         * Must cover all strips: STRIP_COUNT * STRIP_SPACING = 20 * 4 = 80 blocks.
+         * 100 gives a small margin beyond the actual grid.
          */
-        const val SCAN_Z_RADIUS = 200
+        const val SCAN_Z_RADIUS = 100
     }
 
     /**
@@ -193,15 +193,21 @@ class BlockScanner(
 
     /**
      * Scan the entire coding zone and return all discovered CodeLines.
-     * Requirements: 4.1, 10.1
      *
-     * Must be called from the Bukkit main thread (or via [scanCodingZoneAsync]) because
-     * internal methods access [Block.state] / TileEntity data which PaperMC guards against
-     * asynchronous access (throws IllegalStateException: Tile is null, asynchronous access?).
+     * Only scans the Y levels that the [CodingGridGenerator] actually places strips at:
+     * Y = 15, 35, 55, ... (15 + level * 20) for LEVEL_COUNT levels.
+     * Previously iterated 0..255 step 5 = 52 iterations; now only LEVEL_COUNT = 4.
+     *
+     * Requirements: 4.1, 10.1
      */
     fun scanCodingZone(): List<CodeLine> {
         val codeLines = mutableListOf<CodeLine>()
-        for (y in 0..255 step 5) {
+        // Match CodingGridGenerator: Y = 15 + level * LEVEL_SPACING, for LEVEL_COUNT levels
+        val levelSpacing = 20
+        val levelCount = 4   // must match CodingGridGenerator.LEVEL_COUNT
+        val baseY = 15       // must match CodingGridGenerator first level Y
+        for (level in 0 until levelCount) {
+            val y = baseY + level * levelSpacing
             codeLines.addAll(scanLevel(y))
         }
         return codeLines

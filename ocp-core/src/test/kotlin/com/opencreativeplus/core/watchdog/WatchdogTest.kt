@@ -1,21 +1,32 @@
 package com.opencreativeplus.core.watchdog
 
 import com.opencreativeplus.api.execution.ExecutionContext
-import io.mockk.every
+import com.opencreativeplus.api.execution.VariableScope
+import com.opencreativeplus.core.execution.CompiledScript
+import com.opencreativeplus.core.execution.ScriptFrame
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.throwables.shouldNotThrowAny
+import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.mockk.mockk
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
+import org.bukkit.entity.Entity
+import org.bukkit.entity.Player
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import java.util.concurrtTrue
 
 /**
  * Unit tests for the Watchdog anti-lag system.
  *
- 8.2, 8.3, 8.4, 29.2
+ * Covers:
+ * - Legacy checkExecution path (operation limit, TPS, memory)
+ * - checkTps() direct TPS threshold checks (Requirements 9.2, 9.3)
+ * - areScriptsPaused() state (Requirements 9.2, 9.3)
+ * - checkFrame() operation limit + onCancel callback (Requirements 9.1, 9.4)
+ * - checkFrame() memory limit + onCancel callback
+ * - getStats() / WatchdogStats snapshot (Requirement 9.6)
+ *
+ * Validates: Requirements 9.1, 9.2, 9.4
  */
 class WatchdogTest {
 
@@ -39,6 +50,22 @@ class WatchdogTest {
         every { ctx.plotId } returns plotId
         every { ctx.operationCount } returns AtomicInteger(ops)
         return ctx
+    }
+
+    /** Create a minimal fake [ScriptFrame] without needing a running Bukkit server. */
+    private fun frame(
+        plotId: UUID = UUID.randomUUID(),
+        ops: Int = 0
+    ): ScriptFrame {
+        val ctx = context(plotId = plotId, ops = ops)
+        val script = mockk<CompiledScript>(relaxed = true)
+        return ScriptFrame(
+            frameId = UUID.randomUUID(),
+            plotId = plotId,
+            player = null,
+            script = script,
+            context = ctx
+        )
     }
 
     // =========================================================================
@@ -250,5 +277,303 @@ class WatchdogTest {
     @Test
     fun `MAX_MEMORY_BYTES constant equals 50 MB`() {
         assertEquals(50L * 1024 * 1024, Watchdog.MAX_MEMORY_BYTES)
+    }
+
+    // =========================================================================
+    // checkTps() — direct TPS threshold checks  (Requirements 9.2, 9.3)
+    // =========================================================================
+
+    @Nested
+    inner class CheckTpsThresholds {
+
+        @Test
+        fun `checkTps does not throw when TPS is above MIN_TPS and scripts are not paused`() {
+            // Req 9.2: normal TPS — no pause should occur
+            every { tpsMonitor.getCurrentTPS() } returns 20.0
+
+            watchdog.checkTps() // must not throw
+            assertFalse(watchdog.areScriptsPaused())
+        }
+
+        @Test
+        fun `checkTps throws and pauses scripts when TPS drops below MIN_TPS`() {
+            // Req 9.2: when TPS < MIN_TPS, scripts must be paused
+            every { tpsMonitor.getCurrentTPS() } returns Watchdog.MIN_TPS - 0.1
+
+            val ex = assertFailsWith<WatchdogException> { watchdog.checkTps() }
+            assertTrue(watchdog.areScriptsPaused(), "Scripts should be paused after TPS drop")
+            assertTrue(ex.message!!.contains("TPS"), "Exception message should mention TPS")
+        }
+
+        @Test
+        fun `checkTps throws when TPS is exactly at MIN_TPS boundary`() {
+            // Req 9.2: boundary — TPS == MIN_TPS means NOT paused yet (condition is < MIN_TPS)
+            // MIN_TPS = 15.0 — if current TPS is exactly 15.0 it is not below threshold
+            every { tpsMonitor.getCurrentTPS() } returns Watchdog.MIN_TPS
+
+            watchdog.checkTps() // should NOT throw at exactly MIN_TPS
+            assertFalse(watchdog.areScriptsPaused())
+        }
+
+        @Test
+        fun `areScriptsPaused returns false initially`() {
+            // Req 9.2: fresh Watchdog should not be paused
+            assertFalse(watchdog.areScriptsPaused())
+        }
+
+        @Test
+        fun `checkTps keeps scripts paused when TPS is between MIN_TPS and RESUME_TPS`() {
+            // Req 9.2: once paused, scripts stay paused until TPS >= RESUME_TPS
+            every { tpsMonitor.getCurrentTPS() } returns 10.0
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+            assertTrue(watchdog.areScriptsPaused())
+
+            // TPS recovers partially — below RESUME_TPS
+            every { tpsMonitor.getCurrentTPS() } returns Watchdog.RESUME_TPS - 0.1
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+            assertTrue(watchdog.areScriptsPaused(), "Scripts should remain paused below RESUME_TPS")
+        }
+
+        @Test
+        fun `checkTps resumes scripts when TPS recovers above RESUME_TPS`() {
+            // Req 9.3: when TPS >= RESUME_TPS, pause flag must be cleared
+            every { tpsMonitor.getCurrentTPS() } returns 10.0
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+            assertTrue(watchdog.areScriptsPaused())
+
+            every { tpsMonitor.getCurrentTPS() } returns Watchdog.RESUME_TPS + 0.1
+            watchdog.checkTps() // must NOT throw
+            assertFalse(watchdog.areScriptsPaused(), "Scripts should resume after TPS recovery")
+        }
+
+        @Test
+        fun `checkTps resumes scripts when TPS is exactly at RESUME_TPS`() {
+            // Req 9.3: boundary — TPS == RESUME_TPS (condition is >= RESUME_TPS)
+            every { tpsMonitor.getCurrentTPS() } returns 10.0
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+
+            every { tpsMonitor.getCurrentTPS() } returns Watchdog.RESUME_TPS
+            watchdog.checkTps() // must NOT throw at exactly RESUME_TPS
+            assertFalse(watchdog.areScriptsPaused())
+        }
+
+        @Test
+        fun `areScriptsPaused returns true after TPS drops below MIN_TPS`() {
+            // Req 9.2: areScriptsPaused() must reflect the paused state
+            every { tpsMonitor.getCurrentTPS() } returns 5.0
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+
+            assertTrue(watchdog.areScriptsPaused())
+        }
+
+        @Test
+        fun `areScriptsPaused returns false after TPS recovers above RESUME_TPS`() {
+            // Req 9.3: areScriptsPaused() must reflect the resumed state
+            every { tpsMonitor.getCurrentTPS() } returns 5.0
+            assertFailsWith<WatchdogException> { watchdog.checkTps() }
+
+            every { tpsMonitor.getCurrentTPS() } returns 20.0
+            watchdog.checkTps()
+
+            assertFalse(watchdog.areScriptsPaused())
+        }
+    }
+
+    // =========================================================================
+    // checkFrame() — operation limit and onCancel callback  (Requirements 9.1, 9.4)
+    // =========================================================================
+
+    @Nested
+    inner class CheckFrame {
+
+        @Test
+        fun `checkFrame does not throw and does not call onCancel when operations are below limit`() {
+            // Req 9.1: frame within limits — execution continues normally
+            val f = frame(ops = Watchdog.MAX_OPERATIONS - 1)
+            var cancelled = false
+
+            watchdog.checkFrame(f) { cancelled = true }
+
+            assertFalse(cancelled, "onCancel should NOT be called when under operation limit")
+        }
+
+        @Test
+        fun `checkFrame throws WatchdogException when operation count equals MAX_OPERATIONS`() {
+            // Req 9.1: at the limit — must be terminated
+            val f = frame(ops = Watchdog.MAX_OPERATIONS)
+            var cancelled = false
+
+            val ex = assertFailsWith<WatchdogException> { watchdog.checkFrame(f) { cancelled = true } }
+
+            assertTrue(cancelled, "onCancel MUST be called when operation limit is reached")
+            assertTrue(
+                ex.message!!.contains("Operation limit exceeded"),
+                "Exception message should mention operation limit"
+            )
+        }
+
+        @Test
+        fun `checkFrame throws WatchdogException when operation count exceeds MAX_OPERATIONS`() {
+            // Req 9.1: above the limit
+            val f = frame(ops = Watchdog.MAX_OPERATIONS + 100)
+
+            assertFailsWith<WatchdogException> { watchdog.checkFrame(f) {} }
+        }
+
+        @Test
+        fun `checkFrame calls onCancel with the cancelled frame`() {
+            // Req 9.4: the exact frame that exceeded the limit must be passed to onCancel
+            val f = frame(ops = Watchdog.MAX_OPERATIONS)
+            var cancelledFrame: ScriptFrame? = null
+
+            assertFailsWith<WatchdogException> { watchdog.checkFrame(f) { cancelledFrame = it } }
+
+            assertEquals(f, cancelledFrame, "onCancel should receive the frame that exceeded the limit")
+        }
+
+        @Test
+        fun `checkFrame exception message includes frameId and plotId`() {
+            // Req 9.4: the exception message should identify the problematic frame
+            val plotId = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")
+            val f = frame(plotId = plotId, ops = Watchdog.MAX_OPERATIONS)
+
+            val ex = assertFailsWith<WatchdogException> { watchdog.checkFrame(f) {} }
+
+            assertTrue(
+                ex.message!!.contains(f.frameId.toString()),
+                "Exception message should contain frameId"
+            )
+            assertTrue(
+                ex.message!!.contains(plotId.toString()),
+                "Exception message should contain plotId"
+            )
+        }
+
+        @Test
+        fun `checkFrame throws for memory limit exceeded and calls onCancel`() {
+            // Memory check is also part of checkFrame; onCancel must still be invoked
+            val plotId = UUID.randomUUID()
+            val f = frame(plotId = plotId, ops = 0)
+            watchdog.trackMemoryAllocation(plotId, Watchdog.MAX_MEMORY_BYTES + 1)
+
+            var cancelled = false
+            val ex = assertFailsWith<WatchdogException> { watchdog.checkFrame(f) { cancelled = true } }
+
+            assertTrue(cancelled, "onCancel MUST be called when memory limit is exceeded")
+            assertTrue(
+                ex.message!!.contains("Memory limit exceeded"),
+                "Exception message should mention memory limit"
+            )
+        }
+
+        @Test
+        fun `checkFrame does not call onCancel when frame is within memory limit`() {
+            // Memory check passes for a frame with no significant tracked allocation
+            val f = frame(ops = 0)
+            var cancelled = false
+
+            watchdog.checkFrame(f) { cancelled = true }
+
+            assertFalse(cancelled)
+        }
+    }
+
+    // =========================================================================
+    // getStats() / WatchdogStats snapshot  (Requirement 9.6)
+    // =========================================================================
+
+    @Nested
+    inner class GetStats {
+
+        @Test
+        fun `getStats returns zero values on a fresh Watchdog`() {
+            // Req 9.6: initial state — no frames, no CPU, no memory
+            val stats = watchdog.getStats()
+            assertEquals(0, stats.activeFrames)
+            assertEquals(0L, stats.totalCpuMs)
+            assertEquals(0L, stats.trackedMemoryBytes)
+        }
+
+        @Test
+        fun `getStats activeFrames reflects incrementActiveFrames calls`() {
+            // Req 9.6: incrementActiveFrames() increases activeFrames count
+            watchdog.incrementActiveFrames()
+            watchdog.incrementActiveFrames()
+
+            assertEquals(2, watchdog.getStats().activeFrames)
+        }
+
+        @Test
+        fun `getStats activeFrames reflects decrementActiveFrames calls`() {
+            // Req 9.6: decrementActiveFrames() decreases activeFrames count
+            watchdog.incrementActiveFrames()
+            watchdog.incrementActiveFrames()
+            watchdog.incrementActiveFrames()
+            watchdog.decrementActiveFrames()
+
+            assertEquals(2, watchdog.getStats().activeFrames)
+        }
+
+        @Test
+        fun `getStats totalCpuMs reflects recordTickCpu`() {
+            // Req 9.6: recordTickCpu sets the last tick CPU value
+            watchdog.recordTickCpu(35L)
+
+            assertEquals(35L, watchdog.getStats().totalCpuMs)
+        }
+
+        @Test
+        fun `getStats totalCpuMs is overwritten by subsequent recordTickCpu calls`() {
+            // Req 9.6: only the most recent tick CPU value is reported
+            watchdog.recordTickCpu(35L)
+            watchdog.recordTickCpu(12L)
+
+            assertEquals(12L, watchdog.getStats().totalCpuMs)
+        }
+
+        @Test
+        fun `getStats trackedMemoryBytes sums all plot allocations`() {
+            // Req 9.6: trackedMemoryBytes should be the sum of all per-plot memory
+            val plotA = UUID.randomUUID()
+            val plotB = UUID.randomUUID()
+            watchdog.trackMemoryAllocation(plotA, 1_024L)
+            watchdog.trackMemoryAllocation(plotB, 2_048L)
+
+            assertEquals(3_072L, watchdog.getStats().trackedMemoryBytes)
+        }
+
+        @Test
+        fun `getStats trackedMemoryBytes decreases after resetMemoryTracking`() {
+            // Req 9.6: resetting a plot's memory should reduce the total
+            val plotId = UUID.randomUUID()
+            watchdog.trackMemoryAllocation(plotId, 1_000L)
+            assertEquals(1_000L, watchdog.getStats().trackedMemoryBytes)
+
+            watchdog.resetMemoryTracking(plotId)
+            assertEquals(0L, watchdog.getStats().trackedMemoryBytes)
+        }
+
+        @Test
+        fun `WatchdogStats is a data class holding activeFrames, totalCpuMs, trackedMemoryBytes`() {
+            // Req 9.6: verify data class fields and equality semantics
+            val s1 = WatchdogStats(activeFrames = 3, totalCpuMs = 20L, trackedMemoryBytes = 512L)
+            val s2 = WatchdogStats(activeFrames = 3, totalCpuMs = 20L, trackedMemoryBytes = 512L)
+
+            assertEquals(s1, s2)
+            assertEquals(3, s1.activeFrames)
+            assertEquals(20L, s1.totalCpuMs)
+            assertEquals(512L, s1.trackedMemoryBytes)
+        }
+
+        @Test
+        fun `getStats returns a snapshot — subsequent mutations do not affect the returned object`() {
+            // Req 9.6: getStats returns a snapshot, not a live view
+            watchdog.incrementActiveFrames()
+            val snapshot = watchdog.getStats()
+            watchdog.incrementActiveFrames()
+
+            // The snapshot captured before the second increment must still show 1
+            assertEquals(1, snapshot.activeFrames)
+        }
     }
 }

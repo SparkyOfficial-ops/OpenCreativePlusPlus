@@ -1,9 +1,11 @@
 package com.opencreativeplus.api.registry
 
+import com.opencreativeplus.api.node.CommandNode
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.ICondition
 import com.opencreativeplus.api.node.IEvent
 import com.opencreativeplus.api.node.IValue
+import com.opencreativeplus.api.node.NodeType
 import org.bukkit.Material
 
 /**
@@ -113,4 +115,33 @@ interface NodeRegistry {
      * Returns null if no value is registered with the given nodeId.
      */
     fun getValueFactoryById(nodeId: String): ((Map<String, Any>) -> IValue<*>)?
+
+    // -------------------------------------------------------------------------
+    // CommandNode-based registration (Req 8.7)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Register a [CommandNode] factory by nodeId string.
+     * Used for the new [CommandNode]-based dispatch (Req 8.7).
+     *
+     * @param nodeId  The unique node identifier used for lookup during dispatch.
+     * @param type    The [NodeType] category of this node.
+     * @param factory Factory function that creates a [CommandNode] from a parameter map.
+     */
+    fun registerCommandNode(nodeId: String, type: NodeType, factory: (params: Map<String, Any>) -> CommandNode)
+
+    /**
+     * Get a [CommandNode] factory by nodeId.
+     *
+     * @param nodeId The unique node identifier to look up.
+     * @return The factory, or `null` if no [CommandNode] is registered with this nodeId.
+     */
+    fun getCommandNodeFactory(nodeId: String): ((Map<String, Any>) -> CommandNode)?
+
+    /**
+     * Get all nodeIds that have been registered as [CommandNode] factories.
+     *
+     * @return An immutable snapshot of all registered [CommandNode] nodeIds.
+     */
+    fun getRegisteredNodeIds(): Set<String>
 }

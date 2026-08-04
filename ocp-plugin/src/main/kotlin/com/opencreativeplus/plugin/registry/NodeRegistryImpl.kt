@@ -1,9 +1,11 @@
 package com.opencreativeplus.plugin.registry
 
+import com.opencreativeplus.api.node.CommandNode
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.ICondition
 import com.opencreativeplus.api.node.IEvent
 import com.opencreativeplus.api.node.IValue
+import com.opencreativeplus.api.node.NodeType
 import com.opencreativeplus.api.registry.NodeRegistry
 import org.bukkit.Material
 import java.util.concurrent.ConcurrentHashMap
@@ -32,6 +34,9 @@ class NodeRegistryImpl(
     private val actionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IAction>()
     private val conditionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> ICondition>()
     private val valueFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IValue<*>>()
+
+    // CommandNode factories by nodeId (Req 8.7)
+    private val commandNodeFactories = ConcurrentHashMap<String, (Map<String, Any>) -> CommandNode>()
 
     // --- registerAction ---
 
@@ -135,6 +140,26 @@ class NodeRegistryImpl(
      * Returns all registered action block types (used for inventory provisioning in DEV mode).
      */
     fun getRegisteredActionMaterials(): Set<Material> = actionFactories.keys.toSet()
+
+    // --- CommandNode registration (Req 8.7) ---
+
+    override fun registerCommandNode(
+        nodeId: String,
+        type: NodeType,
+        factory: (params: Map<String, Any>) -> CommandNode
+    ) {
+        require(nodeId.isNotBlank()) { "CommandNode nodeId must not be blank" }
+        if (commandNodeFactories.containsKey(nodeId)) {
+            logger.warning("Overwriting existing CommandNode registration for nodeId '$nodeId'")
+        }
+        commandNodeFactories[nodeId] = factory
+        logger.fine("Registered CommandNode for nodeId '$nodeId' (type=$type)")
+    }
+
+    override fun getCommandNodeFactory(nodeId: String): ((Map<String, Any>) -> CommandNode)? =
+        commandNodeFactories[nodeId]
+
+    override fun getRegisteredNodeIds(): Set<String> = commandNodeFactories.keys.toSet()
 
     private fun validateNotAlreadyRegistered(blockType: Material, nodeType: String) {
         val alreadyRegistered = when (nodeType) {

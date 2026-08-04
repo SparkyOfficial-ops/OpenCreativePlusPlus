@@ -72,6 +72,9 @@ class NodeDSLPropertyTest : FreeSpec({
             override fun getActionFactoryById(nodeId: String): ((Map<String, Any>) -> IAction)? = null
             override fun getConditionFactoryById(nodeId: String): ((Map<String, Any>) -> ICondition)? = null
             override fun getValueFactoryById(nodeId: String): ((Map<String, Any>) -> IValue<*>)? = null
+            override fun registerCommandNode(nodeId: String, type: com.opencreativeplus.api.node.NodeType, factory: (Map<String, Any>) -> com.opencreativeplus.api.node.CommandNode) = Unit
+            override fun getCommandNodeFactory(nodeId: String): ((Map<String, Any>) -> com.opencreativeplus.api.node.CommandNode)? = null
+            override fun getRegisteredNodeIds(): Set<String> = emptySet()
         }
     }
 

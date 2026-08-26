@@ -904,19 +904,38 @@ class BlockScanner(
 
     /**
      * Read all parameters stored in the block's PersistentDataContainer under the "ocp" namespace.
-     * Supports STRING, INTEGER, and DOUBLE types.
-     * Returns an empty map if the block state is not a TileState.
+         *
+     * Delegates to [ParamSerializer]-compatible logic: reads the `_ocp_type` tag for each key
+     * to restore the correct Kotlin type (String, Int, Double, Boolean).
+     *
+     * Excludes internal keys: `action_id`, `function_name`, `condition_children`,
+     * and any key ending with `_ocp_type` (those are type metadata, not param values).
+     *
      * Requirements: 20.2, 20.3
      */
     internal fun readPDCParams(block: Block): Map<String, Any> {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return emptyMap()
+        val internalKeys = setOf("action_id", "function_name", "condition_children")
         val result = mutableMapOf<String, Any>()
-        pdc.keys.filter { it.namespace == "ocp" && it.key != "action_id" }.forEach { key ->
-            val paramName = key.key
-            pdc.get(key, PersistentDataType.INTEGER)?.let { result[paramName] = it }
-            pdc.get(key, PersistentDataType.DOUBLE)?.let { result[paramName] = it }
-            pdc.get(key, PersistentDataType.STRING)?.let { result[paramName] = it }
-        }
+
+        pdc.keys
+            .filter { it.namespace == "ocp" }
+            .filter { it.key !in internalKeys }
+            .filter { !it.key.endsWith("_ocp_type") }
+            .forEach { key ->
+                val paramName = key.key
+                val typeTag = pdc.get(NamespacedKey("ocp", "${paramName}_ocp_type"), PersistentDataType.STRING)
+                val value: Any? = when (typeTag) {
+                    "INT"     -> pdc.get(key, PersistentDataType.INTEGER)
+                    "DOUBLE"  -> pdc.get(key, PersistentDataType.DOUBLE)
+                    "BOOLEAN" -> pdc.get(key, PersistentDataType.BYTE)?.let { it == 1.toByte() }
+                    // STRING, LOCATION, UUID, LIST — all stored as STRING
+                    else      -> pdc.get(key, PersistentDataType.STRING)
+                            ?: pdc.get(key, PersistentDataType.INTEGER)
+                            ?: pdc.get(key, PersistentDataType.DOUBLE)
+                }
+                if (value != null) result[paramName] = value
+            }
         return result
     }
 

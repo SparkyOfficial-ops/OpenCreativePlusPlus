@@ -145,7 +145,7 @@ class InventoryManager(
      */
     private fun expectedDevSlotCount(): Int {
         val categoryCount = categoryRegistry?.let { NodeCategory.entries.size } ?: 0
-        return categoryCount + 3 + 2  // categories + 3 glass + sign + barrel
+        return categoryCount + 3  // categories + 3 glass variants
     }
 
     /**
@@ -166,12 +166,10 @@ class InventoryManager(
     // -------------------------------------------------------------------------
 
     /**
-     * Provision the DEV mode inventory with category blocks, glass, signs, and barrels.
+     * Provision the DEV mode inventory with category blocks and glass strips.
      *
-     * Each item:
-     * - Quantity = 1 (not stackable — easier to notice when missing)
-     * - Display name = non-italic bold white text via Adventure API
-     * - Lore = category description (italic disabled)
+     * Параметры теперь вводятся через SmartGUI (ПКМ по блоку) — бочки и таблички
+     * больше не нужны в инвентаре.
      *
      * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6
      */
@@ -196,10 +194,6 @@ class InventoryManager(
         items.add(makeNamedItem(Material.BLUE_STAINED_GLASS,  64, "Синяя полоса",  "Начало новой строки кода"))
         items.add(makeNamedItem(Material.WHITE_STAINED_GLASS, 64, "Белое стекло",  "Продолжение строки кода"))
         items.add(makeNamedItem(Material.GRAY_STAINED_GLASS,  64, "Серое стекло",  "Разделитель / заполнитель"))
-
-        // Tools
-        items.add(makeNamedItem(Material.OAK_SIGN,  1, "Табличка",  "Параметры действий"))
-        items.add(makeNamedItem(Material.BARREL,    1, "Бочка",     "Хранилище параметров"))
 
         if (items.size > 36) {
             logger?.warning("provisionDevInventory: ${items.size} items — showing first 36 slots only.")

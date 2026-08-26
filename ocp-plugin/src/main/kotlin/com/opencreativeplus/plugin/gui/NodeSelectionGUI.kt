@@ -123,6 +123,12 @@ class NodeSelectionGUI(
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
         val player = event.player
 
+        // If this block already has an action_id, SmartGUI handles it — not us
+        val existingActionId = (block.state as? TileState)
+            ?.persistentDataContainer
+            ?.get(NamespacedKey("ocp", "action_id"), PersistentDataType.STRING)
+        if (existingActionId != null) return
+
         event.isCancelled = true
 
         if (modeManager != null && plotManager != null && scope != null) {

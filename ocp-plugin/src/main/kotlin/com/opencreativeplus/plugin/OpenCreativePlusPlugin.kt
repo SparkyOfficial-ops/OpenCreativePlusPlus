@@ -477,8 +477,17 @@ class ActionNodeInteractListener(
         val block = event.clickedBlock ?: return
         val player = event.player
 
-        // Quick material check on main thread before launching coroutine
-        if (nodeRegistry.getActionFactory(block.type) == null) return
+        // Category blocks without an action_id go to NodeSelectionGUI — not here
+        if (categoryRegistry.isCategoryMaterial(block.type)) {
+            val actionId = (block.state as? org.bukkit.block.TileState)
+                ?.persistentDataContainer
+                ?.get(keyActionId, org.bukkit.persistence.PersistentDataType.STRING)
+            // No action selected yet - let NodeSelectionGUI handle it
+            if (actionId == null) return
+        } else if (nodeRegistry.getActionFactory(block.type) == null) {
+            // Not a category block and not a registered action material
+            return
+        }
         event.isCancelled = true
 
         scope.launch {

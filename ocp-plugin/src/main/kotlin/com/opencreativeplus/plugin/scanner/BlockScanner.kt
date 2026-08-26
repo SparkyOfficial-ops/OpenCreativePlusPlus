@@ -133,21 +133,17 @@ class BlockScanner(
         codeLines.filter { it.nodes.firstOrNull()?.blockType == FUNCTION_ENTRY_MATERIAL }
 
     /**
-     * Reads the function name from the first slot of the ParamChest above [block].
+     * Reads the function name from the PDC of [block] (key: "function_name").
      *
-     * The function name is the plain display name of the item in slot 0 of the chest.
-     * Returns null if no chest is present, the chest is empty, or slot 0 is empty.
+     * Баг 1: раньше имя функции читалось из первого слота бочки. Теперь оно
+     * хранится прямо в PDC блока — туда его записывает SmartGUI через ParamSerializer.
      *
      * Requirements: 5.2
-     *
-     * @param block The LAPIS_BLOCK whose ParamChest contains the function name.
-     * @return The function name string, or null if not found.
      */
     fun readFunctionName(block: org.bukkit.block.Block): String? {
-        val above = block.getRelative(org.bukkit.block.BlockFace.UP)
-        val barrel = above.state as? org.bukkit.block.Barrel ?: return null
-        val firstItem = barrel.inventory.getItem(0) ?: return null
-        return firstItem.plainDisplayName().takeIf { it.isNotBlank() }
+        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
+        return pdc.get(NamespacedKey("ocp", "function_name"), PersistentDataType.STRING)
+            ?.takeIf { it.isNotBlank() }
     }
 
     // -----------------------------------------------------------------------
@@ -814,28 +810,14 @@ class BlockScanner(
     /**
      * Extract parameters for [block].
      *
-     * If [descriptor] is provided and the block above has a chest marked with
-     * `ocp:param_chest`, reads chest inventory and maps items to [descriptor.expectedParams]
-     * by ascending slot index (Requirements 9.5, 9.6, 9.7, 9.8, 9.9).
+     * Баг 1: параметры читаются ТОЛЬКО из PDC самого блока (через SmartGUI).
+     * Физические бочки больше не используются — BlockScanner никогда не ошибётся
+     * из-за неправильно расставленных предметов.
      *
-     * Otherwise falls back to the legacy sign + PDC extraction path.
-     *
-     * Requirements: 4.2, 4.3, 4.5, 9.5, 9.6, 9.7, 9.8, 9.9
+     * Requirements: 4.2, 4.3, 4.5, 20.2, 20.3
      */
     internal fun extractParameters(block: Block, descriptor: ActionDescriptor? = null): Map<String, Any> {
-        // Try param-chest path first (new category-based system)
-        val above = block.getRelative(BlockFace.UP)
-        val aboveState = above.state
-        if (aboveState is org.bukkit.block.Barrel) {
-            val chestPdc = (aboveState as? TileState)?.persistentDataContainer
-            val isParamChest = chestPdc?.get(KEY_PARAM_CHEST, PersistentDataType.STRING) == "true"
-            if (isParamChest && descriptor != null) {
-                return buildParamBarrelMap(aboveState, descriptor)
-            }
-        }
-
-        // Legacy path: signs + PDC on the block itself
-        return extractParametersLegacy(block)
+        return readPDCParams(block)
     }
 
     /**

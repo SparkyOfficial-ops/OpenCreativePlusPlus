@@ -2,6 +2,7 @@ package com.opencreativeplus.plugin.node.player
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
+import com.opencreativeplus.core.execution.ScriptExecutionException
 import org.bukkit.Location
 import org.bukkit.entity.Player
 import org.bukkit.util.Vector
@@ -17,8 +18,10 @@ class TeleportPlayerNode(params: Map<String, Any>) : IAction {
     private val locationVar: String = params["location"] as? String ?: error("location param required")
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.currentTarget as? Player ?: return
-        val loc = context.localScope.get(locationVar) as? Location ?: return
+        val player = context.currentTarget as? Player
+            ?: throw ScriptExecutionException("Блок Teleport: цель не является игроком. Убедитесь, что перед этим блоком стоит 'Выбор игрока'.")
+        val loc = context.localScope.get(locationVar) as? Location
+            ?: throw ScriptExecutionException("Блок Teleport: переменная '$locationVar' не найдена или не является локацией.")
         context.syncContext { player.teleport(loc) }
     }
 }
@@ -35,8 +38,10 @@ class TeleportToPlayerNode(params: Map<String, Any>) : IAction {
     private val targetVar: String = params["target"] as? String ?: error("target param required")
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.localScope.get(playerVar) as? Player ?: return
-        val target = context.localScope.get(targetVar) as? Player ?: return
+        val player = context.localScope.get(playerVar) as? Player
+            ?: throw ScriptExecutionException("Блок Teleport To Player: переменная '$playerVar' не найдена или не является игроком.")
+        val target = context.localScope.get(targetVar) as? Player
+            ?: throw ScriptExecutionException("Блок Teleport To Player: переменная '$targetVar' (цель) не найдена или не является игроком.")
         context.syncContext { player.teleport(target.location) }
     }
 }
@@ -54,7 +59,8 @@ class LaunchPlayerNode(params: Map<String, Any>) : IAction {
     private val vz: Double = params["z"] as? Double ?: 0.0
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.currentTarget as? Player ?: return
+        val player = context.currentTarget as? Player
+            ?: throw ScriptExecutionException("Блок Launch Player: цель не является игроком.")
         context.syncContext { player.velocity = Vector(vx, vy, vz) }
     }
 }
@@ -70,7 +76,8 @@ class SetPlayerFlightNode(params: Map<String, Any>) : IAction {
     private val flightEnabled: Boolean = params["flight"] as? Boolean ?: true
 
     override suspend fun execute(context: ExecutionContext) {
-        val player = context.currentTarget as? Player ?: return
+        val player = context.currentTarget as? Player
+            ?: throw ScriptExecutionException("Блок Set Flight: цель не является игроком.")
         context.syncContext {
             player.allowFlight = flightEnabled
             player.isFlying = flightEnabled

@@ -157,29 +157,6 @@ class ModeManagerImpl(
         devVisualizer?.startFor(player, codeLines)
         hologramReporter?.showToPlayer(player)
 
-        // Arg holograms: only show if there are actually any nodes with params
-        // Previously this iterated ALL nodes on EVERY /dev — now skipped when empty
-        val hr = hologramReporter
-        if (hr != null && codeLines.any { it.nodes.isNotEmpty() }) {
-            val devWorld = worlds?.second
-            if (devWorld != null) {
-                for (codeLine in codeLines) {
-                    for (node in codeLine.nodes) {
-                        val args = runOnMain {
-                            val chestBlock = devWorld.getBlockAt(node.location)
-                                .getRelative(org.bukkit.block.BlockFace.UP)
-                            val barrel = chestBlock.state as? org.bukkit.block.Barrel ?: return@runOnMain null
-                            val containers = barrel.inventory.contents
-                                .filterNotNull()
-                                .mapNotNull { com.opencreativeplus.plugin.scanner.DataContainer.deserializeFrom(it) }
-                            if (containers.isEmpty()) null else containers to chestBlock.location
-                        } ?: continue
-                        hr.showArgHolograms(player, args.second, args.first)
-                    }
-                }
-            }
-        }
-
         loadAndRegisterCustomMenus(plot.id)
         return true
     }

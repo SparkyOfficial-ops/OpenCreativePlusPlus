@@ -16,12 +16,10 @@ import com.opencreativeplus.core.watchdog.TPSMonitor
 import com.opencreativeplus.core.watchdog.Watchdog
 import com.opencreativeplus.plugin.api.OpenCreativePlusAPI
 import com.opencreativeplus.plugin.command.DialogueQuitListener
-import com.opencreativeplus.plugin.listener.ArgHologramListener
 import com.opencreativeplus.plugin.listener.AutoDecorationListener
 import com.opencreativeplus.plugin.listener.PlotProtectionListener
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.registry.NodeCategory
-import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import com.opencreativeplus.plugin.gui.NodeSelectionGUI
 import com.opencreativeplus.plugin.command.OcpDialogueCommand
 import com.opencreativeplus.plugin.command.PlotCommands
@@ -293,9 +291,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         server.pluginManager.registerEvents(plotTopGUI, this)
 
         // Category-based coding UI listeners
-        val parameterPlacer = ParameterPlacer(this)
         server.pluginManager.registerEvents(
-            NodeSelectionGUI(categoryRegistry, parameterPlacer, this), this
+            NodeSelectionGUI(categoryRegistry, this, modeManager, plotManager, scope), this
         )
         server.pluginManager.registerEvents(
             PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
@@ -312,13 +309,8 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                 plugin = this
             ), this
         )
-        // Req 9.3: update arg holograms when chest contents change
-        server.pluginManager.registerEvents(
-            ArgHologramListener(
-                plugin = this,
-                hologramReporter = hologramReporter
-            ), this
-        )
+        // ArgHologramListener removed: barrel-based param chests are no longer used.
+        // Errors are now shown via HologramReporter.reportError triggered by ScriptExecutionException.
 
         // ── SignInputManager + ParamSerializer ────────────────────────────────
         val protocolManager = ProtocolLibrary.getProtocolManager()

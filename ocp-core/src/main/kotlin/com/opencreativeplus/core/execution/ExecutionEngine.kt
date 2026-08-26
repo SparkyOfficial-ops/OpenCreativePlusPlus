@@ -163,6 +163,22 @@ class ExecutionEngine(
                         )
                     }
                 }
+            } catch (e: ScriptExecutionException) {
+                // Node-level error with a meaningful message — show to player + hologram
+                val location = e.sourceLocation ?: effectiveScript.sourceLocation
+                logger.warning("[OCP] Script execution error on plot $plotId at $location: ${e.message}")
+                val ownerUuid = plotManager?.getPlot(plotId)?.owner
+                val errorMsg = e.message ?: "Ошибка выполнения скрипта"
+                context.syncContext {
+                    // Notify the player who triggered the script
+                    player?.sendMessage("§c[OCP] §lОшибка скрипта: §r§c$errorMsg")
+                    // Also notify the plot owner if different
+                    if (ownerUuid != null && ownerUuid != player?.uniqueId) {
+                        Bukkit.getPlayer(ownerUuid)?.sendMessage("§c[OCP] Ошибка в скрипте плота: $errorMsg")
+                    }
+                }
+                // Spawn hologram above the offending block via errorReporter
+                errorReporter?.invoke(location, errorMsg)
             } catch (e: Exception) {
                 logger.warning("[OCP] Script error on plot $plotId at ${effectiveScript.sourceLocation}: ${e.message}")
                 if (errorReporter != null) {

@@ -5,7 +5,6 @@ import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.registry.ActionDescriptor
 import com.opencreativeplus.plugin.registry.CategoryRegistry
 import com.opencreativeplus.plugin.registry.NodeCategory
-import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import net.kyori.adventure.text.Component
@@ -33,13 +32,16 @@ import java.util.concurrent.ConcurrentHashMap
  * GUI for selecting an action from a NodeCategory.
  *
  * Opens when a player right-clicks a Category_Block in the Coding_Zone.
- * Writes the selected `action_id` to the block's PDC and triggers ParameterPlacer.
+ * Writes the selected `action_id` to the block's PDC. Parameters are then
+ * edited via SmartGUI (right-click the block again). No physical barrels are used.
+ *
+ * Баг 2: для IF_* и LOOP категорий автоматически ставит поршневую скобку
+ * [STICKY_PISTON] → [тело] → [PISTON], чтобы синтаксис был всегда корректным.
  *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 6.1, 6.2, 6.3, 6.4
  */
 class NodeSelectionGUI(
     private val categoryRegistry: CategoryRegistry,
-    private val parameterPlacer: ParameterPlacer,
     private val plugin: Plugin,
     private val modeManager: ModeManager? = null,
     private val plotManager: PlotManagerImpl? = null,
@@ -50,9 +52,27 @@ class NodeSelectionGUI(
         const val ITEMS_PER_PAGE = 45
         private val KEY_ACTION_ID = NamespacedKey("ocp", "action_id")
         private const val GUI_TITLE_PREFIX = "Выбор действия: "
+
+        private val GLASS_STRIP_MATERIALS = setOf(
+            Material.BLUE_STAINED_GLASS,
+            Material.WHITE_STAINED_GLASS,
+            Material.GRAY_STAINED_GLASS
+        )
+
+        /** Categories that require an auto-placed piston bracket after selection. */
+        private val BRACKET_CATEGORIES = setOf(
+            NodeCategory.IF_PLAYER,
+            NodeCategory.IF_VARIABLE,
+            NodeCategory.IF_ENTITY,
+            NodeCategory.LOOP
+        )
     }
 
     internal val pendingBlocks = ConcurrentHashMap<UUID, Block>()
+
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
 
     /**
      * Open the action selection GUI for [category] at [page].
@@ -70,7 +90,6 @@ class NodeSelectionGUI(
         val currentActionId = readCurrentActionId(block)
 
         if (descriptors.isEmpty()) {
-            // Req 4 AC5: show informational item when no actions are registered for this category
             val infoItem = ItemStack(Material.BARRIER)
             val infoMeta: ItemMeta = infoItem.itemMeta ?: Bukkit.getItemFactory().getItemMeta(Material.BARRIER)!!
             @Suppress("DEPRECATION")
@@ -87,16 +106,15 @@ class NodeSelectionGUI(
             inventory.setItem(i - start, item)
         }
 
-        // Navigation buttons
-        if (safePage > 0) {
-            inventory.setItem(45, createNavItem(Material.ARROW, "← Назад"))
-        }
-        if (safePage < totalPages - 1) {
-            inventory.setItem(53, createNavItem(Material.ARROW, "Вперёд →"))
-        }
+        if (safePage > 0) inventory.setItem(45, createNavItem(Material.ARROW, "← Назад"))
+        if (safePage < totalPages - 1) inventory.setItem(53, createNavItem(Material.ARROW, "Вперёд →"))
 
         player.openInventory(inventory)
     }
+
+    // -------------------------------------------------------------------------
+    // Listeners
+    // -------------------------------------------------------------------------
 
     @EventHandler
     fun onPlayerInteract(event: PlayerInteractEvent) {
@@ -105,10 +123,8 @@ class NodeSelectionGUI(
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
         val player = event.player
 
-        // Cancel the event synchronously — mode check happens after
         event.isCancelled = true
 
-        // Only open the selection GUI in DEV mode
         if (modeManager != null && plotManager != null && scope != null) {
             scope.launch {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
@@ -119,7 +135,6 @@ class NodeSelectionGUI(
                 }
             }
         } else {
-            // Fallback: no mode check available
             pendingBlocks[player.uniqueId] = block
             open(player, block, category)
         }
@@ -143,9 +158,15 @@ class NodeSelectionGUI(
         val targetBlock = pendingBlocks[player.uniqueId] ?: return
         if (!categoryRegistry.isCategoryMaterial(targetBlock.type)) return
 
+        // Записываем action_id в PDC блока
         writeActionId(targetBlock, actionId)
         placeOrUpdateSign(targetBlock, categoryRegistry.getDescriptorById(actionId)?.displayName ?: actionId)
-        parameterPlacer.placeChest(targetBlock)
+
+        // Баг 2: авто-ставим поршневую скобку для IF и LOOP категорий
+        val descriptor = categoryRegistry.getDescriptorById(actionId)
+        if (descriptor != null && descriptor.category in BRACKET_CATEGORIES) {
+            autoPlacePistonBracket(targetBlock)
+        }
     }
 
     @EventHandler
@@ -158,19 +179,17 @@ class NodeSelectionGUI(
         }
     }
 
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Public helpers (also used by tests)
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     /**
      * Place a new sign or update an existing sign on an adjacent face of [block].
-     * Writes [displayName] to the first line.
      * Requirements: 6.1, 6.2, 6.3, 6.4
      */
     fun placeOrUpdateSign(block: Block, displayName: String) {
         val faces = listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
 
-        // Check for existing sign first — update it
         for (face in faces) {
             val adjacent = block.getRelative(face)
             if (adjacent.type == Material.OAK_SIGN || adjacent.type == Material.OAK_WALL_SIGN) {
@@ -182,7 +201,6 @@ class NodeSelectionGUI(
             }
         }
 
-        // Place new sign on first available AIR face
         for (face in faces) {
             val adjacent = block.getRelative(face)
             if (adjacent.type == Material.AIR) {
@@ -200,9 +218,9 @@ class NodeSelectionGUI(
         )
     }
 
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
     // Private helpers
-    // -----------------------------------------------------------------------
+    // -------------------------------------------------------------------------
 
     private fun readCurrentActionId(block: Block): String? {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
@@ -233,5 +251,51 @@ class NodeSelectionGUI(
         meta.displayName(Component.text(name))
         item.itemMeta = meta
         return item
+    }
+
+    // -------------------------------------------------------------------------
+    // Баг 2: авто-простановка поршневой скобки
+    // -------------------------------------------------------------------------
+
+    /**
+     * Automatically builds a piston bracket structure east of [conditionBlock]:
+     *
+     *   ... [conditionBlock] [glass+STICKY_PISTON] [glass body] [glass+PISTON] ...
+     *
+     * This guarantees syntactically correct bracket pairs so ASTCompiler never
+     * throws "Unclosed bracket". Players cannot break pistons — PlotProtectionListener
+     * cancels all piston physics events in dev worlds.
+     *
+     * Skips silently if:
+     * - conditionBlock is not sitting on a glass strip
+     * - a bracket already exists (STICKY_PISTON already placed)
+     * - blocks ahead are occupied by non-glass
+     */
+    private fun autoPlacePistonBracket(conditionBlock: Block) {
+        val glassBelow = conditionBlock.getRelative(BlockFace.DOWN)
+        if (glassBelow.type !in GLASS_STRIP_MATERIALS) return
+
+        // Opening bracket glass (one east of the condition's glass)
+        val glassOpen = glassBelow.getRelative(BlockFace.EAST)
+        when {
+            glassOpen.type == Material.AIR -> glassOpen.type = Material.WHITE_STAINED_GLASS
+            glassOpen.type !in GLASS_STRIP_MATERIALS -> return  // occupied — skip
+        }
+
+        val aboveOpen = glassOpen.getRelative(BlockFace.UP)
+        if (aboveOpen.type == Material.STICKY_PISTON) return  // bracket already there
+
+        if (aboveOpen.type == Material.AIR) aboveOpen.type = Material.STICKY_PISTON
+
+        // Body glass tile
+        val glassBody = glassOpen.getRelative(BlockFace.EAST)
+        if (glassBody.type == Material.AIR) glassBody.type = Material.WHITE_STAINED_GLASS
+
+        // Closing bracket glass
+        val glassClose = glassBody.getRelative(BlockFace.EAST)
+        if (glassClose.type == Material.AIR) glassClose.type = Material.WHITE_STAINED_GLASS
+
+        val aboveClose = glassClose.getRelative(BlockFace.UP)
+        if (aboveClose.type == Material.AIR) aboveClose.type = Material.PISTON
     }
 }

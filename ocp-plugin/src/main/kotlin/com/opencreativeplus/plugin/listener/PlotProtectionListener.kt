@@ -7,10 +7,8 @@ import com.opencreativeplus.plugin.registry.CategoryRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bukkit.Material
-import org.bukkit.NamespacedKey
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.TileState
 import org.bukkit.entity.Player
 import org.bukkit.event.EventHandler
 import org.bukkit.event.EventPriority
@@ -25,7 +23,6 @@ import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.block.BlockExplodeEvent
 import org.bukkit.event.player.PlayerInteractEvent
-import org.bukkit.persistence.PersistentDataType
 import org.bukkit.plugin.Plugin
 
 /**
@@ -48,17 +45,22 @@ class PlotProtectionListener(
 ) : Listener {
 
     companion object {
-        private val KEY_PARAM_CHEST = NamespacedKey("ocp", "param_chest")
-        private val KEY_ACTION_ID   = NamespacedKey("ocp", "action_id")
-
         /** Fixed whitelist materials (excluding category materials, which are dynamic). */
         private val FIXED_WHITELIST = setOf(
             Material.WHITE_STAINED_GLASS,
             Material.GRAY_STAINED_GLASS,
             Material.BLUE_STAINED_GLASS,
-            Material.BARREL,
             Material.OAK_SIGN,
             Material.OAK_WALL_SIGN
+        )
+
+        /**
+         * Piston materials used by the bracket system — auto-placed by NodeSelectionGUI.
+         * Players must never be able to break these manually.
+         */
+        private val PISTON_MATERIALS = setOf(
+            Material.STICKY_PISTON,
+            Material.PISTON
         )
 
         /** Materials that must never be placed, even if somehow in the whitelist. */
@@ -114,11 +116,15 @@ class PlotProtectionListener(
 
         // Glass strips must never be broken in DEV mode — cancel immediately
         if (material in setOf(Material.BLUE_STAINED_GLASS, Material.WHITE_STAINED_GLASS, Material.GRAY_STAINED_GLASS)) {
-            // We cannot check mode asynchronously here because the event must be cancelled
-            // synchronously. Cancel immediately and let the player know.
-            // The mode check is a best-effort guard — glass strips are always protected.
             event.isCancelled = true
             player.sendMessage("§c[OCP] Нельзя сломать стеклянную полосу в DEV-режиме.")
+            return
+        }
+
+        // Pistons are auto-placed brackets — players must never break them
+        if (material in PISTON_MATERIALS) {
+            event.isCancelled = true
+            player.sendMessage("§c[OCP] Поршни расставляются автоматически. Удалите блок условия, чтобы убрать скобки.")
             return
         }
 
@@ -262,16 +268,24 @@ class PlotProtectionListener(
 
     /**
      * When a Category_Block is broken, also remove:
-     *  - the parameter chest directly above (if it has `ocp:param_chest` PDC tag)
+     *  - the piston bracket structure to the east (STICKY_PISTON → glass → PISTON)
      *  - the adjacent sign on the nearest horizontal face
      *
      * Req 12.10
      */
     private fun cascadeBreakAttachments(categoryBlock: Block) {
-        // Break the parameter barrel above
-        val above = categoryBlock.getRelative(BlockFace.UP)
-        if (above.type == Material.BARREL && hasParamChestTag(above)) {
-            above.type = Material.AIR
+        // Remove piston bracket if this is a conditional/loop block
+        val glassBelow = categoryBlock.getRelative(BlockFace.DOWN)
+        if (glassBelow.type in setOf(Material.BLUE_STAINED_GLASS, Material.WHITE_STAINED_GLASS, Material.GRAY_STAINED_GLASS)) {
+            val glassOpen = glassBelow.getRelative(BlockFace.EAST)
+            val aboveOpen = glassOpen.getRelative(BlockFace.UP)
+            if (aboveOpen.type == Material.STICKY_PISTON) {
+                aboveOpen.type = Material.AIR
+                val glassBody = glassOpen.getRelative(BlockFace.EAST)
+                val glassClose = glassBody.getRelative(BlockFace.EAST)
+                val aboveClose = glassClose.getRelative(BlockFace.UP)
+                if (aboveClose.type == Material.PISTON) aboveClose.type = Material.AIR
+            }
         }
 
         // Break the adjacent sign (first matching horizontal face)
@@ -283,11 +297,5 @@ class PlotProtectionListener(
                 break
             }
         }
-    }
-
-    /** Returns true if [block] has the `ocp:param_chest = "true"` PDC tag. */
-    private fun hasParamChestTag(block: Block): Boolean {
-        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return false
-        return pdc.get(KEY_PARAM_CHEST, PersistentDataType.STRING) == "true"
     }
 }

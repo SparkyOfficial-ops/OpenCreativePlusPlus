@@ -697,27 +697,20 @@ class BlockScanner(
     }
 
     /**
-     * Reads child condition nodeIds from the chest placed directly above [block].
+     * Reads child condition nodeIds from the block's PDC key "condition_children".
      *
-     * Each item in the chest must have `ocp:action_id` in its PDC to be recognised
-     * as a child condition reference. Items without this key are skipped.
+     * Баг 1: раньше читалось из бочки над блоком. Теперь хранится в PDC самого блока
+     * как строка через разделитель "|" — туда записывает SmartGUI.
      *
-     * Returns a list of nodeId strings in chest-slot order.
+     * Returns a list of nodeId strings, or empty list if key absent.
      *
      * Requirements: 6.6, 7.6
      */
     internal fun readConditionChildren(block: Block): List<String> {
-        val above = block.getRelative(BlockFace.UP)
-        val aboveState = above.state as? org.bukkit.block.Barrel ?: return emptyList()
-        val children = mutableListOf<String>()
-        for (item in aboveState.inventory.contents) {
-            if (item == null) continue
-            val nodeId = item.itemMeta?.persistentDataContainer
-                ?.get(KEY_ACTION_ID, PersistentDataType.STRING)
-                ?: continue
-            children.add(nodeId)
-        }
-        return children
+        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return emptyList()
+        val raw = pdc.get(NamespacedKey("ocp", "condition_children"), PersistentDataType.STRING)
+            ?: return emptyList()
+        return raw.split("|").filter { it.isNotBlank() }
     }
 
     /**

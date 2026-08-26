@@ -5,7 +5,6 @@ package com.opencreativeplus.plugin.gui
 import com.opencreativeplus.api.plot.ModeManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.registry.CategoryRegistry
-import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.property.Arb
@@ -45,7 +44,6 @@ class SignDisplayNamePropertyTest : FreeSpec({
         every { plugin.name } returns "ocp"
         return NodeSelectionGUI(
             categoryRegistry = CategoryRegistry(),
-            parameterPlacer = mockk(relaxed = true),
             modeManager = mockk<ModeManager>(relaxed = true),
             plotManager = mockk<PlotManagerImpl>(relaxed = true),
             scope = CoroutineScope(Dispatchers.Unconfined),
@@ -166,7 +164,6 @@ class SignDisplayNamePropertyTest : FreeSpec({
 
                 val gui = NodeSelectionGUI(
                     categoryRegistry = CategoryRegistry(),
-                    parameterPlacer = mockk(relaxed = true),
                     modeManager = mockk<ModeManager>(relaxed = true),
                     plotManager = mockk<PlotManagerImpl>(relaxed = true),
                     scope = CoroutineScope(Dispatchers.Unconfined),

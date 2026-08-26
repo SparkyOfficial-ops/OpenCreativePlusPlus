@@ -7,7 +7,6 @@ package com.opencreativeplus.plugin.gui
 import com.opencreativeplus.api.plot.ModeManager
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.registry.CategoryRegistry
-import com.opencreativeplus.plugin.scanner.ParameterPlacer
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
@@ -45,7 +44,6 @@ class NodeSelectionGUIBlockPropertyTest : FreeSpec({
         every { plugin.name } returns "ocp"
         return NodeSelectionGUI(
             categoryRegistry = CategoryRegistry(),
-            parameterPlacer = mockk<ParameterPlacer>(relaxed = true),
             modeManager = mockk<ModeManager>(relaxed = true),
             plotManager = mockk<PlotManagerImpl>(relaxed = true),
             scope = CoroutineScope(Dispatchers.Unconfined),

@@ -110,16 +110,20 @@ class ASTSerializer(private val nodeRegistry: NodeRegistry) {
     }
 
     /**
-     * Find an event instance by nodeId. Requires registry iteration support.
-     33.4
+     * Find an event instance by nodeId using the nodeRegistry.
+     * 33.4
      */
-    private fun findEventByNodeId(nodeId: String): com.opencreativeplus.api.node.IEvent? = null
-
+    private fun findEventByNodeId(nodeId: String): com.opencreativeplus.api.node.IEvent? =
+        nodeRegistry.getEventFactoryById(nodeId)?.invoke()
+    
     /**
-     * Find an action instance by nodeId. Requires registry iteration support.
-     33.4
+     * Find an action instance by nodeId using the nodeRegistry.
+     * Note: Conditions that are also actions must be registered via registerAction/registerCondition
+     * with the same nodeId to be discoverable here.
+     * 33.4
      */
-    private fun findActionByNodeId(nodeId: String, params: Map<String, Any>): com.opencreativeplus.api.node.IAction? = null
+    private fun findActionByNodeId(nodeId: String, params: Map<String, Any>): com.opencreativeplus.api.node.IAction? =
+        nodeRegistry.getActionFactoryById(nodeId)?.invoke(params)
 }
 
 /**

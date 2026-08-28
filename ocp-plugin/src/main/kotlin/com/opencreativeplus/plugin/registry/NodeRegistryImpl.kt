@@ -34,6 +34,7 @@ class NodeRegistryImpl(
     private val actionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IAction>()
     private val conditionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> ICondition>()
     private val valueFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IValue<*>>()
+    private val eventFactoriesById = ConcurrentHashMap<String, () -> IEvent>()
 
     // CommandNode factories by nodeId (Req 8.7)
     private val commandNodeFactories = ConcurrentHashMap<String, (Map<String, Any>) -> CommandNode>()
@@ -97,6 +98,14 @@ class NodeRegistryImpl(
         logger.fine("Registered event node for $blockType")
     }
 
+    override fun registerEvent(blockType: Material, nodeId: String, factory: () -> IEvent) {
+        require(nodeId.isNotBlank()) { "Event nodeId must not be blank for $blockType" }
+        validateNotAlreadyRegistered(blockType, "event")
+        eventFactories[blockType] = factory
+        eventFactoriesById[nodeId] = factory
+        logger.fine("Registered event node for $blockType: $nodeId")
+    }
+
     // --- getters ---
 
     override fun getActionFactory(blockType: Material): ((Map<String, Any>) -> IAction)? =
@@ -110,6 +119,9 @@ class NodeRegistryImpl(
 
     override fun getEventFactory(blockType: Material): (() -> IEvent)? =
         eventFactories[blockType]
+
+    override fun getEventFactoryById(nodeId: String): (() -> IEvent)? =
+        eventFactoriesById[nodeId]
 
     override fun getActionNodeId(blockType: Material): String? = actionNodeIds[blockType]
 

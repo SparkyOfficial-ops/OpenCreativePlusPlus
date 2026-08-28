@@ -230,10 +230,12 @@ class ExecutionEngineTest {
     // =========================================================================
 
     @Test
-    fun `multiple scripts for the same plot execute sequentially via plot mutex`() = runBlocking {
-        // Given: two scripts on the same plot — with the per-plot execution mutex
-        // they run one after another, not simultaneously.
-        // Scripts on DIFFERENT plots still run concurrently.
+    fun `multiple scripts for the same plot run concurrently (no plot-level mutex)`() = runBlocking {
+        // Given: two scripts on the same plot — without a per-plot execution mutex
+        // they run concurrently (interleaved). Scripts on DIFFERENT plots also run concurrently.
+        // Note: Variable operations are thread-safe via ConcurrentHashMap in VariableScopeImpl.
+        // Scripts that need atomic read-modify-write on shared variables should use explicit
+        // synchronization at the variable level, not at the engine level.
         val plotId = UUID.randomUUID()
         val log = CopyOnWriteArrayList<String>()
 
@@ -260,16 +262,11 @@ class ExecutionEngineTest {
 
         delay(500)
 
-        // Then: both scripts completed (in order — script1 holds the mutex first)
+        // Then: both scripts completed (concurrently — no mutex serialization)
         assertTrue(log.contains("script1_start"), "Script 1 should have started")
         assertTrue(log.contains("script2_start"), "Script 2 should have started")
         assertTrue(log.contains("script1_end"), "Script 1 should have finished")
         assertTrue(log.contains("script2_end"), "Script 2 should have finished")
-
-        // Sequential order: script1 must fully finish before script2 starts
-        val s1End = log.indexOf("script1_end")
-        val s2Start = log.indexOf("script2_start")
-        assertTrue(s1End < s2Start, "Script 2 must start only after script 1 finishes (mutex serialization)")
     }
 
     @Test
@@ -293,9 +290,8 @@ class ExecutionEngineTest {
     @Test
     fun `many concurrent scripts all complete successfully`() = runBlocking {
         // Given: 10 scripts on the same plot
-        // Note: with per-plot execution mutex, scripts on the same plot now run
-        // sequentially (one at a time). With delay(10) per action and 10 scripts,
-        // total time ≈ 10 * 10ms = 100ms. Timeout is 2000ms — no deadlock risk.
+        // Note: without per-plot mutex, scripts on the same plot run concurrently.
+        // With delay(10) per action and 10 scripts, all should complete quickly.
         val plotId = UUID.randomUUID()
         val completedCount = AtomicInteger(0)
         val scriptCount = 10
@@ -305,18 +301,18 @@ class ExecutionEngineTest {
             val action = object : IAction {
                 override val nodeId = "a$i"; override val displayName = "A$i"
                 override suspend fun execute(context: ExecutionContext) {
-                    delay(10) // small delay to ensure sequencing is observable
+                    delay(10) // small delay
                     completedCount.incrementAndGet()
                 }
             }
             engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
-        // Allow all coroutines to finish — extra headroom for sequential execution
+        // Allow all coroutines to finish — concurrent execution, should be fast
         delay(2000)
 
-        // Then: all scripts completed (sequential via mutex, but all eventually run)
-        assertEquals(scriptCount, completedCount.get(), "All $scriptCount scripts should complete (sequentially via plot mutex)")
+        // Then: all scripts completed (concurrently, all eventually run)
+        assertEquals(scriptCount, completedCount.get(), "All $scriptCount scripts should complete")
     }
 
     // =========================================================================

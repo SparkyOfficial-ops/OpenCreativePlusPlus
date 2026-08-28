@@ -295,7 +295,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
             NodeSelectionGUI(categoryRegistry, this, modeManager, plotManager, scope), this
         )
         server.pluginManager.registerEvents(
-            PlotProtectionListener(modeManager, categoryRegistry, plotManager, scope, this), this
+            PlotProtectionListener(modeManager, categoryRegistry, plotManager, this), this
         )
         server.pluginManager.registerEvents(
             com.opencreativeplus.plugin.listener.DevInventoryGuardListener(inventoryManager, this), this

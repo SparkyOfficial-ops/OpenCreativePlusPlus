@@ -410,6 +410,7 @@ class TestNodeRegistry : NodeRegistry {
     private val actionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IAction>()
     private val conditionFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> ICondition>()
     private val valueFactoriesById = ConcurrentHashMap<String, (Map<String, Any>) -> IValue<*>>()
+    private val eventFactoriesById = ConcurrentHashMap<String, () -> IEvent>()
 
     private val commandNodeFactories = ConcurrentHashMap<String, (Map<String, Any>) -> CommandNode>()
 
@@ -450,6 +451,12 @@ class TestNodeRegistry : NodeRegistry {
         eventFactories[blockType] = factory
     }
 
+    override fun registerEvent(blockType: Material, nodeId: String, factory: () -> IEvent) {
+        require(nodeId.isNotBlank()) { "Event nodeId must not be blank" }
+        eventFactories[blockType] = factory
+        eventFactoriesById[nodeId] = factory
+    }
+
     override fun getActionFactory(blockType: Material) = actionFactories[blockType]
     override fun getConditionFactory(blockType: Material) = conditionFactories[blockType]
     override fun getValueFactory(blockType: Material) = valueFactories[blockType]
@@ -462,6 +469,7 @@ class TestNodeRegistry : NodeRegistry {
     override fun getActionFactoryById(nodeId: String) = actionFactoriesById[nodeId]
     override fun getConditionFactoryById(nodeId: String) = conditionFactoriesById[nodeId]
     override fun getValueFactoryById(nodeId: String) = valueFactoriesById[nodeId]
+    override fun getEventFactoryById(nodeId: String): (() -> IEvent)? = eventFactoriesById[nodeId]
 
     override fun getMaterialForNode(node: INode): Material? {
         val id = node.nodeId

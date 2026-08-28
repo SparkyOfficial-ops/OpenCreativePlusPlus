@@ -63,9 +63,23 @@ class SignInputManager(
                 // Cancel the packet so the sign change doesn't persist in the world
                 event.isCancelled = true
 
-                // Read the first line from the sign update packet
-                val strings = event.packet.stringArrays.read(0)
-                val firstLine = strings?.getOrNull(0) ?: ""
+                // Read the first line from the sign update packet.
+                // Note: In Minecraft 1.20+, sign packets changed significantly:
+                // - Front/Back sides were added
+                // - Text is transmitted as Chat components instead of raw strings
+                // - PacketType.Play.Client.UPDATE_SIGN structure changed
+                // ProtocolLib abstracts some of this, but stringArrays may be null/empty
+                // on certain versions. The null-safe handling below covers these cases.
+                // For full 1.20.2-1.20.4 compatibility, consider using componentArrays instead.
+                val firstLine = try {
+                    val strings = event.packet.stringArrays.read(0)
+                    strings?.getOrNull(0) ?: ""
+                } catch (e: Exception) {
+                    // Fallback: if stringArrays read fails (1.20+ component format),
+                    // log and return empty string rather than crashing
+                    plugin.logger.warning("SignInputManager: failed to read sign stringArrays: ${e.message}")
+                    ""
+                }
 
                 // Complete the deferred and clean up
                 session.deferred.complete(firstLine)

@@ -9,7 +9,6 @@ import com.opencreativeplus.core.watchdog.WatchdogException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.withLock
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 import java.util.UUID
@@ -92,11 +91,12 @@ class ExecutionEngine(
 
         val job = coroutineConfig.executionScope.launch {
             val startTime = System.currentTimeMillis()
-            // Acquire per-plot mutex to serialize plotScope Read-Modify-Write operations.
-            // Prevents race conditions when multiple players trigger events simultaneously
-            // and both scripts modify the same global plot variable (e.g. balance).
-            val mutex = variableManager.getExecutionMutex(plotId)
-            mutex.withLock {
+            // Note: per-plot mutex removed from script lifecycle.
+            // Previously, the entire script execution was wrapped in mutex.withLock {},
+            // which blocked ALL scripts on the plot if one script had a WaitAction (e.g., 10s pause).
+            // Now, variable operations are thread-safe via ConcurrentHashMap in VariableScopeImpl.
+            // Scripts that need atomic read-modify-write on shared variables should use explicit
+            // synchronization or atomic operations at the variable level, not at the engine level.
             try {
                 for ((index, action) in effectiveScript.actions.withIndex()) {
                     watchdog.checkExecution(context)
@@ -199,7 +199,6 @@ class ExecutionEngine(
                 }
                 context.localScope.clear()
             }
-            } // end mutex.withLock
         }
 
         // Track by plot — synchronized ArrayList: low write contention, GC-friendlier than COWAL

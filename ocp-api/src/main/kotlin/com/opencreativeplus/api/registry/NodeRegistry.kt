@@ -58,6 +58,16 @@ interface NodeRegistry {
     fun registerEvent(blockType: Material, factory: () -> IEvent)
 
     /**
+     * Register an event node factory with an explicit nodeId.
+     * Preferred overload for string-based lookup during deserialization.
+     *
+     * @param blockType The Minecraft block material
+     * @param nodeId Explicit node identifier stored in metadata
+     * @param factory Factory function that creates an IEvent
+     */
+    fun registerEvent(blockType: Material, nodeId: String, factory: () -> IEvent)
+
+    /**
      * Get the action factory for a specific block type.
      */
     fun getActionFactory(blockType: Material): ((Map<String, Any>) -> IAction)?
@@ -76,6 +86,12 @@ interface NodeRegistry {
      * Get the event factory for a specific block type.
      */
     fun getEventFactory(blockType: Material): (() -> IEvent)?
+
+    /**
+     * Get the event factory for a specific nodeId string.
+     * Returns null if no event is registered with the given nodeId.
+     */
+    fun getEventFactoryById(nodeId: String): (() -> IEvent)?
 
     /**
      * Get the nodeId for a registered action block type.

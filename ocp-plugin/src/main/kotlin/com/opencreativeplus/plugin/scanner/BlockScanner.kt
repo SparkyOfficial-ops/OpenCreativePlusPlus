@@ -212,9 +212,9 @@ class BlockScanner(
     /**
      * Coroutine-safe variant of [scanCodingZone].
      *
-     * Delegates the entire scan to the Bukkit main thread via [syncRunner] so that all
-     * [Block.state] / TileEntity / PDC reads happen synchronously, avoiding the
-     * "Tile is null, asynchronous access?" IllegalStateException thrown by PaperMC.
+     * Pre-loads required chunks asynchronously to avoid synchronous loadChunk lag spikes,
+     * then delegates the actual scan to the Bukkit main thread via [syncRunner] so that all
+     * [Block.state] / TileEntity / PDC reads happen synchronously.
      *
      * Usage from a coroutine (e.g. ModeManagerImpl):
      * ```kotlin
@@ -225,8 +225,45 @@ class BlockScanner(
      *                   and suspends the coroutine until the result is ready.
      *                   Matches the signature of ModeManagerImpl.runOnMain.
      */
-    suspend fun scanCodingZoneAsync(syncRunner: suspend (() -> List<CodeLine>) -> List<CodeLine>): List<CodeLine> =
-        syncRunner { scanCodingZone() }
+    suspend fun scanCodingZoneAsync(syncRunner: suspend (() -> List<CodeLine>) -> List<CodeLine>): List<CodeLine> {
+        // Pre-load chunks asynchronously to avoid sync loadChunk lag spikes
+        preloadChunksForScan()
+        return syncRunner { scanCodingZone() }
+    }
+
+    /**
+     * Asynchronously pre-loads all chunks that [scanLevel] will access.
+     * Uses Paper's async chunk loading API to avoid blocking the main thread.
+     *
+     * Chunks are loaded in parallel via CompletableFuture, then awaited together.
+     * This replaces the previous synchronous world.loadChunk() call inside scanLevel.
+     */
+    private suspend fun preloadChunksForScan() {
+        val chunkCoords = mutableSetOf<Pair<Int, Int>>()
+        val levelSpacing = 20
+        val levelCount = 4
+        val baseY = 15
+        for (level in 0 until levelCount) {
+            @Suppress("UNUSED_VARIABLE")
+            val y = baseY + level * levelSpacing
+            for (z in -SCAN_Z_RADIUS..SCAN_Z_RADIUS step 2) {
+                val chunkX = 0 shr 4
+                val chunkZ = z shr 4
+                if (!world.isChunkLoaded(chunkX, chunkZ)) {
+                    chunkCoords.add(chunkX to chunkZ)
+                }
+            }
+        }
+        // Load all needed chunks asynchronously via Paper API
+        // getChunkAtAsync returns CompletableFuture<Chunk> — await all in parallel
+        if (chunkCoords.isNotEmpty()) {
+            val futures = chunkCoords.map { (cx, cz) ->
+                world.getChunkAtAsync(cx, cz)
+            }
+            // Wait for all chunks to load (non-blocking from coroutine perspective)
+            futures.forEach { it.join() }
+        }
+    }
 
     /**
      * Scan a rectangular area of blocks using ChunkSnapshot batching.
@@ -277,6 +314,7 @@ class BlockScanner(
     /**
      * Scan a single Y level for blue glass strip starts.
      * Only scans Z in [-SCAN_Z_RADIUS..SCAN_Z_RADIUS] and skips unloaded chunks.
+     * Note: chunks should be pre-loaded via [preloadChunksForScan] before calling.
      * Requirements: 4.1, 10.1
      */
     private fun scanLevel(y: Int): List<CodeLine> {
@@ -284,13 +322,8 @@ class BlockScanner(
         for (z in -SCAN_Z_RADIUS..SCAN_Z_RADIUS step 2) {
             val chunkX = 0 shr 4
             val chunkZ = z shr 4
-            // Force-load the chunk synchronously if needed.
-            // This is a one-shot operation that happens when the player switches to /play —
-            // acceptable cost vs. silently ignoring code the player built away from spawn.
-            if (!world.isChunkLoaded(chunkX, chunkZ)) {
-                world.loadChunk(chunkX, chunkZ, /* generate = */ false)
-            }
-            // After load attempt: if still not loaded (chunk doesn't exist on disk), skip.
+            // Chunks should be pre-loaded by preloadChunksForScan().
+            // If still not loaded (e.g., sync scanCodingZone() called directly), skip.
             if (!world.isChunkLoaded(chunkX, chunkZ)) continue
 
             val startBlock = world.getBlockAt(0, y, z)

@@ -59,12 +59,15 @@ class NodeDSLPropertyTest : FreeSpec({
                 throw UnsupportedOperationException()
             override fun registerEvent(blockType: Material, factory: () -> IEvent) =
                 throw UnsupportedOperationException()
+            override fun registerEvent(blockType: Material, nodeId: String, factory: () -> IEvent) =
+                throw UnsupportedOperationException()
             override fun getActionFactory(blockType: Material) = actions[blockType]
             override fun getConditionFactory(blockType: Material) = conditions[blockType]
             override fun getValueFactory(blockType: Material): ((Map<String, Any>) -> IValue<*>)? =
                 throw UnsupportedOperationException()
             override fun getEventFactory(blockType: Material): (() -> IEvent)? =
                 throw UnsupportedOperationException()
+            override fun getEventFactoryById(nodeId: String): (() -> IEvent)? = null
             override fun getActionNodeId(blockType: Material): String? = null
             override fun getConditionNodeId(blockType: Material): String? = null
             override fun getValueNodeId(blockType: Material): String? = null

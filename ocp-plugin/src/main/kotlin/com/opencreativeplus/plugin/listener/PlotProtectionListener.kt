@@ -4,8 +4,6 @@ import com.opencreativeplus.api.plot.ModeManager
 import com.opencreativeplus.api.plot.PlotMode
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import com.opencreativeplus.plugin.registry.CategoryRegistry
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.bukkit.Material
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -40,7 +38,6 @@ class PlotProtectionListener(
     private val modeManager: ModeManager,
     private val categoryRegistry: CategoryRegistry,
     private val plotManager: PlotManagerImpl,
-    private val scope: CoroutineScope,
     private val plugin: Plugin
 ) : Listener {
 
@@ -86,20 +83,15 @@ class PlotProtectionListener(
             return
         }
 
-        // For non-whitelisted materials: check if player is in DEV mode and remove the block if so
+        // For non-whitelisted materials: check synchronously if player is in DEV mode
+        // and cancel immediately to prevent block placement (no dupes, no ghost blocks).
         if (!isWhitelisted(material)) {
-            val placedBlock = event.blockPlaced
-            scope.launch {
-                val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
-                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
-                // Player is in DEV mode — remove the illegally placed block on main thread
-                org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
-                    if (placedBlock.type == material) { // verify it's still there
-                        placedBlock.type = org.bukkit.Material.AIR
-                        player.sendMessage("§c[OCP] Нельзя разместить §e${material.name}§c в DEV-режиме. " +
-                            "Разрешены только блоки кодирования.")
-                    }
-                })
+            // Synchronous lookup — safe on main thread (in-memory ConcurrentHashMap)
+            val plot = plotManager.getPlayerPlotSync(player.uniqueId) ?: return
+            if (modeManager.getCurrentMode(player, plot) == PlotMode.DEV) {
+                event.isCancelled = true
+                player.sendMessage("§c[OCP] Нельзя разместить §e${material.name}§c в DEV-режиме. " +
+                    "Разрешены только блоки кодирования.")
             }
         }
     }
@@ -129,20 +121,13 @@ class PlotProtectionListener(
         }
 
         if (!isWhitelisted(material)) {
-            // Only enforce in DEV mode — check asynchronously, then restore block if needed.
-            // We cannot cancel the event here (already past the synchronous window),
-            // so we restore the block on the main thread after the async check.
-            scope.launch {
-                val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
-                if (modeManager.getCurrentMode(player, plot) != PlotMode.DEV) return@launch
-                // Player is in DEV mode — restore the block on main thread
-                org.bukkit.Bukkit.getScheduler().runTask(plugin, Runnable {
-                    if (block.type == org.bukkit.Material.AIR) {
-                        block.type = material
-                        player.sendMessage("§c[OCP] Нельзя сломать §e${material.name}§c в DEV-режиме. " +
-                            "Разрешены только блоки кодирования.")
-                    }
-                })
+            // Synchronous check — cancel immediately to prevent block break and item drops.
+            // No dupes, no ghost blocks, no autoclicker exploitation.
+            val plot = plotManager.getPlayerPlotSync(player.uniqueId) ?: return
+            if (modeManager.getCurrentMode(player, plot) == PlotMode.DEV) {
+                event.isCancelled = true
+                player.sendMessage("§c[OCP] Нельзя сломать §e${material.name}§c в DEV-режиме. " +
+                    "Разрешены только блоки кодирования.")
             }
             return
         }

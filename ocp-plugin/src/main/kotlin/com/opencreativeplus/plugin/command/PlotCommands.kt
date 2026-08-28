@@ -60,11 +60,22 @@ class PlotCommands(
             "dev"   -> handleModeSwitch(sender, PlotMode.DEV)
             "play"  -> handleModeSwitch(sender, PlotMode.PLAY)
             "plot"  -> handlePlot(sender, args)
+            "hub", "spawn" -> handleHub(sender)
             "ocptps" -> sender.sendMessage("§6[OCP] Current TPS: §f${String.format("%.1f", tpsMonitor.getCurrentTPS())}")
             "ocp"   -> handleOcp(sender, args)
         }
 
         return true
+    }
+
+    private fun handleHub(player: Player) {
+        val hubWorld = player.server.worlds.first()
+        player.teleport(hubWorld.spawnLocation)
+        player.gameMode = org.bukkit.GameMode.ADVENTURE
+        // Give navigation items
+        val ocpPlugin = plugin as? com.opencreativeplus.plugin.OpenCreativePlusPlugin
+        ocpPlugin?.giveNavigationItems(player)
+        player.sendMessage("§a[OCP] Вы вернулись в главное лобби.")
     }
 
     private fun handleModeSwitch(player: Player, mode: PlotMode) {

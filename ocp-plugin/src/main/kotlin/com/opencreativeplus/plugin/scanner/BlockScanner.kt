@@ -667,66 +667,59 @@ class BlockScanner(
     internal fun buildScannedNode(block: Block): ScannedNode? {
         val pdcActionId = readActionId(block)
 
-        return if (pdcActionId != null) {
-            // PDC path: action_id present
-            val factory = nodeRegistry.getActionFactoryById(pdcActionId)
-                ?: nodeRegistry.getConditionFactoryById(pdcActionId)
-                ?: nodeRegistry.getValueFactoryById(pdcActionId)
-
-            if (factory == null) {
-                logger.fine(
-                    "BlockScanner: action_id '$pdcActionId' at ${block.location} " +
-                    "is not registered in NodeRegistry — skipping block"
+        // 1. If this is an event block (e.g. DIAMOND_BLOCK on a blue glass strip)
+        if (block.type == Material.DIAMOND_BLOCK) {
+            val eventId = pdcActionId ?: "on_join"
+            val factory = nodeRegistry.getEventFactoryById(eventId)
+                ?: nodeRegistry.getEventFactory(Material.DIAMOND_BLOCK)
+            if (factory != null) {
+                return ScannedNode(
+                    blockType = block.type,
+                    location = block.location,
+                    parameters = emptyMap(),
+                    nodeId = eventId
                 )
-                return null
             }
+        }
 
+        // 2. If action_id is present (from sign PDC or block PDC)
+        if (pdcActionId != null) {
             val descriptor = categoryRegistry?.getDescriptorById(pdcActionId)
             val params = extractParameters(block, descriptor).toMutableMap()
             if (pdcActionId == "and_condition" || pdcActionId == "or_condition") {
                 params["condition_children"] = readConditionChildren(block)
             }
-            // Req 5.2: if this is a LAPIS_BLOCK (function entry), read function name from ParamChest slot 0
             if (block.type == FUNCTION_ENTRY_MATERIAL) {
                 readFunctionName(block)?.let { params["function_name"] = it }
             }
-            ScannedNode(
+            return ScannedNode(
                 blockType = block.type,
                 location  = block.location,
                 parameters = params,
                 nodeId    = pdcActionId
             )
-        } else {
-            // Material fallback path (Requirement 7.1)
-            val materialNodeId = nodeRegistry.getActionNodeId(block.type)
-                ?: nodeRegistry.getConditionNodeId(block.type)
-                ?: nodeRegistry.getValueNodeId(block.type)
-
-            // If no nodeId found by material either, skip this block (Req 4.3)
-            if (materialNodeId == null) {
-                logger.fine(
-                    "BlockScanner: block ${block.type} at ${block.location} " +
-                    "has no registered nodeId — skipping block"
-                )
-                return null
-            }
-
-            val descriptor = categoryRegistry?.getDescriptorById(materialNodeId)
-            val params = extractParameters(block, descriptor).toMutableMap()
-            if (materialNodeId == "and_condition" || materialNodeId == "or_condition") {
-                params["condition_children"] = readConditionChildren(block)
-            }
-            // Req 5.2: if this is a LAPIS_BLOCK (function entry), read function name from ParamChest slot 0
-            if (block.type == FUNCTION_ENTRY_MATERIAL) {
-                readFunctionName(block)?.let { params["function_name"] = it }
-            }
-            ScannedNode(
-                blockType  = block.type,
-                location   = block.location,
-                parameters = params,
-                nodeId     = materialNodeId
-            )
         }
+
+        // 3. Material fallback path (Requirement 7.1)
+        val materialNodeId = nodeRegistry.getActionNodeId(block.type)
+            ?: nodeRegistry.getConditionNodeId(block.type)
+            ?: nodeRegistry.getValueNodeId(block.type)
+            ?: return null
+
+        val descriptor = categoryRegistry?.getDescriptorById(materialNodeId)
+        val params = extractParameters(block, descriptor).toMutableMap()
+        if (materialNodeId == "and_condition" || materialNodeId == "or_condition") {
+            params["condition_children"] = readConditionChildren(block)
+        }
+        if (block.type == FUNCTION_ENTRY_MATERIAL) {
+            readFunctionName(block)?.let { params["function_name"] = it }
+        }
+        return ScannedNode(
+            blockType  = block.type,
+            location   = block.location,
+            parameters = params,
+            nodeId     = materialNodeId
+        )
     }
 
     /**
@@ -747,10 +740,22 @@ class BlockScanner(
     }
 
     /**
-     * Read `ocp:action_id` from the block's PDC.
-     * Returns null if the block is not a TileState or the key is absent.
+     * Read `ocp:action_id` from an adjacent sign's PDC, or from the block itself.
+     * Regular blocks (cobblestone, diamond block, etc.) are NOT TileEntities and have no PDC —
+     * the action_id is stored in the attached sign instead.
+     * Returns null if no action_id is found.
      */
     internal fun readActionId(block: Block): String? {
+        // Check adjacent signs first (since regular blocks have no PDC)
+        for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)) {
+            val adjacent = block.getRelative(face)
+            if (adjacent.state is Sign) {
+                val pdc = (adjacent.state as TileState).persistentDataContainer
+                val id = pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
+                if (id != null) return id
+            }
+        }
+        // Fallback: check the block itself (for TileEntity blocks like signs, chests)
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
         return pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
     }

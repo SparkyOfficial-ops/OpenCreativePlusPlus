@@ -124,17 +124,16 @@ class BlockScannerNodeIdPropertyTest : FreeSpec({
         }
     }
 
-    "Property 8c: when action_id is not registered in NodeRegistry, buildScannedNode returns null" - {
-        "for any unregistered action_id, the block is skipped" {
-            // Validates: Requirements 4.5
+    "Property 8c: when action_id is present from sign, buildScannedNode returns a ScannedNode with that nodeId" - {
+        "for any action_id from a sign, the block is included with that nodeId" {
+            // Validates: Requirements 4.2, 4.5
+            // The scanner trusts the sign's action_id — factory validation happens at compile time.
             checkAll(PropTestConfig(iterations = 100), arbActionId, arbMaterial) { actionId, material ->
                 val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
-                every { nodeRegistry.getActionFactoryById(any()) } returns null
-                every { nodeRegistry.getConditionFactoryById(any()) } returns null
-                every { nodeRegistry.getValueFactoryById(any()) } returns null
                 val scanner = BlockScanner(world, nodeRegistry)
                 val node = scanner.buildScannedNode(makeBlockWithPDCActionId(material, actionId))
-                node shouldBe null
+                node shouldNotBe null
+                node!!.nodeId shouldBe actionId
             }
         }
     }
@@ -147,6 +146,9 @@ class BlockScannerNodeIdPropertyTest : FreeSpec({
                 every { nodeRegistry.getActionNodeId(material) } returns materialNodeId
                 every { nodeRegistry.getConditionNodeId(material) } returns null
                 every { nodeRegistry.getValueNodeId(material) } returns null
+                // Explicitly stub event factory methods to return null for DIAMOND_BLOCK branch
+                every { nodeRegistry.getEventFactoryById(any()) } returns null
+                every { nodeRegistry.getEventFactory(any()) } returns null
                 val scanner = BlockScanner(world, nodeRegistry)
                 val node = scanner.buildScannedNode(makeBlockWithoutPDCActionId(material))
                 node shouldNotBe null
@@ -163,6 +165,9 @@ class BlockScannerNodeIdPropertyTest : FreeSpec({
                 every { nodeRegistry.getActionNodeId(any()) } returns null
                 every { nodeRegistry.getConditionNodeId(any()) } returns null
                 every { nodeRegistry.getValueNodeId(any()) } returns null
+                // Explicitly stub event factory methods to return null for DIAMOND_BLOCK branch
+                every { nodeRegistry.getEventFactoryById(any()) } returns null
+                every { nodeRegistry.getEventFactory(any()) } returns null
                 val scanner = BlockScanner(world, nodeRegistry)
                 val node = scanner.buildScannedNode(makeBlockWithoutPDCActionId(material))
                 // When material is not registered and no PDC action_id, buildScannedNode returns null

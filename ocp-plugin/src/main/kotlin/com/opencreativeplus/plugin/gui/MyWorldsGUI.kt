@@ -4,6 +4,7 @@ import com.opencreativeplus.api.plot.Plot
 import com.opencreativeplus.core.database.PlotPersistence
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
+import com.opencreativeplus.plugin.world.WorldManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.bukkit.Bukkit
@@ -38,7 +39,8 @@ class MyWorldsGUI(
     private val plotPersistence: PlotPersistence,
     private val modeManager: ModeManagerImpl,
     private val scope: CoroutineScope,
-    private val plugin: Plugin
+    private val plugin: Plugin,
+    private val worldManager: WorldManager? = null
 ) : Listener {
 
     companion object {
@@ -180,21 +182,18 @@ class MyWorldsGUI(
                 open(player, currentPage - 1)
             }
             slot == 49 -> {
-                // Create new world
-                scope.launch {
-                    val canCreate = plotManager.canCreatePlot(player.uniqueId)
-                    if (!canCreate) {
-                        Bukkit.getScheduler().runTask(plugin, Runnable {
-                            player.sendMessage("§c[OCP] Вы достигли лимита миров (${PlotManagerImpl.DEFAULT_MAX_PLOTS}).")
-                        })
-                        return@launch
-                    }
-                    plotManager.createPlot(player.uniqueId)
-                    Bukkit.getScheduler().runTask(plugin, Runnable {
-                        player.sendMessage("§a[OCP] Новый мир создан!")
-                    })
-                    open(player, currentPage)
+                // Open template selector GUI
+                val wm = worldManager
+                if (wm == null) {
+                    player.sendMessage("§c[OCP] World manager not available.")
+                    return
                 }
+                player.closeInventory()
+                val templateGUI = TemplateSelectorGUI(plotManager, wm, scope, plugin)
+                plugin.server.pluginManager.registerEvents(templateGUI, plugin)
+                Bukkit.getScheduler().runTask(plugin, Runnable {
+                    templateGUI.open(player)
+                })
             }
             slot == 53 -> {
                 // Next page

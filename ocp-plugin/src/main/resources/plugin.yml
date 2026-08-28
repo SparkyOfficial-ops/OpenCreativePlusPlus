@@ -18,6 +18,10 @@ commands:
   plot:
     description: Plot management
     usage: /plot <create|trust|untrust> [player]
+  hub:
+    description: Return to the main lobby
+    usage: /hub
+    aliases: [spawn]
   ocptps:
     description: Show current TPS
     usage: /ocptps

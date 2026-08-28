@@ -111,7 +111,7 @@ class SignDisplayNamePropertyTest : FreeSpec({
                 @Suppress("DEPRECATION")
                 every { signState.setLine(capture(lineSlot), capture(textSlot)) } returns Unit
 
-                gui.placeOrUpdateSign(block, displayName)
+                gui.placeOrUpdateSign(block, "test_action", displayName)
 
                 lineSlot.captured shouldBe 0
                 textSlot.captured shouldBe displayName
@@ -136,9 +136,9 @@ class SignDisplayNamePropertyTest : FreeSpec({
                 every { signState.setLine(any(), capture(textSlot)) } returns Unit
 
                 // First selection
-                gui.placeOrUpdateSign(block, firstName)
+                gui.placeOrUpdateSign(block, "action_1", firstName)
                 // Second selection — should update the same sign
-                gui.placeOrUpdateSign(block, secondName)
+                gui.placeOrUpdateSign(block, "action_2", secondName)
 
                 // setLine should have been called twice (once per call)
                 @Suppress("DEPRECATION")
@@ -178,7 +178,7 @@ class SignDisplayNamePropertyTest : FreeSpec({
                     every { block.getRelative(face) } returns occupiedBlock
                 }
 
-                gui.placeOrUpdateSign(block, displayName)
+                gui.placeOrUpdateSign(block, "test_action", displayName)
 
                 verify { logger.warning(any<String>()) }
             }

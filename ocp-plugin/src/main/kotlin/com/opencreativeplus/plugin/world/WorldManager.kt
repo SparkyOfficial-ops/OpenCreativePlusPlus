@@ -1,10 +1,13 @@
 package com.opencreativeplus.plugin.world
 
+import com.opencreativeplus.core.world.PlotTemplate
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bukkit.Bukkit
 import org.bukkit.Difficulty
+import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.WorldCreator
+import org.bukkit.WorldType
 import org.bukkit.plugin.Plugin
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -32,9 +35,10 @@ class WorldManager(
      * Create both worlds for a new plot synchronously.
      * MUST be called from the Bukkit main thread.
      */
-    fun createPlotWorldsSync(plotId: UUID): Pair<World, World> {
-        val mainWorld = createWorld(plotId.toString(), isDevWorld = false)
-        val devWorld = createWorld("${plotId}_dev", isDevWorld = true)
+    fun createPlotWorldsSync(plotId: UUID, template: PlotTemplate = PlotTemplate.VOID): Pair<World, World> {
+        val mainWorld = createWorld(plotId.toString(), isDevWorld = false, template = template)
+        // Dev world is always void — coding grid is placed on top
+        val devWorld = createWorld("${plotId}_dev", isDevWorld = true, template = PlotTemplate.VOID)
         configureMainWorld(mainWorld)
         configureDevWorld(devWorld)
         loadedWorlds[plotId] = Pair(mainWorld, devWorld)
@@ -45,12 +49,12 @@ class WorldManager(
      * Create both worlds for a new plot.
      1.1, 1.2, 1.3, 35.1, 35.2, 35.3, 35.4
      */
-    suspend fun createPlotWorlds(plotId: UUID): Pair<World, World> =
+    suspend fun createPlotWorlds(plotId: UUID, template: PlotTemplate = PlotTemplate.VOID): Pair<World, World> =
         suspendCancellableCoroutine { cont ->
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 try {
-                    val mainWorld = createWorld(plotId.toString(), isDevWorld = false)
-                    val devWorld = createWorld("${plotId}_dev", isDevWorld = true)
+                    val mainWorld = createWorld(plotId.toString(), isDevWorld = false, template = template)
+                    val devWorld = createWorld("${plotId}_dev", isDevWorld = true, template = PlotTemplate.VOID)
                     configureMainWorld(mainWorld)
                     configureDevWorld(devWorld)
                     loadedWorlds[plotId] = Pair(mainWorld, devWorld)
@@ -117,28 +121,44 @@ class WorldManager(
     // Private helpers
     // -------------------------------------------------------------------------
 
-    private fun createWorld(name: String, isDevWorld: Boolean): World {
-        // Let Bukkit handle world creation natively — including level.dat generation.
-        // Previously, prepareLevelDat() wrote a minimal NBT with SpawnX/Y/Z to avoid slow
-        // spawn scanning, but on Minecraft 1.20+ the strict DFU codecs require additional
-        // fields (dimensions, seed) that our hand-crafted level.dat lacked, causing
-        // "No key dimensions in MapLike[{}]" errors and world load failures.
-        // Bukkit's native creation handles all of this correctly.
-
+    private fun createWorld(name: String, isDevWorld: Boolean, template: PlotTemplate = PlotTemplate.VOID): World {
         val creator = WorldCreator(name)
-            .generateStructures(false)
             .environment(World.Environment.NORMAL)
-            .generator(VoidGenerator())
+
+        // Choose generator based on template. Dev worlds are always void.
+        when {
+            isDevWorld || template == PlotTemplate.VOID -> {
+                creator.generateStructures(false)
+                creator.generator(VoidGenerator())
+            }
+            template == PlotTemplate.FLAT -> {
+                creator.generateStructures(false)
+                creator.type(WorldType.FLAT)
+            }
+            template == PlotTemplate.SURVIVAL -> {
+                creator.generateStructures(true)
+                creator.type(WorldType.NORMAL)
+            }
+        }
 
         val world = Bukkit.createWorld(creator)
             ?: error("Failed to create world: $name")
 
         world.setKeepSpawnInMemory(false)
-        if (isDevWorld) {
-            world.setSpawnLocation(0, 16, 0)
-        } else {
-            world.setSpawnLocation(0, 64, 0)
+        val spawnY = if (isDevWorld) 16 else 64
+        world.setSpawnLocation(0, spawnY, 0)
+
+        // For void worlds, place a 3x3 stone platform at spawn to prevent the player
+        // from falling into the void. Without any blocks, Paper's PlayerRespawnLogic
+        // scans thousands of chunks on the main thread, causing 45-second freezes.
+        if (!isDevWorld && template == PlotTemplate.VOID) {
+            for (x in -1..1) {
+                for (z in -1..1) {
+                    world.getBlockAt(x, spawnY - 1, z).type = Material.SMOOTH_STONE
+                }
+            }
         }
+
         return world
     }
 

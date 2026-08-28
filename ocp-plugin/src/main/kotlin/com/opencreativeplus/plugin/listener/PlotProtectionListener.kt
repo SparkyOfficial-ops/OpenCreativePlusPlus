@@ -74,7 +74,8 @@ class PlotProtectionListener(
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     fun onBlockPlace(event: BlockPlaceEvent) {
         val player = event.player
-        val material = event.blockPlaced.type
+        val block = event.blockPlaced
+        val material = block.type
 
         // Req 12.7: LAVA and WATER are always blocked regardless of mode
         if (material in ALWAYS_BLOCKED_PLACE) {
@@ -89,9 +90,19 @@ class PlotProtectionListener(
             // Synchronous lookup — safe on main thread (in-memory ConcurrentHashMap)
             val plot = plotManager.getPlayerPlotSync(player.uniqueId) ?: return
             if (modeManager.getCurrentMode(player, plot) == PlotMode.DEV) {
-                event.isCancelled = true
-                player.sendMessage("§c[OCP] Нельзя разместить §e${material.name}§c в DEV-режиме. " +
-                    "Разрешены только блоки кодирования.")
+                // In DEV mode, code blocks can ONLY be placed directly on top of glass strips
+                val below = block.getRelative(BlockFace.DOWN).type
+                val isOverGlass = below in setOf(
+                    Material.BLUE_STAINED_GLASS,
+                    Material.WHITE_STAINED_GLASS,
+                    Material.GRAY_STAINED_GLASS
+                )
+
+                if (!isOverGlass) {
+                    event.isCancelled = true
+                    player.sendMessage("§c[OCP] Блоки кода можно ставить ТОЛЬКО на стеклянную полосу!")
+                    return
+                }
             }
         }
     }

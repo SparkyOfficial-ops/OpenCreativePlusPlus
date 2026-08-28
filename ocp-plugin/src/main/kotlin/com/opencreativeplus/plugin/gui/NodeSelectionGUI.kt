@@ -123,10 +123,8 @@ class NodeSelectionGUI(
         val category = categoryRegistry.getCategoryForMaterial(block.type) ?: return
         val player = event.player
 
-        // If this block already has an action_id, SmartGUI handles it — not us
-        val existingActionId = (block.state as? TileState)
-            ?.persistentDataContainer
-            ?.get(NamespacedKey("ocp", "action_id"), PersistentDataType.STRING)
+        // If this block already has an action_id (stored in adjacent sign's PDC), SmartGUI handles it — not us
+        val existingActionId = readCurrentActionId(block)
         if (existingActionId != null) return
 
         event.isCancelled = true
@@ -164,15 +162,19 @@ class NodeSelectionGUI(
         val targetBlock = pendingBlocks[player.uniqueId] ?: return
         if (!categoryRegistry.isCategoryMaterial(targetBlock.type)) return
 
-        // Записываем action_id в PDC блока
-        writeActionId(targetBlock, actionId)
-        placeOrUpdateSign(targetBlock, categoryRegistry.getDescriptorById(actionId)?.displayName ?: actionId)
+        val descriptor = categoryRegistry.getDescriptorById(actionId)
+        val displayName = descriptor?.displayName ?: actionId
+
+        // Write action_id into the adjacent sign's PDC (regular blocks like cobblestone/diamond
+        // are NOT TileEntities and have no PDC — signs are TileEntities with full PDC support)
+        placeOrUpdateSign(targetBlock, actionId, displayName)
 
         // Баг 2: авто-ставим поршневую скобку для IF и LOOP категорий
-        val descriptor = categoryRegistry.getDescriptorById(actionId)
         if (descriptor != null && descriptor.category in BRACKET_CATEGORIES) {
             autoPlacePistonBracket(targetBlock)
         }
+
+        player.sendMessage("§a[OCP] Выбрано действие: §e$displayName")
     }
 
     @EventHandler
@@ -191,29 +193,39 @@ class NodeSelectionGUI(
 
     /**
      * Place a new sign or update an existing sign on an adjacent face of [block].
+     * The sign stores the action_id in its PDC (PersistentDataContainer).
      * Requirements: 6.1, 6.2, 6.3, 6.4
      */
-    fun placeOrUpdateSign(block: Block, displayName: String) {
+    fun placeOrUpdateSign(block: Block, actionId: String, displayName: String) {
         val faces = listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
 
+        // 1. If a sign already exists on an adjacent face — update it
         for (face in faces) {
             val adjacent = block.getRelative(face)
-            if (adjacent.type == Material.OAK_SIGN || adjacent.type == Material.OAK_WALL_SIGN) {
-                val signState = adjacent.state as? org.bukkit.block.Sign ?: continue
+            if (adjacent.state is org.bukkit.block.Sign) {
+                val signState = adjacent.state as org.bukkit.block.Sign
                 @Suppress("DEPRECATION")
                 signState.setLine(0, displayName)
+                signState.persistentDataContainer.set(KEY_ACTION_ID, PersistentDataType.STRING, actionId)
                 signState.update()
                 return
             }
         }
 
+        // 2. Otherwise place a new wall sign on the first free face
         for (face in faces) {
             val adjacent = block.getRelative(face)
             if (adjacent.type == Material.AIR) {
                 adjacent.type = Material.OAK_WALL_SIGN
-                val signState = adjacent.state as? org.bukkit.block.Sign ?: continue
+                val data = adjacent.blockData
+                if (data is org.bukkit.block.data.type.WallSign) {
+                    data.facing = face
+                    adjacent.blockData = data
+                }
+                val signState = adjacent.state as org.bukkit.block.Sign
                 @Suppress("DEPRECATION")
                 signState.setLine(0, displayName)
+                signState.persistentDataContainer.set(KEY_ACTION_ID, PersistentDataType.STRING, actionId)
                 signState.update()
                 return
             }
@@ -228,15 +240,24 @@ class NodeSelectionGUI(
     // Private helpers
     // -------------------------------------------------------------------------
 
+    /**
+     * Read action_id from adjacent sign's PDC, or from the block itself if it's a TileState.
+     * Regular blocks (cobblestone, diamond block, etc.) are NOT TileEntities and have no PDC —
+     * the action_id is stored in the attached sign instead.
+     */
     private fun readCurrentActionId(block: Block): String? {
-        val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
-        return pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
-    }
-
-    private fun writeActionId(block: Block, actionId: String) {
-        val state = block.state as? TileState ?: return
-        state.persistentDataContainer.set(KEY_ACTION_ID, PersistentDataType.STRING, actionId)
-        state.update()
+        // Check adjacent signs first
+        val faces = listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST)
+        for (face in faces) {
+            val adjacent = block.getRelative(face)
+            if (adjacent.state is org.bukkit.block.Sign) {
+                val pdc = (adjacent.state as TileState).persistentDataContainer
+                val id = pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
+                if (id != null) return id
+            }
+        }
+        // Fallback: check the block itself (for TileEntity blocks like signs, chests)
+        return (block.state as? TileState)?.persistentDataContainer?.get(KEY_ACTION_ID, PersistentDataType.STRING)
     }
 
     private fun createActionItem(descriptor: ActionDescriptor, highlighted: Boolean): ItemStack {

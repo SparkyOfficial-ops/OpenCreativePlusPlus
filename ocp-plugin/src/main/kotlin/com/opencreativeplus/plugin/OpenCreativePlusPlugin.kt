@@ -283,6 +283,28 @@ class OpenCreativePlusPlugin : JavaPlugin() {
                     coreWorldManager.onPlayerLeave(plot.id, player.uniqueId)
                 }
             }
+            @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+            fun onPlayerRespawn(event: org.bukkit.event.player.PlayerRespawnEvent) {
+                val player = event.player
+                val plot = plotManager.getPlayerPlotSync(player.uniqueId)
+
+                if (plot != null) {
+                    val worlds = worldManager.getLoadedWorlds(plot.id)
+                    if (worlds != null) {
+                        // Respawn on the player's plot main world
+                        event.respawnLocation = worlds.first.spawnLocation
+                    }
+                } else {
+                    // Respawn in the hub (overworld)
+                    val hubWorld = server.worlds.first()
+                    event.respawnLocation = hubWorld.spawnLocation
+                }
+
+                // Give navigation items after respawn
+                server.scheduler.runTaskLater(this@OpenCreativePlusPlugin, Runnable {
+                    giveNavigationItems(player)
+                }, 2L)
+            }
         }, this)
         server.pluginManager.registerEvents(PlotConfigGUI(plotManager, scope, this), this)
         server.pluginManager.registerEvents(DialogueQuitListener(), this)
@@ -326,7 +348,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
         }, this)
 
         // World management GUIs (after signInputManager is initialized)
-        val myWorldsGUI = MyWorldsGUI(plotManager, plotPersistence, modeManager, scope, this)
+        val myWorldsGUI = MyWorldsGUI(plotManager, plotPersistence, modeManager, scope, this, worldManager)
         val worldSettingsGUI = WorldSettingsGUI(plotManager, scope, this)
         val worldBrowserGUI = WorldBrowserGUI(plotManager, plotPersistence, signInputManager, scope, this)
         server.pluginManager.registerEvents(myWorldsGUI, this)
@@ -353,7 +375,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
 
         // ── Commands ──────────────────────────────────────────────────────────
         val plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, scope, traceManager, variableManager = variableManager, plugin = this, plotTopGUI = plotTopGUI, coreWorldManager = coreWorldManager, signInputManager = signInputManager, pluginWorldManager = worldManager)
-        listOf("build", "dev", "play", "plot", "ocptps", "ocp").forEach { cmd ->
+        listOf("build", "dev", "play", "plot", "hub", "ocptps", "ocp").forEach { cmd ->
             getCommand(cmd)?.setExecutor(plotCommands)
         }
         getCommand("ocplogs")?.setExecutor(LogViewCommand(executionLogger, plotManager, scope))
@@ -406,7 +428,7 @@ class OpenCreativePlusPlugin : JavaPlugin() {
      *
      * Items are only placed if the slot is empty to avoid overwriting existing items.
      */
-    private fun giveNavigationItems(player: org.bukkit.entity.Player) {
+    internal fun giveNavigationItems(player: org.bukkit.entity.Player) {
         fun makeNavItem(material: org.bukkit.Material, name: String, lore: List<String>): org.bukkit.inventory.ItemStack {
             val item = org.bukkit.inventory.ItemStack(material)
             val meta = item.itemMeta ?: return item

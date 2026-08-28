@@ -69,7 +69,12 @@ class WorldBrowserGUI(
             openInventories[player.uniqueId] = pagePlots
             playerPages[player.uniqueId] = safePage
             playerSortModes[player.uniqueId] = sort
-            playerSearchQueries[player.uniqueId] = search
+            // ConcurrentHashMap does not accept null values — use remove() instead
+            if (search != null) {
+                playerSearchQueries[player.uniqueId] = search
+            } else {
+                playerSearchQueries.remove(player.uniqueId)
+            }
 
             Bukkit.getScheduler().runTask(plugin, Runnable {
                 val inv = Bukkit.createInventory(null, 54, GUI_TITLE)

@@ -118,13 +118,12 @@ class WorldManager(
     // -------------------------------------------------------------------------
 
     private fun createWorld(name: String, isDevWorld: Boolean): World {
-        // Pre-create the world folder with a level.dat that has SpawnX/Y/Z = 0/64/0.
-        // This prevents Bukkit from calling setInitialSpawn → getOverworldRespawnPos,
-        // which synchronously generates chunks on the main thread causing 10-40s Watchdog freezes.
-        val worldFolder = java.io.File(Bukkit.getWorldContainer(), name)
-        if (!worldFolder.exists()) {
-            prepareLevelDat(worldFolder)
-        }
+        // Let Bukkit handle world creation natively — including level.dat generation.
+        // Previously, prepareLevelDat() wrote a minimal NBT with SpawnX/Y/Z to avoid slow
+        // spawn scanning, but on Minecraft 1.20+ the strict DFU codecs require additional
+        // fields (dimensions, seed) that our hand-crafted level.dat lacked, causing
+        // "No key dimensions in MapLike[{}]" errors and world load failures.
+        // Bukkit's native creation handles all of this correctly.
 
         val creator = WorldCreator(name)
             .generateStructures(false)
@@ -135,65 +134,12 @@ class WorldManager(
             ?: error("Failed to create world: $name")
 
         world.setKeepSpawnInMemory(false)
-        world.setSpawnLocation(0, 64, 0)
-        return world
-    }
-
-    /**
-     * Writes a minimal level.dat NBT file into [worldFolder] that pre-sets the spawn
-     * coordinates to (0, 64, 0).  When Bukkit loads this folder it reads the existing
-     * SpawnX/Y/Z values from level.dat and skips the expensive `setInitialSpawn` scan.
-     *
-     * The NBT is written using the vanilla-compatible format that Paper 1.20.1 accepts.
-     * If anything fails (e.g. NBT libraries not accessible) we log and continue — Bukkit
-     * will fall back to the slow path but won't crash.
-     */
-    private fun prepareLevelDat(worldFolder: java.io.File) {
-        try {
-            worldFolder.mkdirs()
-            val levelDat = java.io.File(worldFolder, "level.dat")
-            if (levelDat.exists()) return
-
-            // Write a minimal compound NBT: {Data:{SpawnX:0,SpawnY:64,SpawnZ:0}}
-            // Using raw NBT bytes — avoids depending on server-internal NMS classes.
-            // Gzip-compressed NBT compound as Paper/Vanilla expects.
-            val nbt = buildMinimalLevelDat()
-            java.io.FileOutputStream(levelDat).use { fos ->
-                java.util.zip.GZIPOutputStream(fos).use { gzip ->
-                    gzip.write(nbt)
-                }
-            }
-        } catch (e: Exception) {
-            // Non-fatal: Bukkit will create level.dat itself (with slow spawn scan)
-            plugin.logger.warning("[OCP] Could not pre-create level.dat for $worldFolder: ${e.message}")
+        if (isDevWorld) {
+            world.setSpawnLocation(0, 16, 0)
+        } else {
+            world.setSpawnLocation(0, 64, 0)
         }
-    }
-
-    /**
-     * Returns a minimal gzip-compatible NBT byte array with SpawnX=0, SpawnY=64, SpawnZ=0.
-     * Format: TAG_Compound("") { TAG_Compound("Data") { TAG_Int("SpawnX",0), TAG_Int("SpawnY",64), TAG_Int("SpawnZ",0) } }
-     */
-    private fun buildMinimalLevelDat(): ByteArray {
-        val out = java.io.ByteArrayOutputStream()
-        val dos = java.io.DataOutputStream(out)
-        // TAG_Compound (id=10), name=""
-        dos.writeByte(10); dos.writeShort(0)
-        // TAG_Compound (id=10), name="Data"
-        dos.writeByte(10); dos.writeShort(4); dos.write("Data".toByteArray(Charsets.UTF_8))
-        // TAG_Int SpawnX = 0
-        dos.writeByte(3); dos.writeShort(6); dos.write("SpawnX".toByteArray(Charsets.UTF_8)); dos.writeInt(0)
-        // TAG_Int SpawnY = 64
-        dos.writeByte(3); dos.writeShort(6); dos.write("SpawnY".toByteArray(Charsets.UTF_8)); dos.writeInt(64)
-        // TAG_Int SpawnZ = 0
-        dos.writeByte(3); dos.writeShort(6); dos.write("SpawnZ".toByteArray(Charsets.UTF_8)); dos.writeInt(0)
-        // TAG_Int DataVersion (required by Paper 1.20.1 to not re-init world)
-        dos.writeByte(3); dos.writeShort(11); dos.write("DataVersion".toByteArray(Charsets.UTF_8)); dos.writeInt(3465)
-        // End of "Data" compound
-        dos.writeByte(0)
-        // End of root compound
-        dos.writeByte(0)
-        dos.flush()
-        return out.toByteArray()
+        return world
     }
 
     /**

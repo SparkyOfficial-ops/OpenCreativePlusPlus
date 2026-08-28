@@ -44,6 +44,11 @@ class PlotTopGUITest {
         mockkStatic("org.bukkit.Bukkit")
         every { Bukkit.createInventory(any(), any<Int>(), any<String>()) } returns inventory
         every { inventory.setItem(any(), any()) } just Runs
+
+        // Mock Bukkit.getPluginManager() for PlotTopGUI constructor default parameter
+        val pluginManager = mockk<org.bukkit.plugin.PluginManager>(relaxed = true)
+        every { Bukkit.getPluginManager() } returns pluginManager
+        every { pluginManager.getPlugin("OpenCreativePlus") } returns mockk(relaxed = true)
     }
 
     @AfterEach

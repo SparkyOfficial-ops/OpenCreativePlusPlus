@@ -68,6 +68,7 @@ class ModeManagerTest {
         executionEngine = mockk(relaxed = true)
 
         every { blockScanner.scanCodingZone() } returns emptyList()
+        coEvery { blockScanner.scanCodingZoneAsync(any()) } returns emptyList()
         every { astCompiler.compile(any()) } returns CompilationResult(emptyList(), emptyList())
         every { worldManager.getLoadedWorlds(any()) } returns null
         coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } returns null
@@ -75,7 +76,7 @@ class ModeManagerTest {
         modeManager = ModeManagerImpl(
             inventoryManager = inventoryManager,
             worldManager = worldManager,
-            blockScannerFactory = { blockScanner },
+            blockScannerFactory = { _ -> blockScanner },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
             executionEngine = executionEngine,
@@ -88,9 +89,9 @@ class ModeManagerTest {
         unmockkAll()
     }
 
-    private fun makePlot(id: UUID = UUID.randomUUID()): Plot = Plot(
+    private fun makePlot(id: UUID = UUID.randomUUID(), owner: UUID = UUID.randomUUID()): Plot = Plot(
         id = id,
-        owner = UUID.randomUUID(),
+        owner = owner,
         name = "Test Plot",
         description = "",
         mainWorldName = "${id}_main",
@@ -123,7 +124,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode saves old inventory and restores new inventory across multiple switches`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val savedModes = mutableListOf<PlotMode>()
         val loadedModes = mutableListOf<PlotMode>()
         coEvery { inventoryManager.saveInventorySnapshot(any(), any(), capture(savedModes), any(), any(), any()) } just Runs
@@ -144,7 +146,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode saves old inventory before restoring new inventory`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val callOrder = mutableListOf<String>()
         coEvery { inventoryManager.saveInventorySnapshot(any(), any(), any(), any(), any(), any()) } answers { callOrder.add("save") }
         coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { callOrder.add("load"); null }
@@ -160,17 +163,20 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode triggers block scan and AST compilation when switching to PLAY mode`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val codeLines = listOf(mockk<CodeLine>(relaxed = true))
         every { blockScanner.scanCodingZone() } returns codeLines
+        coEvery { blockScanner.scanCodingZoneAsync(any()) } returns codeLines
         modeManager.switchMode(player, plot, PlotMode.PLAY)
-        verify(exactly = 1) { blockScanner.scanCodingZone() }
+        coVerify(exactly = 1) { blockScanner.scanCodingZoneAsync(any()) }
         verify(exactly = 1) { astCompiler.compile(codeLines) }
     }
 
     @Test
     fun `switchMode does not trigger compilation when switching to non-PLAY modes`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         modeManager.switchMode(player, plot, PlotMode.DEV)
         modeManager.switchMode(player, plot, PlotMode.BUILD)
         verify(exactly = 0) { astCompiler.compile(any()) }
@@ -178,7 +184,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode registers compiled scripts with EventDispatcher on successful compilation`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val scripts = listOf(makeScript(), makeScript())
         every { astCompiler.compile(any()) } returns CompilationResult(scripts, emptyList())
         modeManager.switchMode(player, plot, PlotMode.PLAY)
@@ -187,7 +194,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode does not register scripts and reverts to previous mode when compilation fails`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val error = CompilationError(mockk(relaxed = true), "Unknown block")
         every { astCompiler.compile(any()) } returns CompilationResult(emptyList(), listOf(error))
         modeManager.switchMode(player, plot, PlotMode.DEV)
@@ -200,7 +208,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode cancels executions and unregisters scripts when leaving PLAY mode`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         modeManager.switchMode(player, plot, PlotMode.PLAY)
         for (target in listOf(PlotMode.BUILD, PlotMode.DEV)) {
             clearMocks(executionEngine, eventDispatcher, answers = false, recordedCalls = true)
@@ -213,7 +222,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode does not cancel executions when switching between non-PLAY modes`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         modeManager.switchMode(player, plot, PlotMode.DEV)
         modeManager.switchMode(player, plot, PlotMode.BUILD)
         verify(exactly = 0) { executionEngine.cancelAllExecutions(any()) }
@@ -221,7 +231,8 @@ class ModeManagerTest {
 
     @Test
     fun `switchMode cancels executions before restoring inventory when leaving PLAY mode`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         val callOrder = mutableListOf<String>()
         every { executionEngine.cancelAllExecutions(any()) } answers { callOrder.add("cancel") }
         coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { callOrder.add("load"); null }
@@ -245,14 +256,16 @@ class ModeManagerTest {
 
     @Test
     fun `getCurrentMode reflects the mode after a successful switch`() = runTest {
-        val player = mockPlayer(); val plot = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
         modeManager.switchMode(player, plot, PlotMode.DEV)
         assertEquals(PlotMode.DEV, modeManager.getCurrentMode(player, plot))
     }
 
     @Test
     fun `getCurrentMode is independent per player`() = runTest {
-        val playerA = mockPlayer(); val playerB = mockPlayer(); val plot = makePlot()
+        val playerA = mockPlayer(); val playerB = mockPlayer()
+        val plot = makePlot(owner = playerA.uniqueId)
         modeManager.switchMode(playerA, plot, PlotMode.DEV)
         assertEquals(PlotMode.DEV, modeManager.getCurrentMode(playerA, plot))
         assertEquals(PlotMode.BUILD, modeManager.getCurrentMode(playerB, plot))
@@ -260,7 +273,8 @@ class ModeManagerTest {
 
     @Test
     fun `getCurrentMode is independent per plot`() = runTest {
-        val player = mockPlayer(); val plotA = makePlot(); val plotB = makePlot()
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plotA = makePlot(owner = playerId); val plotB = makePlot(owner = playerId)
         modeManager.switchMode(player, plotA, PlotMode.DEV)
         assertEquals(PlotMode.DEV, modeManager.getCurrentMode(player, plotA))
         assertEquals(PlotMode.BUILD, modeManager.getCurrentMode(player, plotB))

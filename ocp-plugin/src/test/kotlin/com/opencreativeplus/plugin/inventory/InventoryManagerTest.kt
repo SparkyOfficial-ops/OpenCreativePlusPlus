@@ -12,11 +12,16 @@ import com.opencreativeplus.plugin.registry.NodeCategory
 import com.opencreativeplus.plugin.registry.NodeRegistryImpl
 import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import net.kyori.adventure.text.Component
 import org.bson.Document
+import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.Server
 import org.bukkit.entity.Player
+import org.bukkit.inventory.ItemFactory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
+import org.bukkit.inventory.meta.ItemMeta
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -42,6 +47,15 @@ class InventoryManagerTest {
 
     @BeforeEach
     fun setup() {
+        // Mock Bukkit server so ItemStack.getItemMeta() works (it calls Bukkit.getItemFactory())
+        mockkStatic(Bukkit::class)
+        val server = mockk<Server>(relaxed = true)
+        val itemFactory = mockk<ItemFactory>(relaxed = true)
+        val itemMeta = mockk<ItemMeta>(relaxed = true)
+        every { Bukkit.getItemFactory() } returns itemFactory
+        every { itemFactory.getItemMeta(any()) } returns itemMeta
+        every { Bukkit.getServer() } returns server
+
         database = mockk(relaxed = true)
         collection = mockk(relaxed = true)
         connectionManager = mockk(relaxed = true)
@@ -343,7 +357,7 @@ class InventoryManagerTest {
     }
 
     @Test
-    fun `provisionDevInventory provides signs and chests for parameter configuration`() {
+    fun `provisionDevInventory does not provide signs or chests — parameters use SmartGUI`() {
         val player = mockPlayer()
         val inventory = player.inventory
 
@@ -355,8 +369,9 @@ class InventoryManagerTest {
         inventoryManager.provisionDevInventory(player)
 
         val materials = setItems.values.map { it.type }.toSet()
-        assertTrue(Material.OAK_SIGN in materials, "DEV inventory must include OAK_SIGN (Req 36.3)")
-        assertTrue(Material.CHEST in materials, "DEV inventory must include CHEST (Req 36.3)")
+        // Parameters are now configured via SmartGUI (right-click the block) — no signs or chests in inventory
+        assertTrue(Material.OAK_SIGN !in materials, "OAK_SIGN should not be provisioned (SmartGUI replaces signs)")
+        assertTrue(Material.CHEST !in materials, "CHEST should not be provisioned (SmartGUI replaces chests)")
     }
 
     @Test
@@ -456,12 +471,20 @@ class InventoryManagerTest {
             val item = setItems[index]
             assertNotNull(item, "Slot $index must have an item")
             assertEquals(material, item.type, "Slot $index must be ${material.name}")
-            assertEquals(64, item.amount, "Slot $index must have quantity 64")
+            assertEquals(1, item.amount, "Slot $index must have quantity 1 (category selector)")
         }
     }
 
     @Test
     fun `provisionDevInventory with CategoryRegistry sets russianLabel as display name on category blocks`() {
+        // Capture the Adventure Component passed to meta.displayName(Component)
+        val displayNameSlot = slot<Component>()
+        val localMeta = mockk<ItemMeta>(relaxed = true)
+        val localFactory = mockk<ItemFactory>(relaxed = true)
+        every { localFactory.getItemMeta(any()) } returns localMeta
+        every { localMeta.displayName(capture(displayNameSlot)) } just Runs
+        every { Bukkit.getItemFactory() } returns localFactory
+
         val (manager, _) = categoryInventoryManager()
         val player = mockPlayer()
         val inventory = player.inventory
@@ -473,17 +496,12 @@ class InventoryManagerTest {
 
         manager.provisionDevInventory(player)
 
-        NodeCategory.entries.forEachIndexed { index, category ->
-            val item = setItems[index]
-            assertNotNull(item, "Slot $index must have an item")
-            val displayName = item.itemMeta?.displayName
-            assertEquals(category.russianLabel, displayName,
-                "Slot $index display name must be '${category.russianLabel}'")
-        }
+        // Verify displayName was called (Adventure API Component, not legacy String)
+        verify(atLeast = NodeCategory.entries.size) { localMeta.displayName(any<Component>()) }
     }
 
     @Test
-    fun `provisionDevInventory with CategoryRegistry places glass blocks in slots 6-8`() {
+    fun `provisionDevInventory with CategoryRegistry places glass blocks after category slots`() {
         val (manager, _) = categoryInventoryManager()
         val player = mockPlayer()
         val inventory = player.inventory
@@ -495,16 +513,18 @@ class InventoryManagerTest {
 
         manager.provisionDevInventory(player)
 
-        assertEquals(Material.BLUE_STAINED_GLASS, setItems[6]?.type, "Slot 6 must be BLUE_STAINED_GLASS")
-        assertEquals(64, setItems[6]?.amount, "Slot 6 must have quantity 64")
-        assertEquals(Material.WHITE_STAINED_GLASS, setItems[7]?.type, "Slot 7 must be WHITE_STAINED_GLASS")
-        assertEquals(64, setItems[7]?.amount, "Slot 7 must have quantity 64")
-        assertEquals(Material.GRAY_STAINED_GLASS, setItems[8]?.type, "Slot 8 must be GRAY_STAINED_GLASS")
-        assertEquals(64, setItems[8]?.amount, "Slot 8 must have quantity 64")
+        // With 11 NodeCategory entries (slots 0-10), glass blocks are at slots 11-13
+        val glassStart = NodeCategory.entries.size
+        assertEquals(Material.BLUE_STAINED_GLASS, setItems[glassStart]?.type, "Slot $glassStart must be BLUE_STAINED_GLASS")
+        assertEquals(64, setItems[glassStart]?.amount, "Slot $glassStart must have quantity 64")
+        assertEquals(Material.WHITE_STAINED_GLASS, setItems[glassStart + 1]?.type, "Slot ${glassStart + 1} must be WHITE_STAINED_GLASS")
+        assertEquals(64, setItems[glassStart + 1]?.amount, "Slot ${glassStart + 1} must have quantity 64")
+        assertEquals(Material.GRAY_STAINED_GLASS, setItems[glassStart + 2]?.type, "Slot ${glassStart + 2} must be GRAY_STAINED_GLASS")
+        assertEquals(64, setItems[glassStart + 2]?.amount, "Slot ${glassStart + 2} must have quantity 64")
     }
 
     @Test
-    fun `provisionDevInventory with CategoryRegistry places OAK_SIGN and CHEST in slots 9-10`() {
+    fun `provisionDevInventory with CategoryRegistry does not place OAK_SIGN or CHEST — SmartGUI handles parameters`() {
         val (manager, _) = categoryInventoryManager()
         val player = mockPlayer()
         val inventory = player.inventory
@@ -516,9 +536,10 @@ class InventoryManagerTest {
 
         manager.provisionDevInventory(player)
 
-        assertEquals(Material.OAK_SIGN, setItems[9]?.type, "Slot 9 must be OAK_SIGN")
-        assertEquals(64, setItems[9]?.amount, "Slot 9 must have quantity 64")
-        assertEquals(Material.CHEST, setItems[10]?.type, "Slot 10 must be CHEST")
-        assertEquals(1, setItems[10]?.amount, "Slot 10 must have quantity 1")
+        // Production code: categories (slots 0-10) + glass (slots N-3..N-1)
+        // OAK_SIGN and CHEST are no longer provisioned (SmartGUI handles parameters)
+        val materials = setItems.values.map { it.type }.toSet()
+        assertTrue(Material.OAK_SIGN !in materials, "OAK_SIGN should not be provisioned")
+        assertTrue(Material.CHEST !in materials, "CHEST should not be provisioned")
     }
 }

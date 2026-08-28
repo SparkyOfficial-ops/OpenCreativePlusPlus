@@ -89,9 +89,9 @@ class PlayerStateResetPropertyTest : FreeSpec({
     // Helpers
     // -----------------------------------------------------------------------
 
-    fun makePlot(id: UUID = UUID.randomUUID()): Plot = Plot(
+    fun makePlot(id: UUID = UUID.randomUUID(), owner: UUID = UUID.randomUUID()): Plot = Plot(
         id = id,
-        owner = UUID.randomUUID(),
+        owner = owner,
         name = "Test Plot",
         description = "",
         mainWorldName = "${id}_main",
@@ -111,13 +111,14 @@ class PlayerStateResetPropertyTest : FreeSpec({
         val executionEngine = mockk<ExecutionEngine>(relaxed = true)
 
         every { blockScanner.scanCodingZone() } returns emptyList()
+        coEvery { blockScanner.scanCodingZoneAsync(any()) } returns emptyList()
         every { astCompiler.compile(any()) } returns CompilationResult(emptyList(), emptyList())
         every { worldManager.getLoadedWorlds(any()) } returns null
 
         return ModeManagerImpl(
             inventoryManager = inventoryManager,
             worldManager = worldManager,
-            blockScannerFactory = { blockScanner },
+            blockScannerFactory = { _ -> blockScanner },
             astCompiler = astCompiler,
             eventDispatcher = eventDispatcher,
             executionEngine = executionEngine,
@@ -136,7 +137,8 @@ class PlayerStateResetPropertyTest : FreeSpec({
         initialHealth: Double,
         initialFallDist: Float,
         maxHealth: Double,
-        initialFoodLevel: Int = 20
+        initialFoodLevel: Int = 20,
+        id: UUID = UUID.randomUUID()
     ): Player {
         val inventory = mockk<PlayerInventory>(relaxed = true)
         every { inventory.contents } returns arrayOfNulls(36)
@@ -147,7 +149,7 @@ class PlayerStateResetPropertyTest : FreeSpec({
         every { attrInstance.value } returns maxHealth
 
         val player = mockk<Player>(relaxed = true)
-        every { player.uniqueId } returns UUID.randomUUID()
+        every { player.uniqueId } returns id
         every { player.inventory } returns inventory
         every { player.fireTicks } returns initialFireTicks
         every { player.health } returns initialHealth
@@ -210,9 +212,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 arbMaxHealth,
                 arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 runTest { switchToMode(manager, player, plot, targetMode) }
 
@@ -241,9 +244,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 arbMaxHealth,
                 arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 val capturedFireTicks = mutableListOf<Int>()
                 every { player.fireTicks = capture(capturedFireTicks) } just Runs
@@ -272,9 +276,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 arbMaxHealth,
                 arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 val capturedHealth = mutableListOf<Double>()
                 every { player.health = capture(capturedHealth) } just Runs
@@ -303,9 +308,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 arbMaxHealth,
                 arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 runTest { switchToMode(manager, player, plot, targetMode) }
 
@@ -331,9 +337,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 arbMaxHealth
             ) { fireTicks, health, fallDist, maxHealth ->
                 for (targetMode in listOf(PlotMode.DEV, PlotMode.BUILD)) {
+                    val playerId = UUID.randomUUID()
                     val manager = buildManager()
-                    val plot = makePlot()
-                    val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                    val plot = makePlot(owner = playerId)
+                    val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                     val capturedFireTicks = mutableListOf<Int>()
                     val capturedHealth = mutableListOf<Double>()
@@ -363,9 +370,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 20),
                 arbFireTicks, arbHealth, arbFallDist, arbMaxHealth, arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 runTest { switchToMode(manager, player, plot, targetMode) }
 
@@ -385,9 +393,10 @@ class PlayerStateResetPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 20),
                 arbFireTicks, arbHealth, arbFallDist, arbMaxHealth, arbTargetMode
             ) { fireTicks, health, fallDist, maxHealth, targetMode ->
+                val playerId = UUID.randomUUID()
                 val manager = buildManager()
-                val plot = makePlot()
-                val player = buildPlayer(fireTicks, health, fallDist, maxHealth)
+                val plot = makePlot(owner = playerId)
+                val player = buildPlayer(fireTicks, health, fallDist, maxHealth, id = playerId)
 
                 runTest { switchToMode(manager, player, plot, targetMode) }
 

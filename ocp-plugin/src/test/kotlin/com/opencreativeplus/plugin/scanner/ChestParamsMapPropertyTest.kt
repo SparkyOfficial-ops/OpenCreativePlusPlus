@@ -25,7 +25,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
+import org.bukkit.block.Barrel
 import org.bukkit.block.TileState
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
@@ -129,9 +129,9 @@ class ChestParamsMapPropertyTest : FreeSpec({
 
         val categoryBlock = mockk<Block>(relaxed = true)
 
-        // Block above is a Chest
+        // Block above is a Barrel (production code checks for Barrel)
         val chestBlock = mockk<Block>(relaxed = true)
-        val chestState = mockk<Chest>(relaxed = true)
+        val chestState = mockk<Barrel>(relaxed = true)
         val chestPdc = mockk<PersistentDataContainer>(relaxed = true)
         val inventory = mockk<Inventory>(relaxed = true)
 

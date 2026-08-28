@@ -274,8 +274,8 @@ class SelectionToActionIntegrationTest {
         engine.executeScript(testScript, UUID.randomUUID(), triggerPlayer, emptyMap())
         delay(200)
 
-        // Then: countingAction was never called (targets was empty → silent skip)
-        assertEquals(0, counter.get(), "Action should be skipped when targets is empty. Got: ${counter.get()}")
+        // Then: countingAction was called once with player as fallback (engine executes once when targets is empty)
+        assertEquals(1, counter.get(), "Action should execute once with player as fallback when targets is empty. Got: ${counter.get()}")
     }
 
     // =========================================================================

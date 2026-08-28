@@ -51,6 +51,8 @@ class BranchingPropertyTest : FreeSpec({
     val world = mockk<World>(relaxed = true).also {
         every { it.name } returns "test_world"
         every { it.hashCode() } returns 42
+        // scanStrip uses getRelativeSafe which checks isChunkLoaded
+        every { it.isChunkLoaded(any<Int>(), any<Int>()) } returns true
     }
     val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
 

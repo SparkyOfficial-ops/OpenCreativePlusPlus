@@ -214,16 +214,15 @@ class ReactiveGUIPropertyTest : FreeSpec({
 
             val gui = TestReactiveGUI(plotId, vm, plugin, scope, listOf("score"))
             players.forEach { gui.open(it) }
+            val buildCountAfterOpen = gui.buildCount
 
             runTest(dispatcher) {
                 changesFlow.emit(VariableChange(plotId, "score", 42, VariableScopeType.PLOT))
             }
 
-            // Each player should have had openInventory called at least twice:
-            // once on open(), once on the update
-            players.forEach { p ->
-                verify(atLeast = 2) { p.openInventory(any<Inventory>()) }
-            }
+            // updateAll() rebuilds the inventory (buildInventory called again)
+            // and applies it via soft-update (contents replacement) or openInventory
+            gui.buildCount shouldBe buildCountAfterOpen + 1
         }
     }
 

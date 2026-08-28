@@ -11,7 +11,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
+import org.bukkit.block.Barrel
 import org.bukkit.block.Sign
 import org.bukkit.block.TileState
 import org.bukkit.inventory.Inventory
@@ -96,12 +96,16 @@ class BlockScannerPDCTest {
         val keys = entries.keys.map { NamespacedKey("ocp", it) }.toSet()
         every { pdc.keys } returns keys
 
-        // For each key, return the string value; return null for INTEGER and DOUBLE
+        // Default: all STRING gets return null (prevents _ocp_type lookup returning Object)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
+
+        // For each key, return the string value; return null for other types
         for ((k, v) in entries) {
             val nsKey = NamespacedKey("ocp", k)
             every { pdc.get(nsKey, PersistentDataType.STRING) } returns v
             every { pdc.get(nsKey, PersistentDataType.INTEGER) } returns null
             every { pdc.get(nsKey, PersistentDataType.DOUBLE) } returns null
+            every { pdc.get(nsKey, PersistentDataType.BYTE) } returns null
         }
 
         nodeBlock.withRelative(BlockFace.UP, tileBlock)
@@ -122,11 +126,15 @@ class BlockScannerPDCTest {
         val keys = entries.keys.map { NamespacedKey("ocp", it) }.toSet()
         every { pdc.keys } returns keys
 
+        // Default: all STRING gets return null (prevents _ocp_type lookup returning Object)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
+
         for ((k, v) in entries) {
             val nsKey = NamespacedKey("ocp", k)
             every { pdc.get(nsKey, PersistentDataType.STRING) } returns v
             every { pdc.get(nsKey, PersistentDataType.INTEGER) } returns null
             every { pdc.get(nsKey, PersistentDataType.DOUBLE) } returns null
+            every { pdc.get(nsKey, PersistentDataType.BYTE) } returns null
         }
 
         return block
@@ -153,10 +161,10 @@ class BlockScannerPDCTest {
         return item
     }
 
-    /** Attach a chest above [nodeBlock] containing the given items. */
+    /** Attach a barrel above [nodeBlock] containing the given items. */
     private fun attachChest(nodeBlock: Block, vararg items: ItemStack?) {
         val chestBlock = mockk<Block>(relaxed = true)
-        val chestState = mockk<Chest>(relaxed = true)
+        val chestState = mockk<Barrel>(relaxed = true)
         val inventory = mockk<Inventory>(relaxed = true)
 
         every { chestBlock.state } returns chestState
@@ -205,9 +213,11 @@ class BlockScannerPDCTest {
         val ocpKey = NamespacedKey("ocp", "my-param")
         val foreignKey = NamespacedKey("other", "foreign-param")
         every { pdc.keys } returns setOf(ocpKey, foreignKey)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(ocpKey, PersistentDataType.STRING) } returns "ocpValue"
         every { pdc.get(ocpKey, PersistentDataType.INTEGER) } returns null
         every { pdc.get(ocpKey, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(ocpKey, PersistentDataType.BYTE) } returns null
 
         val result = scanner.readPDCParams(block)
         assertEquals(1, result.size)
@@ -237,9 +247,11 @@ class BlockScannerPDCTest {
 
         val speedKey = NamespacedKey("ocp", "speed")
         every { pdc.keys } returns setOf(speedKey)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(speedKey, PersistentDataType.STRING) } returns "fast"
         every { pdc.get(speedKey, PersistentDataType.INTEGER) } returns null
         every { pdc.get(speedKey, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(speedKey, PersistentDataType.BYTE) } returns null
 
         // No chest above
         attachAir(nodeBlock, BlockFace.UP)
@@ -266,9 +278,11 @@ class BlockScannerPDCTest {
 
         val countKey = NamespacedKey("ocp", "count")
         every { pdc.keys } returns setOf(countKey)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(countKey, PersistentDataType.STRING) } returns "5"
         every { pdc.get(countKey, PersistentDataType.INTEGER) } returns null
         every { pdc.get(countKey, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(countKey, PersistentDataType.BYTE) } returns null
 
         attachAir(nodeBlock, BlockFace.UP)
 
@@ -289,9 +303,11 @@ class BlockScannerPDCTest {
 
         val key = NamespacedKey("ocp", "mode")
         every { pdc.keys } returns setOf(key)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(key, PersistentDataType.STRING) } returns "auto"
         every { pdc.get(key, PersistentDataType.INTEGER) } returns null
         every { pdc.get(key, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(key, PersistentDataType.BYTE) } returns null
 
         attachAir(nodeBlock, BlockFace.UP)
 

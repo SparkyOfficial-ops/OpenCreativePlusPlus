@@ -119,8 +119,8 @@ class PreHighlightPropertyTest : FreeSpec({
                 // Exactly one slot highlighted
                 highlighted.size shouldBe 1
                 highlighted[0] shouldBe 0
-                // All other slots are not highlighted
-                val nonHighlightedDescriptors = descriptors.drop(1)
+                // All other descriptors on the SAME page are not highlighted at the target's slot
+                val nonHighlightedDescriptors = descriptors.drop(1).take(pageSize - 1)
                 nonHighlightedDescriptors.forEachIndexed { idx, descriptor ->
                     val slot = computeHighlightedSlot(descriptors, descriptor.id, page = 0)
                     // Each other descriptor highlights its own slot, not the target's slot
@@ -212,7 +212,7 @@ class PreHighlightPropertyTest : FreeSpec({
                 PropTestConfig(iterations = 25),
                 Arb.list(Arb.string(1..20), 1..30)
             ) { rawIds ->
-                val uniqueIds = rawIds.distinct().ifEmpty { listOf("id1") }
+                val uniqueIds = rawIds.distinct().filter { it.isNotBlank() }.ifEmpty { listOf("__fallback_id__") }
                 val registry = CategoryRegistry()
                 val category = NodeCategory.GAME_ACTION
                 uniqueIds.forEach { id ->

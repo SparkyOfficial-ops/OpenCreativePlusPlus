@@ -268,9 +268,9 @@ class BlockScanner(
      * if the BFS walks a glass strip built by a player toward the world border.
      */
     private fun Block.getRelativeSafe(face: BlockFace): Block? {
-        val targetX = this.x + face.modX
-        val targetZ = this.z + face.modZ
-        if (!world.isChunkLoaded(targetX shr 4, targetZ shr 4)) return null
+        val targetX = this.location.blockX + face.modX
+        val targetZ = this.location.blockZ + face.modZ
+        if (!this@BlockScanner.world.isChunkLoaded(targetX shr 4, targetZ shr 4)) return null
         return this.getRelative(face)
     }
 
@@ -717,7 +717,7 @@ class BlockScanner(
      * Read `ocp:action_id` from the block's PDC.
      * Returns null if the block is not a TileState or the key is absent.
      */
-    private fun readActionId(block: Block): String? {
+    internal fun readActionId(block: Block): String? {
         val pdc = (block.state as? TileState)?.persistentDataContainer ?: return null
         return pdc.get(KEY_ACTION_ID, PersistentDataType.STRING)
     }
@@ -810,6 +810,14 @@ class BlockScanner(
      * Requirements: 4.2, 4.3, 4.5, 20.2, 20.3
      */
     internal fun extractParameters(block: Block, descriptor: ActionDescriptor? = null): Map<String, Any> {
+        if (descriptor != null) {
+            // Check for param barrel above block (buildParamBarrelMap path)
+            val above = block.getRelative(BlockFace.UP)
+            val barrel = above.state as? org.bukkit.block.Barrel
+            if (barrel != null) {
+                return buildParamBarrelMap(barrel, descriptor)
+            }
+        }
         return readPDCParams(block)
     }
 

@@ -28,7 +28,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
+import org.bukkit.block.Barrel
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -129,7 +129,7 @@ class ParamChestSlotMappingPropertyTest : FreeSpec({
         val inventory = mockk<Inventory>(relaxed = true)
         every { inventory.contents } returns contents
 
-        val chestState = mockk<Chest>(relaxed = true)
+        val chestState = mockk<Barrel>(relaxed = true)
         every { chestState.inventory } returns inventory
 
         val chestBlock = mockk<Block>(relaxed = true)

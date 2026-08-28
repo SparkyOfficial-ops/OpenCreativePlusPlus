@@ -165,8 +165,8 @@ class BlockScannerNodeIdPropertyTest : FreeSpec({
                 every { nodeRegistry.getValueNodeId(any()) } returns null
                 val scanner = BlockScanner(world, nodeRegistry)
                 val node = scanner.buildScannedNode(makeBlockWithoutPDCActionId(material))
-                node shouldNotBe null
-                node?.nodeId shouldBe null
+                // When material is not registered and no PDC action_id, buildScannedNode returns null
+                node shouldBe null
             }
         }
     }

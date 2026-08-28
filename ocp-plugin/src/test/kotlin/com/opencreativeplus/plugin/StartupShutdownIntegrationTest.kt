@@ -139,8 +139,14 @@ class StartupShutdownIntegrationTest {
         runBlocking {
             // Given: two coroutines — first throws, second completes normally
             val secondCompleted = AtomicBoolean(false)
+            val exceptionCaught = AtomicBoolean(false)
 
-            coroutineConfig.executionScope.launch {
+            // Install exception handler to catch the intentional failure
+            val handler = CoroutineExceptionHandler { _, _ ->
+                exceptionCaught.set(true)
+            }
+
+            coroutineConfig.executionScope.launch(handler) {
                 throw RuntimeException("intentional child failure")
             }
 
@@ -157,6 +163,8 @@ class StartupShutdownIntegrationTest {
                 "SupervisorJob should keep scope active after a child failure")
             assertTrue(secondCompleted.get(),
                 "Second coroutine should complete despite first one throwing")
+            assertTrue(exceptionCaught.get(),
+                "Exception handler should have caught the intentional failure")
         }
 
     // =========================================================================
@@ -169,11 +177,11 @@ class StartupShutdownIntegrationTest {
      */
     @Test
     fun `shutdown cancels all active coroutines`() = runBlocking {
-        // Given: 3 long-running scripts on a plot
-        val plotId = UUID.randomUUID()
+        // Given: 3 long-running scripts on different plots (to avoid mutex serialization)
         val cancelledCount = AtomicInteger(0)
+        val plotIds = (0..2).map { UUID.randomUUID() }
 
-        repeat(3) { i ->
+        plotIds.forEachIndexed { i, plotId ->
             val action = object : IAction {
                 override val nodeId = "long$i"; override val displayName = "Long$i"
                 override suspend fun execute(context: ExecutionContext) {
@@ -188,12 +196,12 @@ class StartupShutdownIntegrationTest {
             engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
-        delay(100) // let all 3 coroutines start
+        delay(300) // let all 3 coroutines start and register
 
         // When: shutdown sequence — cancel executions then close scope
-        engine.cancelAllExecutions(plotId)
+        plotIds.forEach { engine.cancelAllExecutions(it) }
         coroutineConfig.close()
-        delay(100)
+        delay(500) // give coroutines time to catch CancellationException
 
         // Then: all 3 coroutines were cancelled
         assertEquals(3, cancelledCount.get(), "All 3 active coroutines should be cancelled on shutdown")

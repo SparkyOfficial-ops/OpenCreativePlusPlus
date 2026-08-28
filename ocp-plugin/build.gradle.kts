@@ -43,6 +43,11 @@ tasks {
 
     test {
         enabled = true
-        jvmArgs("-Xmx1536m")
+        // Full suite (~930 tests) exhausts the default heap — property tests
+        // accumulate mock-heavy objects. 3g stays well within 32g RAM.
+        // Parallel forks disabled: runTest's strict uncaught-exception checking
+        // causes flaky failures when tests share a JVM fork.
+        maxHeapSize = "3g"
+        maxParallelForks = 1
     }
 }

@@ -12,7 +12,6 @@ import io.kotest.property.arbitrary.filter
 import io.kotest.property.arbitrary.pair
 import io.kotest.property.arbitrary.of
 import io.kotest.property.checkAll
-import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import org.bukkit.NamespacedKey
@@ -57,9 +56,12 @@ class PDCPriorityPropertyTest : FreeSpec({
         every { tileState.persistentDataContainer } returns pdc
         val nsKey = NamespacedKey("ocp", key)
         every { pdc.keys } returns setOf(nsKey)
+        // Default: all STRING gets return null (prevents _ocp_type lookup returning Object)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(nsKey, PersistentDataType.STRING) } returns pdcValue
         every { pdc.get(nsKey, PersistentDataType.INTEGER) } returns null
         every { pdc.get(nsKey, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(nsKey, PersistentDataType.BYTE) } returns null
         return nodeBlock
     }
 
@@ -99,23 +101,22 @@ class PDCPriorityPropertyTest : FreeSpec({
         every { tileState.persistentDataContainer } returns pdc
         val nsKey = NamespacedKey("ocp", key)
         every { pdc.keys } returns setOf(nsKey)
+        // Default: all STRING gets return null (prevents _ocp_type lookup returning Object)
+        every { pdc.get(any(), any<PersistentDataType<String, String>>()) } returns null
         every { pdc.get(nsKey, PersistentDataType.STRING) } returns pdcValue
         every { pdc.get(nsKey, PersistentDataType.INTEGER) } returns null
         every { pdc.get(nsKey, PersistentDataType.DOUBLE) } returns null
+        every { pdc.get(nsKey, PersistentDataType.BYTE) } returns null
         return nodeBlock
     }
 
     "Property 23a: PDC value overrides sign value for the same parameter key" - {
         "for any key and distinct sign/PDC values, extractParameters returns the PDC value" {
             checkAll(PropTestConfig(iterations = 20), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
-                try {
                     val block = makeBlockWithSignAndPDC(key, signValue, pdcValue)
                     val params = scanner.extractParameters(block)
                     params[key] shouldBe pdcValue
                     params[key] shouldNotBe signValue
-                } finally {
-                    clearAllMocks()
-                }
             }
         }
     }
@@ -123,13 +124,9 @@ class PDCPriorityPropertyTest : FreeSpec({
     "Property 23b: sign value is preserved when PDC does not contain the same key" - {
         "for any key and value, sign-only block returns the sign value" {
             checkAll(PropTestConfig(iterations = 20), arbKey, arbValue) { key, signValue ->
-                try {
                     val block = makeBlockWithSignOnly(key, signValue)
                     val params = scanner.extractParameters(block)
                     params[key]?.toString() shouldBe signValue
-                } finally {
-                    clearAllMocks()
-                }
             }
         }
     }
@@ -137,13 +134,9 @@ class PDCPriorityPropertyTest : FreeSpec({
     "Property 23c: PDC-only value is returned when no sign data exists" - {
         "for any key and value, PDC-only block returns the PDC value" {
             checkAll(PropTestConfig(iterations = 20), arbKey, arbValue) { key, pdcValue ->
-                try {
                     val block = makeBlockWithPDCOnly(key, pdcValue)
                     val params = scanner.extractParameters(block)
                     params[key] shouldBe pdcValue
-                } finally {
-                    clearAllMocks()
-                }
             }
         }
     }
@@ -151,14 +144,10 @@ class PDCPriorityPropertyTest : FreeSpec({
     "Property 23d: extractParameters is deterministic — same block returns same result on repeated calls" - {
         "for any key with both sign and PDC data, two calls return identical maps" {
             checkAll(PropTestConfig(iterations = 20), arbKey, arbDistinctValues) { key, (signValue, pdcValue) ->
-                try {
                     val block = makeBlockWithSignAndPDC(key, signValue, pdcValue)
                     val first = scanner.extractParameters(block)
                     val second = scanner.extractParameters(block)
                     first[key] shouldBe second[key]
-                } finally {
-                    clearAllMocks()
-                }
             }
         }
     }

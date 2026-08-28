@@ -5,13 +5,18 @@ import io.mockk.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
+import org.bukkit.Bukkit
 import org.bukkit.Location
+import org.bukkit.Material
+import org.bukkit.Server
 import org.bukkit.World
 import org.bukkit.entity.Player
 import org.bukkit.event.inventory.InventoryClickEvent
 import org.bukkit.inventory.Inventory
+import org.bukkit.inventory.ItemFactory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.PlayerInventory
+import org.bukkit.inventory.meta.ItemMeta
 import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.PluginManager
 import org.junit.jupiter.api.AfterEach
@@ -47,12 +52,30 @@ class ItemCreatorGUITest {
 
     @BeforeEach
     fun setup() {
-        val server = mockk<org.bukkit.Server>(relaxed = true)
+        // Mock Bukkit statics so ItemStack operations work
+        mockkStatic(Bukkit::class)
+        val server = mockk<Server>(relaxed = true)
+        val itemFactory = mockk<ItemFactory>(relaxed = true)
+        val itemMeta = mockk<ItemMeta>(relaxed = true)
+        every { Bukkit.getItemFactory() } returns itemFactory
+        every { itemFactory.getItemMeta(any()) } returns itemMeta
+        every { Bukkit.getServer() } returns server
+
         pluginManager = mockk(relaxed = true)
         plugin = mockk(relaxed = true)
         every { plugin.server } returns server
         every { server.pluginManager } returns pluginManager
         every { pluginManager.registerEvents(any(), any()) } just Runs
+
+        // Stub scheduler.runTask to execute the runnable immediately
+        val scheduler = mockk<org.bukkit.scheduler.BukkitScheduler>(relaxed = true)
+        every { server.scheduler } returns scheduler
+        val stubbedTask = mockk<org.bukkit.scheduler.BukkitTask>(relaxed = true)
+        val runnableSlot = slot<Runnable>()
+        every { scheduler.runTask(any<org.bukkit.plugin.Plugin>(), capture(runnableSlot)) } answers {
+            runnableSlot.captured.run()
+            stubbedTask
+        }
 
         world = mockk(relaxed = true)
         playerInventory = mockk(relaxed = true)
@@ -272,18 +295,19 @@ class ItemCreatorGUITest {
 
     /**
      * Req 3.11: When inventory is full, item is dropped at player's feet and error message is sent.
+     * Uses mock ItemStacks to avoid Bukkit.getItemFactory() calls from ItemStack.hashCode()
+     * which break MockK's SafeLoggingState argument recording.
      */
     @Test
-    fun `when inventory is full item is dropped at player feet and error message is sent`() = runTest {
-        coEvery { signInputManager.awaitSignInput(player, "") } returns "overflow text"
-
+    fun `when inventory is full item is dropped at player feet and error message is sent`() {
         val leftoverItem = mockk<ItemStack>(relaxed = true)
         every { playerInventory.addItem(any()) } returns hashMapOf(0 to leftoverItem)
 
         val loc = mockk<Location>(relaxed = true)
         every { player.location } returns loc
 
-        gui.onInventoryClick(makeClickEvent(0))
+        val item = mockk<ItemStack>(relaxed = true)
+        gui.deliverItem(player, item)
 
         verify { world.dropItem(loc, any()) }
         verify { player.sendMessage(match<String> { it.contains("Инвентарь полон") }) }

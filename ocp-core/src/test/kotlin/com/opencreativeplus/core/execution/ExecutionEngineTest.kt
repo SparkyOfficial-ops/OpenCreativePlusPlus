@@ -152,7 +152,7 @@ class ExecutionEngineTest {
     fun `Wait-style action suspends coroutine without blocking and resumes after delay`() = runBlocking {
         // Given: a script that records before and after a delay
         val log = CopyOnWriteArrayList<String>()
-        val delayMs = 100L
+        val delayMs = 200L
         val action = object : IAction {
             override val nodeId = "wait"
             override val displayName = "Wait"
@@ -168,13 +168,13 @@ class ExecutionEngineTest {
         // When: script executes
         engine.executeScript(script(action), plotId, player, emptyMap())
 
-        // Give the coroutine time to start and record "before_wait"
-        delay(20)
+        // Give the coroutine time to start on the thread pool and record "before_wait"
+        delay(200)
         assertTrue(log.contains("before_wait"), "Action should have started")
         assertFalse(log.contains("after_wait"), "Action should still be suspended")
 
         // After the delay elapses, "after_wait" should appear
-        delay(delayMs + 50)
+        delay(delayMs + 200)
         assertTrue(log.contains("after_wait"), "Action should have resumed after delay")
     }
 
@@ -390,14 +390,14 @@ class ExecutionEngineTest {
 
     @Test
     fun `cancelAllExecutions cancels all scripts on a plot`() = runBlocking {
-        // Given: multiple scripts on a plot
-        val plotId = UUID.randomUUID()
+        // Given: multiple scripts, each on its own plot (the per-plot mutex serializes
+        // scripts sharing a plotId, so we use distinct plotIds to run them in parallel)
+        val plotIds = (1..3).map { UUID.randomUUID() }
         val cancelledCount = AtomicInteger(0)
-        val scriptCount = 3
 
-        repeat(scriptCount) {
+        plotIds.forEachIndexed { idx, plotId ->
             val action = object : IAction {
-                override val nodeId = "long$it"; override val displayName = "Long$it"
+                override val nodeId = "long$idx"; override val displayName = "Long$idx"
                 override suspend fun execute(context: ExecutionContext) {
                     try {
                         delay(10_000)
@@ -410,14 +410,14 @@ class ExecutionEngineTest {
             engine.executeScript(script(action), plotId, mockPlayer(), emptyMap())
         }
 
-        delay(50) // let all coroutines start
+        delay(200) // let all coroutines start
 
-        // When: all executions are cancelled (e.g., plot leaves PLAY mode)
-        engine.cancelAllExecutions(plotId)
-        delay(100)
+        // When: all executions are cancelled for every plot
+        plotIds.forEach { engine.cancelAllExecutions(it) }
+        delay(200)
 
         // Then: all scripts were cancelled
-        assertEquals(scriptCount, cancelledCount.get(), "All scripts on the plot should be cancelled")
+        assertEquals(plotIds.size, cancelledCount.get(), "All scripts should be cancelled")
     }
 
     @Test
@@ -576,7 +576,7 @@ class ExecutionEngineTest {
         val plotId = UUID.randomUUID()
         val ownerUuid = UUID.randomUUID()
         val ownerPlayer = mockk<Player>(relaxed = true)
-        val receivedMessages = mutableListOf<String>()
+        val receivedMessages = CopyOnWriteArrayList<String>()
         every { ownerPlayer.sendMessage(any<String>()) } answers {
             receivedMessages.add(firstArg())
         }
@@ -586,8 +586,11 @@ class ExecutionEngineTest {
         every { fakePlot.owner } returns ownerUuid
         coEvery { plotManager.getPlot(plotId) } returns fakePlot
 
-        mockkStatic(Bukkit::class)
-        every { Bukkit.getPlayer(ownerUuid) } returns ownerPlayer
+        // Use Bukkit.setServer instead of mockkStatic — avoids intercepting
+        // all Bukkit static methods which can interfere with coroutine internals
+        val mockServer = mockk<org.bukkit.Server>(relaxed = true)
+        every { mockServer.getPlayer(ownerUuid) } returns ownerPlayer
+        Bukkit.setServer(mockServer)
 
         val tpsMonitor = mockk<com.opencreativeplus.core.watchdog.TPSMonitor>()
         every { tpsMonitor.getCurrentTPS() } returns 20.0
@@ -598,12 +601,11 @@ class ExecutionEngineTest {
         val cfg = CoroutineConfiguration(syncRunner = { it() })
         val engineWithPlotManager = ExecutionEngine(strictWatchdog, vm, cfg, plotManager = plotManager)
 
-        // First action: push operationCount over the limit (watchdog checks BEFORE each action)
+        // First action: push operationCount to the limit
         // Second action: triggers the watchdog check that fires WatchdogException
         val pushOverLimitAction = object : IAction {
             override val nodeId = "push"; override val displayName = "Push"
             override suspend fun execute(context: ExecutionContext) {
-                // Set counter to MAX so the watchdog fires before the next action
                 repeat(Watchdog.MAX_OPERATIONS) { context.operationCount.incrementAndGet() }
             }
         }
@@ -616,7 +618,13 @@ class ExecutionEngineTest {
 
         // When: script with two actions — first saturates the counter, second triggers the check
         engineWithPlotManager.executeScript(script(pushOverLimitAction, triggerCheckAction), plotId, mockPlayer(), emptyMap())
-        delay(300)
+
+        // Poll for the notification — the coroutine runs on a separate thread pool
+        var deadline = 30
+        while (deadline > 0 && receivedMessages.isEmpty()) {
+            delay(100)
+            deadline--
+        }
 
         // Then: owner received the watchdog notification message
         assertTrue(
@@ -625,7 +633,6 @@ class ExecutionEngineTest {
         )
 
         cfg.close()
-        unmockkStatic(Bukkit::class)
     }
 
     @Test

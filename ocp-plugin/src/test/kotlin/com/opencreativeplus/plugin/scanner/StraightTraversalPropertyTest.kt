@@ -36,6 +36,9 @@ class StraightTraversalPropertyTest : FreeSpec({
     val world = mockk<World>(relaxed = true)
     val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
 
+    // scanStrip uses getRelativeSafe which checks isChunkLoaded
+    every { world.isChunkLoaded(any<Int>(), any<Int>()) } returns true
+
     // All material-based lookups return null (no registered nodes by material)
     every { nodeRegistry.getActionNodeId(any()) } returns null
     every { nodeRegistry.getConditionNodeId(any()) } returns null

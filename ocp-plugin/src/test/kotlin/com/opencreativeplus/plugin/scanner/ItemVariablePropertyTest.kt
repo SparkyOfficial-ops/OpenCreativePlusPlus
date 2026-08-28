@@ -23,7 +23,7 @@ import org.bukkit.NamespacedKey
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
+import org.bukkit.block.Barrel
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
 import org.bukkit.inventory.meta.ItemMeta
@@ -71,9 +71,9 @@ class ItemVariablePropertyTest : FreeSpec({
             every { air.state } returns mockk(relaxed = true)
             every { nodeBlock.getRelative(face) } returns air
         }
-        // Chest above
+        // Barrel above (production code checks for Barrel, not Chest)
         val chestBlock = mockk<Block>(relaxed = true)
-        val chestState = mockk<Chest>(relaxed = true)
+        val chestState = mockk<Barrel>(relaxed = true)
         val inventory = mockk<Inventory>(relaxed = true)
         every { chestBlock.state } returns chestState
         every { chestState.inventory } returns inventory

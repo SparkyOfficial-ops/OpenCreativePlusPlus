@@ -8,7 +8,7 @@ import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
-import org.bukkit.block.Chest
+import org.bukkit.block.Barrel
 import org.bukkit.block.Sign
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.ItemStack
@@ -26,6 +26,11 @@ class BlockScannerTest {
     private val world = mockk<World>(relaxed = true)
     private val nodeRegistry = mockk<NodeRegistry>(relaxed = true)
     private val scanner = BlockScanner(world, nodeRegistry)
+
+    init {
+        // scanLevel/scanStrip use isChunkLoaded via getRelativeSafe — default must be true
+        every { world.isChunkLoaded(any<Int>(), any<Int>()) } returns true
+    }
 
     // -----------------------------------------------------------------------
     // Helpers
@@ -189,7 +194,7 @@ class BlockScannerTest {
     // -----------------------------------------------------------------------
 
     @Test
-    fun `extractParameters reads chest contents from block above`() {
+    fun `extractParameters reads barrel contents from block above`() {
         val nodeBlock = mockBlock(1, 6, 0, Material.PAPER)
 
         // No signs on sides
@@ -199,17 +204,17 @@ class BlockScannerTest {
             nodeBlock.withRelative(face, airBlock)
         }
 
-        // Chest above
-        val chestBlock = mockk<Block>(relaxed = true)
-        val chestState = mockk<Chest>(relaxed = true)
+        // Barrel above (production code checks for Barrel, not Chest)
+        val barrelBlock = mockk<Block>(relaxed = true)
+        val barrelState = mockk<Barrel>(relaxed = true)
         val inventory = mockk<Inventory>(relaxed = true)
         val item = mockk<ItemStack>(relaxed = true)
         // itemMeta returns null so Item_Variable detection is skipped for this plain item
         every { item.itemMeta } returns null
-        every { chestBlock.state } returns chestState
-        every { chestState.inventory } returns inventory
+        every { barrelBlock.state } returns barrelState
+        every { barrelState.inventory } returns inventory
         every { inventory.contents } returns arrayOf(item, null)
-        nodeBlock.withRelative(BlockFace.UP, chestBlock)
+        nodeBlock.withRelative(BlockFace.UP, barrelBlock)
 
         val params = scanner.extractParameters(nodeBlock)
         @Suppress("UNCHECKED_CAST")
@@ -246,30 +251,33 @@ class BlockScannerTest {
      */
     @Test
     fun `scanCodingZone stops strip at glass gap and excludes nodes after gap`() {
+        // scanCodingZone scans at Y=15,35,55,75 — place blocks at Y=15
+        val stripY = 15
+
         // Default air block returned for all positions
         val defaultAir = mockk<Block>(relaxed = true)
         every { defaultAir.type } returns Material.AIR
         every { world.getBlockAt(any<Int>(), any<Int>(), any<Int>()) } returns defaultAir
 
-        // y=0, z=0: blue glass start
-        val blueGlass = mockBlock(0, 0, 0, Material.BLUE_STAINED_GLASS)
+        // x=0, y=15, z=0: blue glass start (scanLevel checks x=0)
+        val blueGlass = mockBlock(0, stripY, 0, Material.BLUE_STAINED_GLASS)
         // above blue glass: PAPER node
-        val paperNode = mockBlock(0, 1, 0, Material.PAPER)
+        val paperNode = mockBlock(0, stripY + 1, 0, Material.PAPER)
         every { blueGlass.getRelative(BlockFace.UP) } returns paperNode
-        // paper node has no signs/chest
+        // paper node has no signs/barrel
         val airSide = mockk<Block>(relaxed = true)
         every { airSide.state } returns mockk(relaxed = true)
         for (face in listOf(BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.UP)) {
             every { paperNode.getRelative(face) } returns airSide
         }
 
-        // x=1, y=0, z=0: white glass (strip continues)
-        val whiteGlass = mockBlock(1, 0, 0, Material.WHITE_STAINED_GLASS)
+        // x=1, y=15, z=0: white glass (strip continues)
+        val whiteGlass = mockBlock(1, stripY, 0, Material.WHITE_STAINED_GLASS)
         val airAboveWhite = mockk<Block>(relaxed = true)
         every { airAboveWhite.type } returns Material.AIR
         every { whiteGlass.getRelative(BlockFace.UP) } returns airAboveWhite
 
-        // x=2, y=0, z=0: AIR → gap, strip stops (already covered by defaultAir)
+        // x=2, y=15, z=0: AIR → gap, strip stops (already covered by defaultAir)
 
         val codeLines = scanner.scanCodingZone()
 
@@ -289,6 +297,10 @@ class BlockScannerTest {
      */
     @Test
     fun `scanCodingZone finds code lines at multiple Y levels`() {
+        // scanCodingZone scans at Y=15,35,55,75 — use first two levels
+        val yLevel1 = 15
+        val yLevel2 = 35
+
         // Default: all blocks are AIR
         val defaultAir = mockk<Block>(relaxed = true)
         every { defaultAir.type } returns Material.AIR
@@ -308,15 +320,15 @@ class BlockScannerTest {
             // x=1 at this y/z is AIR → strip stops (covered by defaultAir)
         }
 
-        setupBlueGlassStrip(y = 0, z = 0)
-        setupBlueGlassStrip(y = 5, z = 0)
+        setupBlueGlassStrip(y = yLevel1, z = 0)
+        setupBlueGlassStrip(y = yLevel2, z = 0)
 
         val codeLines = scanner.scanCodingZone()
 
         assertEquals(2, codeLines.size, "Expected code lines from both Y levels")
         val yLevels = codeLines.map { it.startLocation.blockY }.toSet()
-        assertTrue(0 in yLevels, "Expected a code line at Y=0")
-        assertTrue(5 in yLevels, "Expected a code line at Y=5")
+        assertTrue(yLevel1 in yLevels, "Expected a code line at Y=$yLevel1")
+        assertTrue(yLevel2 in yLevels, "Expected a code line at Y=$yLevel2")
     }
 
     // -----------------------------------------------------------------------

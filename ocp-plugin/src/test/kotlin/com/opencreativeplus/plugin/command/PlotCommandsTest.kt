@@ -9,6 +9,7 @@ import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.plot.PlotManagerImpl
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.bukkit.command.Command
@@ -76,7 +77,7 @@ class PlotCommandsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `non-owner is denied dev command and receives denial message`() = runTest {
+    fun `non-owner is denied dev command and receives denial message`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val strangerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
@@ -94,7 +95,7 @@ class PlotCommandsTest {
     }
 
     @Test
-    fun `non-owner is denied build command and receives denial message`() = runTest {
+    fun `non-owner is denied build command and receives denial message`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val strangerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
@@ -114,7 +115,7 @@ class PlotCommandsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `plot owner can execute dev command and mode switch is triggered`() = runTest {
+    fun `plot owner can execute dev command and mode switch is triggered`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
         val owner = mockPlayer(ownerId)
@@ -128,7 +129,7 @@ class PlotCommandsTest {
     }
 
     @Test
-    fun `plot owner can execute build command and mode switch is triggered`() = runTest {
+    fun `plot owner can execute build command and mode switch is triggered`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
         val owner = mockPlayer(ownerId)
@@ -146,7 +147,7 @@ class PlotCommandsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `play command triggers PLAY mode switch`() = runTest {
+    fun `play command triggers PLAY mode switch`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
         val owner = mockPlayer(ownerId)
@@ -160,7 +161,7 @@ class PlotCommandsTest {
     }
 
     @Test
-    fun `dev command triggers DEV mode switch`() = runTest {
+    fun `dev command triggers DEV mode switch`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
         val owner = mockPlayer(ownerId)
@@ -174,7 +175,7 @@ class PlotCommandsTest {
     }
 
     @Test
-    fun `build command triggers BUILD mode switch`() = runTest {
+    fun `build command triggers BUILD mode switch`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId)
         val owner = mockPlayer(ownerId)
@@ -192,7 +193,7 @@ class PlotCommandsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `trusted player can execute dev command`() = runTest {
+    fun `trusted player can execute dev command`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val trustedId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId, trustedPlayers = setOf(trustedId))
@@ -207,7 +208,7 @@ class PlotCommandsTest {
     }
 
     @Test
-    fun `trusted player can execute build command`() = runTest {
+    fun `trusted player can execute build command`() = runBlocking {
         val ownerId = UUID.randomUUID()
         val trustedId = UUID.randomUUID()
         val plot = makePlot(owner = ownerId, trustedPlayers = setOf(trustedId))
@@ -226,7 +227,7 @@ class PlotCommandsTest {
     // -------------------------------------------------------------------------
 
     @Test
-    fun `player without a plot receives informational message and no mode switch occurs`() = runTest {
+    fun `player without a plot receives informational message and no mode switch occurs`() = runBlocking {
         val playerId = UUID.randomUUID()
         val player = mockPlayer(playerId)
 

@@ -128,7 +128,7 @@ class ParamChestPropertyTest : FreeSpec({
                 val result = placer.placeChest(categoryBlock)
 
                 result shouldBe true
-                blockAbove.type shouldBe Material.CHEST
+                blockAbove.type shouldBe Material.BARREL
             }
         }
     }
@@ -192,14 +192,14 @@ class ParamChestPropertyTest : FreeSpec({
                 // First placement
                 val first = placer.placeChest(categoryBlock)
                 first shouldBe true
-                blockAbove.type shouldBe Material.CHEST
+                blockAbove.type shouldBe Material.BARREL
 
                 // Second placement — must remove old chest and place a new one
                 val second = placer.placeChest(categoryBlock)
                 second shouldBe true
 
                 // Still exactly one CHEST above (not AIR, not doubled)
-                blockAbove.type shouldBe Material.CHEST
+                blockAbove.type shouldBe Material.BARREL
 
                 // PDC tag must still be "true"
                 val paramChestKey = NamespacedKey("opencreativeplus", "param_chest")
@@ -226,7 +226,7 @@ class ParamChestPropertyTest : FreeSpec({
 
                 // After placement: hasParamChest should return true
                 placer.placeChest(categoryBlock)
-                blockAbove.type shouldBe Material.CHEST
+                blockAbove.type shouldBe Material.BARREL
                 val paramChestKey = NamespacedKey("opencreativeplus", "param_chest")
                 world.pdcData[paramChestKey] shouldBe "true"
 

@@ -1,5 +1,9 @@
 package com.opencreativeplus.core.execution
 
+import com.opencreativeplus.api.execution.CancellableEventReference
+import com.opencreativeplus.api.execution.EventReference
+import com.opencreativeplus.api.execution.NoOpEventReference
+import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.ICondition
 import com.opencreativeplus.api.node.IFunctionCall
 import com.opencreativeplus.api.plot.PlotManager
@@ -67,12 +71,15 @@ class ExecutionEngine(
      * @param plotId   The plot on which the script is executing.
      * @param player   The player that triggered the event, or null for non-player events.
      * @param eventData Key/value pairs from the triggering Minecraft event.
+     * @param eventReference Reference to the triggering Bukkit event; [NoOpEventReference]
+     *                       for non-Cancellable events. gameready-enhancements Req 1.3
      */
     suspend fun executeScript(
         script: CompiledScript,
         plotId: UUID,
         player: Player?,
-        eventData: Map<String, Any>
+        eventData: Map<String, Any>,
+        eventReference: EventReference = NoOpEventReference
     ) {
         // Req 13.3: use pre-compiled form if available
         val effectiveScript = compiledScriptProvider?.invoke(plotId) ?: script
@@ -86,7 +93,8 @@ class ExecutionEngine(
             savedScope = variableManager.getSavedScope(plotId),
             operationCount = AtomicInteger(0),
             syncDispatcher = coroutineConfig.syncDispatcher,
-            memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) }
+            memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) },
+            eventReference = eventReference
         )
 
         val job = coroutineConfig.executionScope.launch {
@@ -114,7 +122,7 @@ class ExecutionEngine(
                             for (childAction in childBranch) {
                                 watchdog.checkExecution(context)
                                 traceManager?.onNodeExecute(null, childAction.displayName, emptyMap())
-                                childAction.execute(context)
+                                executeActionNode(childAction, context)
                                 context.operationCount.incrementAndGet()
                             }
                         } else if (!conditionResult) {
@@ -124,7 +132,7 @@ class ExecutionEngine(
                                 for (elseAction in elseBranch) {
                                     watchdog.checkExecution(context)
                                     traceManager?.onNodeExecute(null, elseAction.displayName, emptyMap())
-                                    elseAction.execute(context)
+                                    executeActionNode(elseAction, context)
                                     context.operationCount.incrementAndGet()
                                 }
                             }
@@ -140,13 +148,13 @@ class ExecutionEngine(
                         if (targets.isNotEmpty()) {
                             for (target in targets) {
                                 context.currentTarget = target
-                                action.execute(context)
+                                executeActionNode(action, context)
                             }
                         } else {
                             // No targets — execute once with currentTarget = player (may be null for non-player events)
                             // This allows player-targeting actions to use context.player as fallback
                             context.currentTarget = context.player
-                            action.execute(context)
+                            executeActionNode(action, context)
                         }
                     }
                     context.operationCount.incrementAndGet()
@@ -230,6 +238,21 @@ class ExecutionEngine(
     }
 
     /**
+     * Execute a single action node, marking the start of the async phase when the
+     * first suspending node (e.g. `WaitAction`, nodeId = "wait") is about to run.
+     *
+     * Once the async phase starts, [CancellableEventReference.cancelEvent] calls are
+     * ignored (Bukkit has already applied the event effects by then).
+     * gameready-enhancements Req 1.2, 1.5
+     */
+    private suspend fun executeActionNode(action: IAction, context: ExecutionContextImpl) {
+        if (action.nodeId == "wait") {
+            (context.eventReference as? CancellableEventReference)?.asyncPhaseStarted = true
+        }
+        action.execute(context)
+    }
+
+    /**
      * Execute a function call action.
      *
      * Looks up the function in [functionRegistry]; if not found — logs a warning and skips (Req 5.4).
@@ -275,7 +298,10 @@ class ExecutionEngine(
                 syncDispatcher = coroutineConfig.syncDispatcher,
                 callStackSize = context.callStackSize,
                 targets = context.targets,
-                memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) }
+                memoryTracker = { id, bytes -> watchdog.trackMemoryAllocation(id, bytes) },
+                // Share the triggering-event reference so cancel_event works inside functions.
+                // gameready-enhancements Req 1.3
+                eventReference = context.eventReference
             )
 
             // Execute the function's actions
@@ -290,7 +316,7 @@ class ExecutionEngine(
                     if (conditionResult && childBranch != null) {
                         for (childAction in childBranch) {
                             watchdog.checkExecution(functionContext)
-                            childAction.execute(functionContext)
+                            executeActionNode(childAction, functionContext)
                             functionContext.operationCount.incrementAndGet()
                         }
                     } else if (!conditionResult) {
@@ -298,7 +324,7 @@ class ExecutionEngine(
                         if (elseBranch != null) {
                             for (elseAction in elseBranch) {
                                 watchdog.checkExecution(functionContext)
-                                elseAction.execute(functionContext)
+                                executeActionNode(elseAction, functionContext)
                                 functionContext.operationCount.incrementAndGet()
                             }
                         }
@@ -311,11 +337,11 @@ class ExecutionEngine(
                     if (targets.isNotEmpty()) {
                         for (target in targets) {
                             functionContext.currentTarget = target
-                            funcAction.execute(functionContext)
+                            executeActionNode(funcAction, functionContext)
                         }
                     } else {
                         functionContext.currentTarget = functionContext.player
-                        funcAction.execute(functionContext)
+                        executeActionNode(funcAction, functionContext)
                     }
                 }
                 functionContext.operationCount.incrementAndGet()

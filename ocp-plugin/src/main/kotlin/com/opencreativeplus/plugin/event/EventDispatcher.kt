@@ -1,5 +1,7 @@
 package com.opencreativeplus.plugin.event
 
+import com.opencreativeplus.api.execution.EventReference
+import com.opencreativeplus.api.execution.NoOpEventReference
 import com.opencreativeplus.core.execution.CompiledScript
 import com.opencreativeplus.core.execution.ExecutionEngine
 import com.opencreativeplus.core.execution.VariableManager
@@ -54,20 +56,26 @@ class EventDispatcher(
     /**
      * Dispatch [eventType] to all matching scripts for [plotId].
      * Each script is launched in its own coroutine so failures are isolated (req 16.5).
-     16.2, 16.3, 16.4, 28.1
+     *
+     * [eventReference] carries the triggering Bukkit event for Cancellable events so
+     * scripts can cancel it during the synchronous phase
+     * (gameready-enhancements Req 1.1–1.3). Defaults to [NoOpEventReference] for
+     * non-Cancellable events.
+     * 16.2, 16.3, 16.4, 28.1
      */
     fun dispatchEvent(
         plotId: UUID,
         eventType: String,
         eventData: Map<String, Any>,
-        player: Player?
+        player: Player?,
+        eventReference: EventReference = NoOpEventReference
     ) {
         val scripts = scriptsByEvent[plotId]?.get(eventType) ?: return
 
         for (script in scripts) {
             executionScope.launch {
                 try {
-                    executionEngine.executeScript(script, plotId, player, eventData)
+                    executionEngine.executeScript(script, plotId, player, eventData, eventReference)
                 } catch (e: Exception) {
                     // Isolate failures — log and continue (req 16.5)
                     // Use logger instead of System.err so errors appear in server log files

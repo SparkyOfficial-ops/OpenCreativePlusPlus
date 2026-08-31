@@ -1,5 +1,6 @@
 package com.opencreativeplus.plugin.registry
 
+import com.opencreativeplus.core.nodes.event.CancelEventAction
 import com.opencreativeplus.plugin.event.EventDispatcher
 import com.opencreativeplus.plugin.mode.ModeManagerImpl
 import com.opencreativeplus.plugin.node.action.SendMessageAction
@@ -153,6 +154,9 @@ object BuiltInNodeRegistry {
 
     private fun registerActions(registry: NodeRegistryImpl) {
         registry.registerAction(Material.PAPER, "send_message") { params -> SendMessageAction(params) }
+        // CancelEventAction — cancels the triggering Bukkit event (sync phase only).
+        // gameready-enhancements Req 1.4, 1.5
+        registry.registerAction(Material.BARRIER, "cancel_event") { _ -> CancelEventAction() }
         // WaitAction requires a Plugin instance — registered via registerPluginActions()
         registry.registerAction(Material.AMETHYST_SHARD, "random_action") { params ->
             @Suppress("UNCHECKED_CAST")

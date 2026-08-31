@@ -1,5 +1,6 @@
 package com.opencreativeplus.plugin.event
 
+import com.opencreativeplus.api.execution.CancellableEventReference
 import com.opencreativeplus.api.plot.ModeManager
 import com.opencreativeplus.api.plot.PlotManager
 import com.opencreativeplus.api.plot.PlotMode
@@ -58,6 +59,9 @@ class PlotEventListener(
         val clickedBlock = event.clickedBlock ?: return
 
         val player = event.player
+        // gameready-enhancements Req 1.1, 1.2: PlayerInteractEvent is Cancellable —
+        // expose it to scripts so cancel_event can cancel it during the sync phase.
+        val eventReference = CancellableEventReference(event, logger = logger)
         scope.launch {
             try {
                 val plot = plotManager.getPlayerPlot(player.uniqueId) ?: return@launch
@@ -73,7 +77,8 @@ class PlotEventListener(
                     plotId = plot.id,
                     eventType = "player_interact",
                     eventData = eventData,
-                    player = player
+                    player = player,
+                    eventReference = eventReference
                 )
             } catch (e: Exception) {
                 logger.warning("[OCP] Error handling PlayerInteractEvent for ${player.name}: ${e.message}")
@@ -87,6 +92,9 @@ class PlotEventListener(
      */
     @EventHandler
     fun onEntityDamageByEntity(event: EntityDamageByEntityEvent) {
+        // gameready-enhancements Req 1.1, 1.2: EntityDamageByEntityEvent is Cancellable —
+        // expose it to scripts so cancel_event can cancel it during the sync phase.
+        val eventReference = CancellableEventReference(event, logger = logger)
         scope.launch {
             try {
                 val victim = event.entity
@@ -121,7 +129,8 @@ class PlotEventListener(
                     plotId = plotId,
                     eventType = "player_damage",
                     eventData = eventData,
-                    player = player
+                    player = player,
+                    eventReference = eventReference
                 )
             } catch (e: Exception) {
                 logger.warning("[OCP] Error handling EntityDamageByEntityEvent: ${e.message}")

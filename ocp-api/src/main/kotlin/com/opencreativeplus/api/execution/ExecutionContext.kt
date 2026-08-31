@@ -30,6 +30,16 @@ interface ExecutionContext {
      * Event data passed from the triggering Minecraft event
      */
     val eventData: Map<String, Any>
+
+    /**
+     * Reference to the triggering Bukkit event, providing cancelEvent() for
+     * Cancellable events. Defaults to [NoOpEventReference] for non-Cancellable
+     * events and executions not triggered by a Bukkit event.
+     * Overridden by ExecutionContextImpl when the event is Cancellable.
+     * gameready-enhancements Req 1.3, 1.6
+     */
+    val eventReference: EventReference
+        get() = NoOpEventReference
     
     /**
      * Local scope variables (cleared after execution completes)

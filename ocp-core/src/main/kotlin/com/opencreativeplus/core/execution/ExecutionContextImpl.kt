@@ -1,6 +1,8 @@
 package com.opencreativeplus.core.execution
 
+import com.opencreativeplus.api.execution.EventReference
 import com.opencreativeplus.api.execution.ExecutionContext
+import com.opencreativeplus.api.execution.NoOpEventReference
 import com.opencreativeplus.api.execution.VariableScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
@@ -33,7 +35,9 @@ class ExecutionContextImpl(
     override val callStackSize: AtomicInteger = AtomicInteger(0),
     override val targets: MutableList<Entity> = if (player != null) mutableListOf(player) else mutableListOf(),
     /** Forwarded to Watchdog.trackMemoryAllocation. No-op by default. Req 29.1 */
-    private val memoryTracker: (plotId: UUID, bytes: Long) -> Unit = { _, _ -> }
+    private val memoryTracker: (plotId: UUID, bytes: Long) -> Unit = { _, _ -> },
+    /** Reference to the triggering Bukkit event. NoOp for non-Cancellable events. gameready-enhancements Req 1.3 */
+    override val eventReference: EventReference = NoOpEventReference
 ) : ExecutionContext {
 
     override var currentTarget: Entity? = null

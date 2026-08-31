@@ -166,38 +166,56 @@ class LoopWatchdogPropertyTest : FreeSpec({
     // Property 12d: Watchdog detects operation limit reached via loop iterations
     // -----------------------------------------------------------------------
 
-    "Property 12d: Watchdog.checkExecution throws WatchdogException when operationCount from loop reaches MAX_OPERATIONS (s 7.5)" - {
-        // If we pre-seed operationCount to MAX_OPERATIONS - 1 and run one more iteration,
-        // the watchdog check should detect the breach.
-        "watchdog throws after operationCount reaches MAX_OPERATIONS" {
+    "Property 12d: RepeatNode throws WatchdogException when operationCount reaches MAX_OPERATIONS (s 7.5)" - {
+        // Starting exactly at the limit, the very next iteration check must throw.
+        "loop node throws once the operation limit is reached" {
             checkAll(
                 PropTestConfig(iterations = 20),
                 Arb.int(1..5)
-            ) { extraIterations ->
-                // Start just below the limit so that extraIterations pushes us over
-                val startCount = Watchdog.MAX_OPERATIONS - 1
+            ) { iterations ->
+                val startCount = Watchdog.MAX_OPERATIONS
                 val ctx = contextWithLocalScope(startCount = startCount)
 
-                // Run a RepeatNode with extraIterations — this will push operationCount over the limit
                 val node = RepeatNode(
                     mapOf(
-                        "count" to extraIterations,
+                        "count" to iterations,
                         "index_var" to "i",
                         "body" to listOf(noopAction)
                     )
                 )
-                node.execute(ctx)
 
-                // operationCount is now >= MAX_OPERATIONS
-                ctx.operationCount.get() shouldBeGreaterThanOrEqual Watchdog.MAX_OPERATIONS
+                // The loop must stop itself by throwing WatchdogException
+                shouldThrow<WatchdogException> {
+                    node.execute(ctx)
+                }
 
-                // The watchdog must detect this
+                // No iteration ran — the counter stays at the limit
+                ctx.operationCount.get() shouldBe startCount
+
+                // And the external watchdog agrees the limit was breached
                 val fakeTpsMonitor = com.opencreativeplus.core.watchdog.TPSMonitor()
                 val watchdog = Watchdog(fakeTpsMonitor)
                 shouldThrow<WatchdogException> {
                     watchdog.checkExecution(ctx)
                 }
             }
+        }
+
+        "runaway Repeat(100000) stops at MAX_OPERATIONS, not at completion" {
+            val ctx = contextWithLocalScope()
+            val node = RepeatNode(
+                mapOf(
+                    "count" to 100_000,
+                    "index_var" to "i",
+                    "body" to listOf(noopAction)
+                )
+            )
+
+            shouldThrow<WatchdogException> {
+                node.execute(ctx)
+            }
+            // Stopped exactly when the limit was reached — the full 100000 never ran
+            ctx.operationCount.get() shouldBe Watchdog.MAX_OPERATIONS
         }
     }
 })

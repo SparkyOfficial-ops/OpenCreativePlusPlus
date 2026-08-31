@@ -2,12 +2,26 @@ package com.opencreativeplus.plugin.node.loop
 
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.node.IAction
+import com.opencreativeplus.core.watchdog.Watchdog
+import com.opencreativeplus.core.watchdog.WatchdogException
 
-private const val MAX_ITERATIONS = 1000
+/**
+ * Throws [WatchdogException] if the execution has reached the global operation limit.
+ * Called on every loop iteration so runaway loops (e.g. Repeat 100000) are stopped
+ * immediately at [Watchdog.MAX_OPERATIONS] instead of running to completion.
+ */
+private fun checkOperationLimit(context: ExecutionContext) {
+    if (context.operationCount.get() >= Watchdog.MAX_OPERATIONS) {
+        throw WatchdogException(
+            "Operation limit exceeded (${Watchdog.MAX_OPERATIONS}) — loop terminated"
+        )
+    }
+}
 
 /**
  * Iterates over a list variable, setting a loop variable in localScope for each element.
- * Caps at 1000 iterations to prevent infinite loops.
+ * Each iteration counts toward the watchdog operation limit; exceeding it throws
+ * [WatchdogException] which the ExecutionEngine reports to the plot owner.
  *
  * Params:
  *   - "list": String — name of the localScope variable holding the list
@@ -24,13 +38,8 @@ class ForEachNode(params: Map<String, Any>) : IAction {
 
     override suspend fun execute(context: ExecutionContext) {
         val list = context.localScope.get(listVar) as? List<*> ?: return
-        var iterations = 0
         for (element in list) {
-            if (++iterations > MAX_ITERATIONS) {
-                // Cap reached — stop iterating silently
-                println("[OCP] ForEachNode: exceeded $MAX_ITERATIONS iterations, terminating loop")
-                break
-            }
+            checkOperationLimit(context)
             val value = element ?: continue
             context.localScope.set(loopVar, value)
             context.operationCount.incrementAndGet()
@@ -41,7 +50,8 @@ class ForEachNode(params: Map<String, Any>) : IAction {
 
 /**
  * Executes the body N times, setting a 0-based index variable in localScope each iteration.
- * Caps at 1000 iterations to prevent runaway loops.
+ * Each iteration counts toward the watchdog operation limit; exceeding it throws
+ * [WatchdogException] which the ExecutionEngine reports to the plot owner.
  *
  * Params:
  *   - "count": Int — number of times to repeat (default: 1)
@@ -57,11 +67,8 @@ class RepeatNode(params: Map<String, Any>) : IAction {
     private val body: List<IAction> = @Suppress("UNCHECKED_CAST") (params["body"] as? List<IAction> ?: emptyList())
 
     override suspend fun execute(context: ExecutionContext) {
-        val effectiveCount = minOf(count, MAX_ITERATIONS)
-        if (count > MAX_ITERATIONS) {
-            println("[OCP] RepeatNode: count $count exceeds $MAX_ITERATIONS, capping iterations")
-        }
-        for (i in 0 until effectiveCount) {
+        for (i in 0 until count) {
+            checkOperationLimit(context)
             context.localScope.set(indexVar, i)
             context.operationCount.incrementAndGet()
             body.forEach { it.execute(context) }

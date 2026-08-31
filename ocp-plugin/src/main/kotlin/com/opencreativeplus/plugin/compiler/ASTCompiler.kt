@@ -79,6 +79,8 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
         // Compile remaining nodes as actions (req 5.2, 23.1, 23.3).
         // Track which child indices are consumed as loop bodies.
         val actions = mutableListOf<com.opencreativeplus.api.node.IAction>()
+        val actionLocations = mutableListOf<Location>()
+        val actionParams = mutableListOf<Map<String, Any>>()
         val loopBodyChildIndices = mutableSetOf<Int>()
 
         for (i in 1 until codeLine.nodes.size) {
@@ -106,6 +108,9 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
                 } else {
                     actions.add(baseAction)
                 }
+                // Trace Mode metadata: source block location + scanned params (s: 14.2, 14.3)
+                actionLocations.add(node.location)
+                actionParams.add(node.parameters)
             } catch (e: CompilationException) {
                 throw e
             } catch (e: Exception) {
@@ -139,7 +144,9 @@ class ASTCompiler(private val nodeRegistry: NodeRegistry) {
             actions = actions,
             sourceLocation = locationStr,
             conditionalBranches = conditionalBranches,
-            elseBranches = elseBranches
+            elseBranches = elseBranches,
+            actionLocations = actionLocations,
+            actionParams = actionParams
         )
     }
 

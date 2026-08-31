@@ -109,7 +109,7 @@ class ExecutionEngine(
                 for ((index, action) in effectiveScript.actions.withIndex()) {
                     watchdog.checkExecution(context)
                     // Trace hook: notify before/at node execution (s: 14.2, 14.3)
-                    traceManager?.onNodeExecute(null, action.displayName, emptyMap())
+                    traceNode(effectiveScript, index, action)
 
                     // Piston System (Req 8.3): if this action is also a condition, evaluate it
                     // and execute or skip the child branch accordingly.
@@ -121,7 +121,6 @@ class ExecutionEngine(
                             // Req 4.5: condition true → execute then-branch only
                             for (childAction in childBranch) {
                                 watchdog.checkExecution(context)
-                                traceManager?.onNodeExecute(null, childAction.displayName, emptyMap())
                                 executeActionNode(childAction, context)
                                 context.operationCount.incrementAndGet()
                             }
@@ -131,7 +130,6 @@ class ExecutionEngine(
                             if (elseBranch != null) {
                                 for (elseAction in elseBranch) {
                                     watchdog.checkExecution(context)
-                                    traceManager?.onNodeExecute(null, elseAction.displayName, emptyMap())
                                     executeActionNode(elseAction, context)
                                     context.operationCount.incrementAndGet()
                                 }
@@ -238,6 +236,22 @@ class ExecutionEngine(
     }
 
     /**
+     * Trace hook (s: 14.2, 14.3): report the action at [index] in [script] to the
+     * [TraceManager] together with its source-block location and scanned parameters,
+     * so tracing players see REDSTONE particles and an ArmorStand overlay above the block.
+     * Cheap no-op while nobody has Trace Mode active.
+     */
+    private fun traceNode(script: CompiledScript, index: Int, action: IAction) {
+        val tm = traceManager ?: return
+        if (!tm.isAnyoneTracing()) return
+        tm.onNodeExecute(
+            script.actionLocations.getOrNull(index),
+            action.displayName,
+            script.actionParams.getOrNull(index) ?: emptyMap()
+        )
+    }
+
+    /**
      * Execute a single action node, marking the start of the async phase when the
      * first suspending node (e.g. `WaitAction`, nodeId = "wait") is about to run.
      *
@@ -283,6 +297,7 @@ class ExecutionEngine(
         try {
             if (depth > MAX_CALL_STACK_SIZE) {
                 logger.warning("[OCP] ExecutionEngine: stack overflow — call stack exceeded $MAX_CALL_STACK_SIZE for function '${action.targetFunctionName}'")
+                notifyStackOverflow(context, action.targetFunctionName)
                 return
             }
 
@@ -307,7 +322,7 @@ class ExecutionEngine(
             // Execute the function's actions
             for ((index, funcAction) in functionScript.actions.withIndex()) {
                 watchdog.checkExecution(functionContext)
-                traceManager?.onNodeExecute(null, funcAction.displayName, emptyMap())
+                traceNode(functionScript, index, funcAction)
 
                 val funcCondition = funcAction as? ICondition
                 if (funcCondition != null) {
@@ -348,6 +363,21 @@ class ExecutionEngine(
             }
         } finally {
             context.callStackSize.decrementAndGet()
+        }
+    }
+
+    /**
+     * Notify the plot owner in red chat that a function-call stack overflow occurred.
+     * Mirror of the WatchdogException notification — an infinite mutual recursion
+     * (A calls B, B calls A) must be visible to the player, not only in the server log.
+     */
+    private suspend fun notifyStackOverflow(context: ExecutionContextImpl, functionName: String) {
+        val ownerUuid = plotManager?.getPlot(context.plotId)?.owner ?: return
+        context.syncContext {
+            Bukkit.getPlayer(ownerUuid)?.sendMessage(
+                "§c[OCP] Ваш скрипт остановлен: переполнение стека вызовов функций " +
+                    "(функция '$functionName', лимит $MAX_CALL_STACK_SIZE)."
+            )
         }
     }
 

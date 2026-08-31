@@ -4,7 +4,6 @@ import org.bukkit.Bukkit
 import org.bukkit.Color
 import org.bukkit.Location
 import org.bukkit.Particle
-import org.bukkit.block.Block
 import org.bukkit.entity.ArmorStand
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
@@ -38,6 +37,12 @@ class TraceManager(private val plugin: Plugin) {
     fun isTracing(playerId: UUID): Boolean = tracingPlayers.containsKey(playerId)
 
     /**
+     * Fast check for the ExecutionEngine hot path — skip all trace work
+     * (block lookups, param formatting) while nobody is tracing.
+     */
+    fun isAnyoneTracing(): Boolean = tracingPlayers.isNotEmpty()
+
+    /**
      * Toggles Trace Mode on/off for [player].
      * Sends "§aTrace Mode ON" or "§cTrace Mode OFF" accordingly.
      * Returns the new state (true = ON, false = OFF).
@@ -58,18 +63,26 @@ class TraceManager(private val plugin: Plugin) {
 
     /**
      * Called when a node executes. For each tracing player:
-     * - Spawns REDSTONE_DUST particles above the block (if block is non-null)
-     * - Spawns an invisible ArmorStand overlay showing node name + up to 3 params (if block is non-null)
+     * - Spawns REDSTONE_DUST particles above the block (if location is non-null)
+     * - Spawns an invisible ArmorStand overlay showing node name + up to 3 params (if location is non-null)
      * - Auto-removes the ArmorStand after 60 ticks (3 seconds)
+     *
+     * May be called from executor threads — all world/entity access is deferred
+     * to the main thread via the Bukkit scheduler.
      * s: 14.2, 14.3, 14.4
      */
-    fun onNodeExecute(block: Block?, nodeDisplayName: String, params: Map<String, Any>) {
-        if (block == null) return
-        tracingPlayers.keys.forEach { playerId ->
-            val player = Bukkit.getPlayer(playerId) ?: return@forEach
-            spawnNodeParticles(block, player)
-            spawnOverlay(block, nodeDisplayName, params, playerId)
-        }
+    fun onNodeExecute(blockLocation: Location?, nodeDisplayName: String, params: Map<String, Any>) {
+        if (blockLocation == null || tracingPlayers.isEmpty()) return
+        val playerIds = tracingPlayers.keys.toList()
+        Bukkit.getScheduler().runTask(plugin, Runnable {
+            for (playerId in playerIds) {
+                // Player may have toggled trace off between scheduling and execution
+                if (!tracingPlayers.containsKey(playerId)) continue
+                val player = Bukkit.getPlayer(playerId) ?: continue
+                spawnNodeParticles(blockLocation, player)
+                spawnOverlay(blockLocation, nodeDisplayName, params, playerId)
+            }
+        })
     }
 
     /**
@@ -159,9 +172,8 @@ class TraceManager(private val plugin: Plugin) {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     @Suppress("DEPRECATION")
-    private fun spawnNodeParticles(block: Block?, player: Player) {
-        if (block == null) return
-        val loc = block.location.add(0.5, 1.2, 0.5)
+    private fun spawnNodeParticles(blockLocation: Location, player: Player) {
+        val loc = blockLocation.clone().add(0.5, 1.2, 0.5)
         player.spawnParticle(
             Particle.REDSTONE,
             loc,
@@ -171,17 +183,16 @@ class TraceManager(private val plugin: Plugin) {
     }
 
     private fun spawnOverlay(
-        block: Block?,
+        blockLocation: Location,
         name: String,
         params: Map<String, Any>,
         playerId: UUID
     ) {
-        if (block == null) return
-        val loc = block.location.add(0.5, 2.0, 0.5)
+        val loc = blockLocation.clone().add(0.5, 2.0, 0.5)
         val paramText = params.entries.take(3).joinToString(" ") { "${it.key}=${it.value}" }
         val displayName = "§e$name §7$paramText".trim()
 
-        val stand = block.world.spawn(loc, ArmorStand::class.java) { armorStand ->
+        val stand = blockLocation.world.spawn(loc, ArmorStand::class.java) { armorStand ->
             armorStand.isVisible = false
             armorStand.isMarker = true
             @Suppress("DEPRECATION")

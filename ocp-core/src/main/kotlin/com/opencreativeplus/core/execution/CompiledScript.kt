@@ -2,6 +2,7 @@ package com.opencreativeplus.core.execution
 
 import com.opencreativeplus.api.node.IAction
 import com.opencreativeplus.api.node.IEvent
+import org.bukkit.Location
 
 /**
  * Represents a compiled script ready for execution.
@@ -48,5 +49,16 @@ data class CompiledScript(
      * When a condition at index i evaluates to false and this map contains key i,
      * the else-branch actions are executed instead of skipping.
      */
-    val elseBranches: Map<Int, List<IAction>> = emptyMap()
+    val elseBranches: Map<Int, List<IAction>> = emptyMap(),
+    /**
+     * World location of the source block for each action in [actions] (same indexing).
+     * Used by Trace Mode to render particles and overlays above the executing block
+     * (s: 14.2, 14.3). Empty for scripts compiled without physical locations.
+     */
+    val actionLocations: List<Location> = emptyList(),
+    /**
+     * Scanned parameters of the source block for each action in [actions] (same indexing).
+     * Shown on the Trace Mode ArmorStand overlays (s: 14.3).
+     */
+    val actionParams: List<Map<String, Any>> = emptyList()
 )

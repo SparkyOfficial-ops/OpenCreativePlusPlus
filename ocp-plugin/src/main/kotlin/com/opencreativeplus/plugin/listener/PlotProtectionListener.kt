@@ -20,6 +20,7 @@ import org.bukkit.event.block.LeavesDecayEvent
 import org.bukkit.event.block.BlockPlaceEvent
 import org.bukkit.event.entity.EntityExplodeEvent
 import org.bukkit.event.block.BlockExplodeEvent
+import org.bukkit.event.player.PlayerBucketEmptyEvent
 import org.bukkit.event.player.PlayerInteractEvent
 import org.bukkit.plugin.Plugin
 
@@ -104,6 +105,33 @@ class PlotProtectionListener(
                     return
                 }
             }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // PlayerBucketEmptyEvent — Req 12.7 (buckets bypass BlockPlaceEvent)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Emptying a bucket places fluid blocks WITHOUT firing BlockPlaceEvent,
+     * so ALWAYS_BLOCKED_PLACE never sees it. Guard it here:
+     *  - water/lava buckets are blocked everywhere (Req 12.7),
+     *  - any other bucket is blocked in DEV mode (buckets are not part of coding).
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    fun onBucketEmpty(event: PlayerBucketEmptyEvent) {
+        val player = event.player
+
+        if (event.bucket == Material.WATER_BUCKET || event.bucket == Material.LAVA_BUCKET) {
+            event.isCancelled = true
+            player.sendMessage("§c[OCP] Нельзя размещать §e${event.bucket.name.removeSuffix("_BUCKET")}§c.")
+            return
+        }
+
+        val plot = plotManager.getPlayerPlotSync(player.uniqueId) ?: return
+        if (modeManager.getCurrentMode(player, plot) == PlotMode.DEV) {
+            event.isCancelled = true
+            player.sendMessage("§c[OCP] Ведра нельзя использовать в DEV-режиме.")
         }
     }
 

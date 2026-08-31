@@ -52,31 +52,68 @@ class ModeManagerImpl(
 
     private val currentModes = ConcurrentHashMap<String, PlotMode>()
 
+    /** Guards against concurrent mode switches for the same player+plot (spamming /dev //play). */
+    private val switching = ConcurrentHashMap.newKeySet<String>()
+
     override suspend fun switchMode(player: Player, plot: Plot, mode: PlotMode) {
         val oldMode = getCurrentMode(player, plot)
         if (oldMode == mode) return
 
-        runOnMain {
-            val contents = player.inventory.contents.clone()
-            val armor = player.inventory.armorContents.clone()
-            val offhand = player.inventory.itemInOffHand.clone()
-            Triple(contents, armor, offhand)
-        }.let { (contents, armor, offhand) ->
-            inventoryManager.saveInventorySnapshot(player, plot.id, oldMode, contents, armor, offhand)
+        val key = modeKey(player.uniqueId, plot.id)
+        if (!switching.add(key)) {
+            player.sendMessage("§c[OCP] Mode switch is already in progress — please wait.")
+            return
         }
+        try {
+            // Pre-check DEV access BEFORE tearing down the current mode, so a rejected
+            // switch never leaves the player stuck in a half-exited mode.
+            if (mode == PlotMode.DEV && !hasDevAccess(player, plot)) {
+                player.sendMessage("§c[OCP] У вас нет доступа к режиму разработки на этом участке.")
+                return
+            }
 
-        onModeExit(player, plot, oldMode)
+            // Snapshot the current inventory on the main thread, then persist it for the old mode.
+            // DEV inventories are always provisioned, so there is nothing worth persisting.
+            if (oldMode != PlotMode.DEV) {
+                val (contents, armor, offhand) = runOnMain {
+                    Triple(
+                        player.inventory.contents.clone(),
+                        player.inventory.armorContents.clone(),
+                        player.inventory.itemInOffHand.clone()
+                    )
+                }
+                inventoryManager.saveInventorySnapshot(player, plot.id, oldMode, contents, armor, offhand)
+            }
 
-        val switched = onModeEnter(player, plot, mode)
-        if (!switched) return
+            onModeExit(player, plot, oldMode)
 
-        // Only restore saved inventory if one exists — don't overwrite provisioned DEV inventory
-        val doc = inventoryManager.fetchInventoryDoc(player, plot.id, mode)
-        if (doc != null) {
-            runOnMain { inventoryManager.applyInventoryDoc(player, doc) }
+            val switched = onModeEnter(player, plot, mode)
+            if (!switched) {
+                // Rollback: re-enter the old mode so scripts/visuals/player state stay
+                // consistent with the mode still recorded in currentModes.
+                onModeEnter(player, plot, oldMode)
+                return
+            }
+
+            // DEV inventories are provisioned by applyDevMode — never restore a stale snapshot
+            // over them (old snapshots would miss newly added node categories).
+            // For BUILD/PLAY always apply the saved state, clearing the inventory when none
+            // exists so items from the previous mode never leak across modes.
+            if (mode != PlotMode.DEV) {
+                val doc = inventoryManager.fetchInventoryDoc(player, plot.id, mode)
+                runOnMain { inventoryManager.applyInventoryDoc(player, doc) }
+            }
+
+            currentModes[key] = mode
+        } finally {
+            switching.remove(key)
         }
+    }
 
-        currentModes[modeKey(player.uniqueId, plot.id)] = mode
+    private fun hasDevAccess(player: Player, plot: Plot): Boolean {
+        val isOwner = plot.owner == player.uniqueId
+        val isTrustedWithAccess = plot.trustedPlayers.contains(player.uniqueId) && plot.settings.allowCodingAccess
+        return isOwner || isTrustedWithAccess
     }
 
     override fun getCurrentMode(player: Player, plot: Plot): PlotMode =
@@ -128,13 +165,7 @@ class ModeManagerImpl(
     }
 
     private suspend fun applyDevMode(player: Player, plot: Plot): Boolean {
-        val isOwner = plot.owner == player.uniqueId
-        val isTrustedWithAccess = plot.trustedPlayers.contains(player.uniqueId) && plot.settings.allowCodingAccess
-        if (!isOwner && !isTrustedWithAccess) {
-            player.sendMessage("§c[OCP] У вас нет доступа к режиму разработки на этом участке.")
-            return false
-        }
-
+        // Access is pre-checked in switchMode before the old mode is torn down.
         val worlds = worldManager.getLoadedWorlds(plot.id)
         val spawnLoc: Location? = worlds?.second?.spawnLocation
 

@@ -89,6 +89,12 @@ class PlotCommands(
                 player.sendMessage("§c[OCP] You don't have permission to change modes on this plot.")
                 return@launch
             }
+            // Make sure the plot worlds are loaded before switching — otherwise the block
+            // scanner silently falls back to the hub world and teleports are skipped.
+            if (plotManager.ensurePlotLoaded(plot.id) == null) {
+                player.sendMessage("§c[OCP] Failed to load plot worlds. Please try again.")
+                return@launch
+            }
             modeManager.switchMode(player, plot, mode)
         }
     }

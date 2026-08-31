@@ -133,8 +133,10 @@ class ModeManagerTest {
         modeManager.switchMode(player, plot, PlotMode.DEV)
         modeManager.switchMode(player, plot, PlotMode.PLAY)
         modeManager.switchMode(player, plot, PlotMode.BUILD)
-        assertEquals(listOf(PlotMode.BUILD, PlotMode.DEV, PlotMode.PLAY), savedModes)
-        assertEquals(listOf(PlotMode.DEV, PlotMode.PLAY, PlotMode.BUILD), loadedModes)
+        // DEV inventories are provisioned — never saved or restored.
+        // BUILD→DEV saves BUILD; DEV→PLAY restores PLAY; PLAY→BUILD saves PLAY then restores BUILD.
+        assertEquals(listOf(PlotMode.BUILD, PlotMode.PLAY), savedModes)
+        assertEquals(listOf(PlotMode.PLAY, PlotMode.BUILD), loadedModes)
     }
 
     @Test
@@ -151,7 +153,7 @@ class ModeManagerTest {
         val callOrder = mutableListOf<String>()
         coEvery { inventoryManager.saveInventorySnapshot(any(), any(), any(), any(), any(), any()) } answers { callOrder.add("save") }
         coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { callOrder.add("load"); null }
-        modeManager.switchMode(player, plot, PlotMode.DEV)
+        modeManager.switchMode(player, plot, PlotMode.PLAY)
         assert(callOrder.indexOf("save") >= 0) { "saveInventorySnapshot should be called" }
         assert(callOrder.indexOf("load") >= 0) { "fetchInventoryDoc should be called" }
         assert(callOrder.indexOf("save") < callOrder.indexOf("load")) {

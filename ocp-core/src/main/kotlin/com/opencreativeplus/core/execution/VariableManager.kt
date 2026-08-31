@@ -5,6 +5,7 @@ import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import com.opencreativeplus.api.execution.VariableScope
 import com.opencreativeplus.api.model.VariableChange
 import com.opencreativeplus.api.model.VariableScopeType
+import com.opencreativeplus.core.serialization.EntityVariableCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -145,7 +146,11 @@ class VariableManager(private val database: MongoDatabase) {
         val scope = savedScopes[plotId] ?: return
         
         val collection = database.getCollection<Document>("plot_variables")
-        val variablesDoc = Document((scope as VariableScopeImpl).toMap())
+        // gameready-enhancements Req 2.1, 2.2: PlayerVariable/EntityVariable are
+        // encoded as { "__type": ..., "uuid": ... } documents before persisting.
+        val variablesDoc = Document(
+            (scope as VariableScopeImpl).toMap().mapValues { (_, v) -> EntityVariableCodec.encode(v) }
+        )
         val document = Document().apply {
             put("_id", plotId.toString())
             put("variables", variablesDoc)
@@ -171,7 +176,9 @@ class VariableManager(private val database: MongoDatabase) {
         
         val scope = VariableScopeImpl()
         document?.get("variables", Document::class.java)?.forEach { key, value ->
-            scope.set(key, value)
+            // gameready-enhancements Req 2.1, 2.2: decode PlayerVariable/EntityVariable
+            // documents back into their UUID wrappers; other values pass through.
+            EntityVariableCodec.decode(value)?.let { scope.set(key, it) }
         }
         
         return scope

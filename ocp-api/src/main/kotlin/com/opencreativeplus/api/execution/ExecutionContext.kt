@@ -85,6 +85,15 @@ interface ExecutionContext {
     fun trackMemory(bytes: Long) { /* no-op by default */ }
 
     /**
+     * Resolve a raw stored variable value back to a runtime object.
+     * UUID wrappers are resolved via Bukkit lookups (null if the player is
+     * offline or the entity despawned); all other values pass through unchanged.
+     * Default is identity — overridden by ExecutionContextImpl.
+     * gameready-enhancements Req 2.3, 2.4, 2.5, 2.6
+     */
+    fun resolveValue(raw: Any?): Any? = raw
+
+    /**
      * Execute a block of code on the Bukkit main thread.
      * Used for operations that require sync context (e.g., teleportation, world manipulation).
      *

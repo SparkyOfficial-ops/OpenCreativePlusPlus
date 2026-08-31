@@ -4,8 +4,11 @@ import com.opencreativeplus.api.execution.EventReference
 import com.opencreativeplus.api.execution.ExecutionContext
 import com.opencreativeplus.api.execution.NoOpEventReference
 import com.opencreativeplus.api.execution.VariableScope
+import com.opencreativeplus.api.model.EntityVariable
+import com.opencreativeplus.api.model.PlayerVariable
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.withContext
+import org.bukkit.Bukkit
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.UUID
@@ -47,4 +50,15 @@ class ExecutionContextImpl(
 
     /** Forward heap allocation to the Watchdog. Req 29.1 */
     override fun trackMemory(bytes: Long) = memoryTracker(plotId, bytes)
+
+    /**
+     * Resolve UUID wrappers to live objects via Bukkit lookups.
+     * Returns null (no exception) when the player is offline or the entity
+     * has despawned. gameready-enhancements Req 2.3, 2.4, 2.5, 2.6
+     */
+    override fun resolveValue(raw: Any?): Any? = when (raw) {
+        is PlayerVariable -> Bukkit.getPlayer(raw.uuid)
+        is EntityVariable -> Bukkit.getEntity(raw.uuid)
+        else -> raw
+    }
 }

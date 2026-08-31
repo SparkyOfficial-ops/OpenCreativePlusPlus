@@ -27,8 +27,13 @@ class GetVariableNode(
         val playerName = context.player?.name
         val resolvedKey = variableManager.resolveVariableKey(rawName, playerName)
 
-        return context.localScope.get(resolvedKey)
+        val raw = context.localScope.get(resolvedKey)
             ?: context.plotScope.get(resolvedKey)
             ?: context.savedScope.get(resolvedKey)
+            ?: return null
+
+        // gameready-enhancements Req 2.3, 2.4: UUID wrappers are resolved back
+        // to Player/Entity (null if offline/despawned); other values pass through.
+        return context.resolveValue(raw)
     }
 }

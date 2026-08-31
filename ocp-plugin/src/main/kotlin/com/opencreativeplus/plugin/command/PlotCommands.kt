@@ -79,8 +79,13 @@ class PlotCommands(
     }
 
     private fun handleModeSwitch(player: Player, mode: PlotMode) {
+        // Read the world on the main thread — command handlers run there
+        val worldName = player.world.name
         scope.launch {
-            val plot = plotManager.getPlayerPlot(player.uniqueId)
+            // The target plot is the one the player is standing in; falling back
+            // to their own plot (e.g. when standing in the hub).
+            val plot = plotManager.getPlotByWorld(worldName)
+                ?: plotManager.getPlayerPlot(player.uniqueId)
             if (plot == null) {
                 player.sendMessage("§c[OCP] You don't have a plot. Use /plot create first.")
                 return@launch

@@ -217,6 +217,14 @@ class PlotManagerImpl(
     }
 
     /**
+     * Find the loaded plot whose main or dev world matches [worldName].
+     * Used to resolve which plot a player is standing on (permission checks).
+     * Synchronous — safe to call from the main thread.
+     */
+    fun getPlotByWorld(worldName: String): Plot? =
+        loadedPlots.values.firstOrNull { it.mainWorldName == worldName || it.devWorldName == worldName }
+
+    /**
      * Ensure a plot's worlds are loaded, loading them from DB if needed.
      * Returns the (mainWorld, devWorld) pair, or null on failure.
      10.6

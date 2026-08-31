@@ -38,6 +38,9 @@ class PlotCommandsTest {
         modeManager = mockk(relaxed = true)
         tpsMonitor = mockk(relaxed = true)
 
+        // Default: player is not standing in any plot world (tests resolve via own plot)
+        every { plotManager.getPlotByWorld(any()) } returns null
+
         // Use UnconfinedTestDispatcher so scope.launch runs eagerly in tests
         val testScope = kotlinx.coroutines.test.TestScope(UnconfinedTestDispatcher())
         plotCommands = PlotCommands(plotManager, modeManager, tpsMonitor, testScope)
@@ -220,6 +223,60 @@ class PlotCommandsTest {
         plotCommands.onCommand(trusted, mockCommand("build"), "build", emptyArray())
 
         coVerify(exactly = 1) { modeManager.switchMode(trusted, plot, PlotMode.BUILD) }
+    }
+
+    // -------------------------------------------------------------------------
+    // Standing on someone else's plot: target is the plot under the player's feet
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `stranger standing on another player plot is denied dev command`() = runBlocking {
+        val ownerId = UUID.randomUUID()
+        val strangerId = UUID.randomUUID()
+        val ownerPlot = makePlot(owner = ownerId)
+        val stranger = mockPlayer(strangerId)
+        every { stranger.world.name } returns ownerPlot.mainWorldName
+
+        every { plotManager.getPlotByWorld(ownerPlot.mainWorldName) } returns ownerPlot
+        every { plotManager.canEdit(stranger, ownerPlot) } returns false
+
+        plotCommands.onCommand(stranger, mockCommand("dev"), "dev", emptyArray())
+
+        verify { stranger.sendMessage(match<String> { it.contains("permission", ignoreCase = true) }) }
+        coVerify(exactly = 0) { modeManager.switchMode(any(), any(), any()) }
+    }
+
+    @Test
+    fun `stranger standing on another player plot is denied build command`() = runBlocking {
+        val ownerId = UUID.randomUUID()
+        val strangerId = UUID.randomUUID()
+        val ownerPlot = makePlot(owner = ownerId)
+        val stranger = mockPlayer(strangerId)
+        every { stranger.world.name } returns ownerPlot.mainWorldName
+
+        every { plotManager.getPlotByWorld(ownerPlot.mainWorldName) } returns ownerPlot
+        every { plotManager.canEdit(stranger, ownerPlot) } returns false
+
+        plotCommands.onCommand(stranger, mockCommand("build"), "build", emptyArray())
+
+        verify { stranger.sendMessage(match<String> { it.contains("permission", ignoreCase = true) }) }
+        coVerify(exactly = 0) { modeManager.switchMode(any(), any(), any()) }
+    }
+
+    @Test
+    fun `trusted player standing on owner plot can execute dev command`() = runBlocking {
+        val ownerId = UUID.randomUUID()
+        val trustedId = UUID.randomUUID()
+        val plot = makePlot(owner = ownerId, trustedPlayers = setOf(trustedId))
+        val trusted = mockPlayer(trustedId)
+        every { trusted.world.name } returns plot.mainWorldName
+
+        every { plotManager.getPlotByWorld(plot.mainWorldName) } returns plot
+        every { plotManager.canEdit(trusted, plot) } returns true
+
+        plotCommands.onCommand(trusted, mockCommand("dev"), "dev", emptyArray())
+
+        coVerify(exactly = 1) { modeManager.switchMode(trusted, plot, PlotMode.DEV) }
     }
 
     // -------------------------------------------------------------------------

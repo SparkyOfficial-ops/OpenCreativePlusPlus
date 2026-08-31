@@ -30,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class ModeManagerTest {
 
@@ -159,6 +160,61 @@ class ModeManagerTest {
         assert(callOrder.indexOf("save") < callOrder.indexOf("load")) {
             "save must happen before load, got: $callOrder"
         }
+    }
+
+    /**
+     * The player scenario: BUILD (with unique items incl. armor + offhand) → /dev → /build.
+     * Verifies that:
+     *  - leaving BUILD captures the full snapshot (contents, armor, offhand) untouched,
+     *  - entering DEV provisions the coding inventory,
+     *  - returning to BUILD restores exactly the document saved for BUILD.
+     */
+    @Test
+    fun `build-dev-build round trip captures full snapshot and restores the saved document`() = runTest {
+        val playerId = UUID.randomUUID()
+        val player = mockPlayer(playerId); val plot = makePlot(owner = playerId)
+
+        val sword = org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_SWORD)
+        val cobble = org.bukkit.inventory.ItemStack(org.bukkit.Material.COBBLESTONE, 37)
+        val boots = org.bukkit.inventory.ItemStack(org.bukkit.Material.IRON_BOOTS)
+        val shield = org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD)
+
+        val contents = arrayOfNulls<org.bukkit.inventory.ItemStack>(36)
+        contents[0] = sword
+        contents[5] = cobble
+        val armor = arrayOfNulls<org.bukkit.inventory.ItemStack>(4)
+        armor[0] = boots
+
+        val inventory = player.inventory
+        every { inventory.contents } returns contents
+        every { inventory.armorContents } returns armor
+        every { inventory.itemInOffHand } returns shield
+
+        val snapshots = mutableListOf<Triple<Array<org.bukkit.inventory.ItemStack?>, Array<org.bukkit.inventory.ItemStack?>, org.bukkit.inventory.ItemStack>>()
+        val savedDoc = org.bson.Document("_id", "snapshot-placeholder")
+        var docToReturn: org.bson.Document? = null
+        coEvery { inventoryManager.saveInventorySnapshot(any(), any(), any(), any(), any(), any()) } answers {
+            snapshots.add(Triple(arg(3), arg(4), arg(5)))
+            docToReturn = savedDoc
+        }
+        coEvery { inventoryManager.fetchInventoryDoc(any(), any(), any()) } answers { docToReturn }
+
+        // BUILD → DEV: snapshot must contain exactly what the player had
+        modeManager.switchMode(player, plot, PlotMode.DEV)
+        assertEquals(1, snapshots.size, "Leaving BUILD must save exactly one inventory snapshot")
+        val (c, a, o) = snapshots.single()
+        assertSame(sword, c[0], "Slot 0 item must be captured")
+        assertSame(cobble, c[5], "Slot 5 item must be captured in the same slot")
+        assertSame(boots, a[0], "Armor must be captured")
+        // offhand is defensively cloned in switchMode — compare value, not identity
+        assertEquals(org.bukkit.Material.SHIELD, o.type, "Offhand type must be captured")
+        assertEquals(shield.amount, o.amount, "Offhand amount must be captured")
+        verify(exactly = 1) { inventoryManager.provisionDevInventory(player) }
+
+        // DEV → BUILD: the saved BUILD document must be applied back
+        modeManager.switchMode(player, plot, PlotMode.BUILD)
+        verify(exactly = 1) { inventoryManager.applyInventoryDoc(player, savedDoc) }
+        assertEquals(PlotMode.BUILD, modeManager.getCurrentMode(player, plot))
     }
 
     // --- Script compilation (Req 2.6 / 5.1) ---

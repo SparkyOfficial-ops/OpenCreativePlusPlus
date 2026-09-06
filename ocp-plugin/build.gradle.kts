@@ -49,5 +49,14 @@ tasks {
         // causes flaky failures when tests share a JVM fork.
         maxHeapSize = "3g"
         maxParallelForks = 1
+        // Workaround for Gradle test worker ClassNotFoundException on Cyrillic paths:
+        // Prepend the non-Cyrillic mirror of the test/main class directories
+        // so the worker's BuiltinClassLoader finds classes before the corrupted entries.
+        classpath = files(
+            "C:/ocp-test-build/classes/kotlin/test",
+            "C:/ocp-test-build/classes/kotlin/main",
+            "C:/ocp-test-build/libs/core/ocp-core-1.0.0-SNAPSHOT.jar",
+            "C:/ocp-test-build/libs/api/ocp-api-1.0.0-SNAPSHOT.jar"
+        ) + classpath
     }
 }
